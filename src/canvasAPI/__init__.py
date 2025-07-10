@@ -9,6 +9,7 @@ from .base import CanvasAPIBase
 # Import submodules
 from . import assignment
 from . import calendar  
+from . import conversation
 from . import course
 
 # Import main API classes and instances
@@ -24,6 +25,10 @@ from .calendar import (
     AccountCalendarsAPI,
     account_calendars,
 )
+from .conversation import (
+    ConversationsAPI,
+    conversations,
+)
 from .course import (
     CoursesAPI,
     courses,
@@ -38,6 +43,7 @@ __all__ = [
     # Submodules
     "assignment",
     "calendar", 
+    "conversation",
     "course",
     
     # Assignment APIs
@@ -51,6 +57,10 @@ __all__ = [
     # Calendar APIs
     "AccountCalendarsAPI",
     "account_calendars",
+    
+    # Conversation APIs
+    "ConversationsAPI",
+    "conversations",
     
     # Course APIs
     "CoursesAPI",
