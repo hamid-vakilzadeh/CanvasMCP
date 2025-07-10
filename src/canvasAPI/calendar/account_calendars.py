@@ -1,8 +1,8 @@
 from typing import List, Dict, Union, Literal
-from .base import CanvasAPIBase
+from ..base import CanvasAPIBase
 
 
-class CanvasAccountCalendarsAPI(CanvasAPIBase):
+class AccountCalendarsAPI(CanvasAPIBase):
     """Canvas LMS Account Calendars API client with reusable methods for all calendar endpoints."""
 
     def __init__(self, access_token: str = None, base_url: str = None):
@@ -48,9 +48,7 @@ class CanvasAccountCalendarsAPI(CanvasAPIBase):
         Returns:
             AccountCalendar dictionary
         """
-        response = self._make_request(
-            "GET", f"/api/v1/account_calendars/{account_id}"
-        )
+        response = self._make_request("GET", f"/api/v1/account_calendars/{account_id}")
         return response.json()
 
     def update_account_calendar(
@@ -169,4 +167,4 @@ class CanvasAccountCalendarsAPI(CanvasAPIBase):
 
 
 # Convenience instance using environment variables
-canvas_account_calendars = CanvasAccountCalendarsAPI()
+account_calendars = AccountCalendarsAPI()

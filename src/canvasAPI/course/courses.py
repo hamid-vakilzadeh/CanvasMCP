@@ -1,8 +1,8 @@
 from typing import List, Dict, Union, Literal, Optional
-from .base import CanvasAPIBase
+from ..base import CanvasAPIBase
 
 
-class CanvasCoursesAPI(CanvasAPIBase):
+class CoursesAPI(CanvasAPIBase):
     """Canvas LMS Courses API client with reusable methods for all course endpoints."""
 
     def __init__(self, access_token: str = None, base_url: str = None):
@@ -908,4 +908,4 @@ class CanvasCoursesAPI(CanvasAPIBase):
 
 
 # Convenience instance using environment variables
-canvas_courses = CanvasCoursesAPI()
+courses = CoursesAPI()

@@ -1,11 +1,17 @@
 from .base import CanvasAPIBase
-from .courses import CanvasCoursesAPI, canvas_courses
-from .account_calendars import CanvasAccountCalendarsAPI, canvas_account_calendars
+from .course.courses import CoursesAPI, courses
+from .calendar.account_calendars import AccountCalendarsAPI, account_calendars
+from .assignment.assignment_extensions import (
+    AssignmentExtensionsAPI,
+    assignment_extensions,
+)
 
 __all__ = [
     "CanvasAPIBase",
-    "CanvasCoursesAPI",
-    "canvas_courses",
-    "CanvasAccountCalendarsAPI", 
-    "canvas_account_calendars"
+    "CoursesAPI",
+    "courses",
+    "AccountCalendarsAPI",
+    "account_calendars",
+    "AssignmentExtensionsAPI",
+    "assignment_extensions",
 ]
