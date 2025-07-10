@@ -785,6 +785,408 @@ class AssignmentsAPI(CanvasAPIBase):
         )
         return response.json()
 
+    # Assignment Override Methods
+
+    def list_assignment_overrides(
+        self,
+        course_id: Union[int, str],
+        assignment_id: Union[int, str],
+    ) -> List[Dict]:
+        """
+        List assignment overrides for an assignment.
+
+        Args:
+            course_id: Course ID
+            assignment_id: Assignment ID
+
+        Returns:
+            List of AssignmentOverride dictionaries
+        """
+        response = self._make_request(
+            "GET", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides"
+        )
+        return response.json()
+
+    def get_assignment_override(
+        self,
+        course_id: Union[int, str],
+        assignment_id: Union[int, str],
+        override_id: Union[int, str],
+    ) -> Dict:
+        """
+        Get a single assignment override.
+
+        Args:
+            course_id: Course ID
+            assignment_id: Assignment ID
+            override_id: Override ID
+
+        Returns:
+            AssignmentOverride dictionary
+        """
+        response = self._make_request(
+            "GET", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides/{override_id}"
+        )
+        return response.json()
+
+    def get_group_override_redirect(
+        self,
+        group_id: Union[int, str],
+        assignment_id: Union[int, str],
+    ) -> Dict:
+        """
+        Redirect to the assignment override for a group.
+
+        Args:
+            group_id: Group ID
+            assignment_id: Assignment ID
+
+        Returns:
+            Redirect response to the override
+        """
+        response = self._make_request(
+            "GET", f"/api/v1/groups/{group_id}/assignments/{assignment_id}/override"
+        )
+        return response.json()
+
+    def get_section_override_redirect(
+        self,
+        course_section_id: Union[int, str],
+        assignment_id: Union[int, str],
+    ) -> Dict:
+        """
+        Redirect to the assignment override for a section.
+
+        Args:
+            course_section_id: Course section ID
+            assignment_id: Assignment ID
+
+        Returns:
+            Redirect response to the override
+        """
+        response = self._make_request(
+            "GET", f"/api/v1/sections/{course_section_id}/assignments/{assignment_id}/override"
+        )
+        return response.json()
+
+    def create_assignment_override(
+        self,
+        course_id: Union[int, str],
+        assignment_id: Union[int, str],
+        student_ids: Optional[List[int]] = None,
+        title: Optional[str] = None,
+        group_id: Optional[int] = None,
+        course_section_id: Optional[int] = None,
+        due_at: Optional[datetime] = None,
+        unlock_at: Optional[datetime] = None,
+        lock_at: Optional[datetime] = None,
+    ) -> Dict:
+        """
+        Create an assignment override.
+
+        Args:
+            course_id: Course ID
+            assignment_id: Assignment ID
+            student_ids: IDs of target students (for adhoc overrides)
+            title: Title of adhoc override (required if student_ids provided)
+            group_id: ID of target group (for group assignments)
+            course_section_id: ID of target section
+            due_at: Overridden due date
+            unlock_at: Overridden unlock date
+            lock_at: Overridden lock date
+
+        Returns:
+            Created AssignmentOverride dictionary
+
+        Raises:
+            ValueError: If validation fails for override parameters
+
+        Note:
+            One of student_ids, group_id, or course_section_id must be present.
+            If multiple are present, only the most specific is used (student_ids > group_id > course_section_id).
+        """
+        # Validate that at least one target is specified
+        targets = [student_ids, group_id, course_section_id]
+        if not any(target is not None for target in targets):
+            raise ValueError("One of student_ids, group_id, or course_section_id must be provided")
+
+        # Validate title requirement for adhoc overrides
+        if student_ids is not None and not title:
+            raise ValueError("Title is required when student_ids is provided")
+
+        # Validate student_ids
+        if student_ids is not None:
+            if not isinstance(student_ids, list) or not student_ids:
+                raise ValueError("student_ids must be a non-empty list")
+            if not all(isinstance(sid, int) and sid > 0 for sid in student_ids):
+                raise ValueError("All student_ids must be positive integers")
+
+        data = {}
+
+        # Add target specification (most specific takes precedence)
+        if student_ids is not None:
+            data["assignment_override[student_ids][]"] = student_ids
+            data["assignment_override[title]"] = title
+        elif group_id is not None:
+            data["assignment_override[group_id]"] = group_id
+        elif course_section_id is not None:
+            data["assignment_override[course_section_id]"] = course_section_id
+
+        # Add date overrides
+        if due_at is not None:
+            data["assignment_override[due_at]"] = due_at.isoformat()
+        if unlock_at is not None:
+            data["assignment_override[unlock_at]"] = unlock_at.isoformat()
+        if lock_at is not None:
+            data["assignment_override[lock_at]"] = lock_at.isoformat()
+
+        response = self._make_request(
+            "POST", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides", data=data
+        )
+        return response.json()
+
+    def update_assignment_override(
+        self,
+        course_id: Union[int, str],
+        assignment_id: Union[int, str],
+        override_id: Union[int, str],
+        student_ids: Optional[List[int]] = None,
+        title: Optional[str] = None,
+        due_at: Optional[datetime] = None,
+        unlock_at: Optional[datetime] = None,
+        lock_at: Optional[datetime] = None,
+    ) -> Dict:
+        """
+        Update an assignment override.
+
+        Args:
+            course_id: Course ID
+            assignment_id: Assignment ID
+            override_id: Override ID
+            student_ids: IDs of target students (ignored unless override is adhoc)
+            title: Title of adhoc override (ignored unless override is adhoc)
+            due_at: Overridden due date (null to remove override)
+            unlock_at: Overridden unlock date (null to remove override)
+            lock_at: Overridden lock date (null to remove override)
+
+        Returns:
+            Updated AssignmentOverride dictionary
+
+        Raises:
+            ValueError: If validation fails for override parameters
+
+        Note:
+            All current overridden values must be supplied to be retained.
+            Target override sets cannot be changed for group or section overrides.
+        """
+        # Validate student_ids if provided
+        if student_ids is not None:
+            if not isinstance(student_ids, list) or not student_ids:
+                raise ValueError("student_ids must be a non-empty list")
+            if not all(isinstance(sid, int) and sid > 0 for sid in student_ids):
+                raise ValueError("All student_ids must be positive integers")
+
+        data = {}
+
+        # Add adhoc override updates
+        if student_ids is not None:
+            data["assignment_override[student_ids][]"] = student_ids
+        if title is not None:
+            data["assignment_override[title]"] = title
+
+        # Add date overrides (explicit None handling for clearing dates)
+        if due_at is not None:
+            data["assignment_override[due_at]"] = due_at.isoformat()
+        if unlock_at is not None:
+            data["assignment_override[unlock_at]"] = unlock_at.isoformat()
+        if lock_at is not None:
+            data["assignment_override[lock_at]"] = lock_at.isoformat()
+
+        response = self._make_request(
+            "PUT", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides/{override_id}", data=data
+        )
+        return response.json()
+
+    def delete_assignment_override(
+        self,
+        course_id: Union[int, str],
+        assignment_id: Union[int, str],
+        override_id: Union[int, str],
+    ) -> Dict:
+        """
+        Delete an assignment override.
+
+        Args:
+            course_id: Course ID
+            assignment_id: Assignment ID
+            override_id: Override ID
+
+        Returns:
+            Deleted AssignmentOverride dictionary
+        """
+        response = self._make_request(
+            "DELETE", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides/{override_id}"
+        )
+        return response.json()
+
+    def batch_retrieve_overrides(
+        self,
+        course_id: Union[int, str],
+        assignment_overrides: List[Dict[str, Union[int, str]]],
+    ) -> List[Dict]:
+        """
+        Batch retrieve assignment overrides in a course.
+
+        Args:
+            course_id: Course ID
+            assignment_overrides: List of dicts with 'id' and 'assignment_id' keys
+
+        Returns:
+            List of AssignmentOverride dictionaries (null for not found)
+
+        Raises:
+            ValueError: If assignment_overrides format is invalid
+
+        Example:
+            overrides = [
+                {"id": 109, "assignment_id": 122},
+                {"id": 99, "assignment_id": 111}
+            ]
+            result = api.batch_retrieve_overrides(123, overrides)
+        """
+        if not assignment_overrides:
+            raise ValueError("assignment_overrides cannot be empty")
+
+        for i, override in enumerate(assignment_overrides):
+            if not isinstance(override, dict):
+                raise ValueError(f"Override at index {i} must be a dictionary")
+            if "id" not in override or "assignment_id" not in override:
+                raise ValueError(f"Override at index {i} must include both 'id' and 'assignment_id'")
+
+        # Convert to query parameters format
+        params = {}
+        for i, override in enumerate(assignment_overrides):
+            params["assignment_overrides[][id]"] = override["id"]
+            params["assignment_overrides[][assignment_id]"] = override["assignment_id"]
+
+        response = self._make_request(
+            "GET", f"/api/v1/courses/{course_id}/assignments/overrides", params=params
+        )
+        return response.json()
+
+    def batch_create_overrides(
+        self,
+        course_id: Union[int, str],
+        assignment_overrides: List[Dict],
+    ) -> List[Dict]:
+        """
+        Batch create assignment overrides in a course.
+
+        Args:
+            course_id: Course ID
+            assignment_overrides: List of override objects (see create_assignment_override for attributes)
+
+        Returns:
+            List of created AssignmentOverride dictionaries
+
+        Raises:
+            ValueError: If assignment_overrides format is invalid
+
+        Note:
+            Creates all overrides in a transaction - all succeed or none are created.
+            Errors are reported in an errors attribute array.
+
+        Example:
+            overrides = [
+                {
+                    "assignment_id": 109,
+                    "student_ids": [8],
+                    "title": "Student Override",
+                    "due_at": "2012-10-08T21:00:00Z"
+                },
+                {
+                    "assignment_id": 13,
+                    "course_section_id": 200,
+                    "due_at": "2012-10-08T21:00:00Z"
+                }
+            ]
+            result = api.batch_create_overrides(123, overrides)
+        """
+        if not assignment_overrides:
+            raise ValueError("assignment_overrides cannot be empty")
+
+        for i, override in enumerate(assignment_overrides):
+            if not isinstance(override, dict):
+                raise ValueError(f"Override at index {i} must be a dictionary")
+            if "assignment_id" not in override:
+                raise ValueError(f"Override at index {i} must include 'assignment_id'")
+
+            # Validate target specification
+            targets = ["student_ids", "group_id", "course_section_id"]
+            if not any(target in override for target in targets):
+                raise ValueError(f"Override at index {i} must include one of: {', '.join(targets)}")
+
+        data = {"assignment_overrides": assignment_overrides}
+
+        response = self._make_request(
+            "POST", f"/api/v1/courses/{course_id}/assignments/overrides", json_data=data
+        )
+        return response.json()
+
+    def batch_update_overrides(
+        self,
+        course_id: Union[int, str],
+        assignment_overrides: List[Dict],
+    ) -> List[Dict]:
+        """
+        Batch update assignment overrides in a course.
+
+        Args:
+            course_id: Course ID
+            assignment_overrides: List of override objects with 'id' and 'assignment_id' plus update attributes
+
+        Returns:
+            List of updated AssignmentOverride dictionaries
+
+        Raises:
+            ValueError: If assignment_overrides format is invalid
+
+        Note:
+            Updates all overrides in a transaction - all succeed or none are updated.
+            All current overridden values must be supplied to be retained.
+            Errors are reported in an errors attribute array.
+
+        Example:
+            overrides = [
+                {
+                    "id": 122,
+                    "assignment_id": 109,
+                    "title": "Updated Title"
+                },
+                {
+                    "id": 993,
+                    "assignment_id": 13,
+                    "due_at": "2012-10-08T21:00:00Z"
+                }
+            ]
+            result = api.batch_update_overrides(123, overrides)
+        """
+        if not assignment_overrides:
+            raise ValueError("assignment_overrides cannot be empty")
+
+        for i, override in enumerate(assignment_overrides):
+            if not isinstance(override, dict):
+                raise ValueError(f"Override at index {i} must be a dictionary")
+            if "id" not in override or "assignment_id" not in override:
+                raise ValueError(f"Override at index {i} must include both 'id' and 'assignment_id'")
+
+        data = {"assignment_overrides": assignment_overrides}
+
+        response = self._make_request(
+            "PUT", f"/api/v1/courses/{course_id}/assignments/overrides", json_data=data
+        )
+        return response.json()
+
 
 # Convenience instance using environment variables
 assignments = AssignmentsAPI()
