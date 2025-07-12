@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import os
 import requests
 import json
-from typing import Dict
+from typing import Dict, List
 
 
 load_dotenv()
@@ -65,3 +65,44 @@ class CanvasAPIBase:
         except requests.exceptions.RequestException as e:
             print(f"API request failed: {e}")
             raise
+
+    def _get_all_pages(
+        self,
+        method: str,
+        endpoint: str,
+        params: Dict = None,
+        data: Dict = None,
+        json_data: Dict = None,
+    ) -> List[Dict]:
+        """
+        Fetch all pages from a paginated endpoint.
+
+        Args:
+            method: HTTP method (GET, POST, PUT, DELETE)
+            endpoint: API endpoint
+            params: Query parameters
+            data: Form data
+            json_data: JSON data
+
+        Returns:
+            List of all items from all pages
+        """
+        all_items = []
+        response = self._make_request(method, endpoint, params, data, json_data)
+        
+        while True:
+            items = response.json()
+            if isinstance(items, list):
+                all_items.extend(items)
+            else:
+                all_items.append(items)
+            
+            # Check if there's a next page using the links attribute
+            if 'next' in response.links:
+                next_url = response.links['next']['url']
+                response = requests.get(next_url, headers=self.headers)
+                response.raise_for_status()
+            else:
+                break
+                
+        return all_items

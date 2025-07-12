@@ -57,6 +57,7 @@ class CoursesAPI(CanvasAPIBase):
         state: Optional[
             List[Literal["unpublished", "available", "completed", "deleted"]]
         ] = None,
+        all_pages: bool = False,
     ) -> List[Dict]:
         """
         List courses for the current user.
@@ -72,6 +73,7 @@ class CoursesAPI(CanvasAPIBase):
                     course_progress, sections, storage_quota_used_mb, total_students, passback_status,
                     favorites, teachers, observed_users, course_image, banner_image, concluded, post_manually)
             state: Course states to include (unpublished, available, completed, deleted)
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of course dictionaries
@@ -161,8 +163,11 @@ class CoursesAPI(CanvasAPIBase):
         if state:
             params["state[]"] = state
 
-        response = self._make_request("GET", "/api/v1/courses", params=params)
-        return response.json()
+        if all_pages:
+            return self._get_all_pages("GET", "/api/v1/courses", params=params)
+        else:
+            response = self._make_request("GET", "/api/v1/courses", params=params)
+            return response.json()
 
     def list_courses_for_user(
         self,
@@ -201,6 +206,7 @@ class CoursesAPI(CanvasAPIBase):
         ] = None,
         homeroom: bool = None,
         account_id: str = None,
+        all_pages: bool = False,
     ) -> List[Dict]:
         """
         List courses for a specific user.
@@ -215,6 +221,7 @@ class CoursesAPI(CanvasAPIBase):
             enrollment_state: Filter by enrollment state (active, invited_or_pending, completed)
             homeroom: Filter homeroom courses
             account_id: Filter by account ID
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of course dictionaries
@@ -282,10 +289,13 @@ class CoursesAPI(CanvasAPIBase):
         if account_id:
             params["account_id"] = account_id
 
-        response = self._make_request(
-            "GET", f"/api/v1/users/{user_id}/courses", params=params
-        )
-        return response.json()
+        if all_pages:
+            return self._get_all_pages("GET", f"/api/v1/users/{user_id}/courses", params=params)
+        else:
+            response = self._make_request(
+                "GET", f"/api/v1/users/{user_id}/courses", params=params
+            )
+            return response.json()
 
     def get_course(
         self,
@@ -484,6 +494,7 @@ class CoursesAPI(CanvasAPIBase):
                 ]
             ]
         ] = None,
+        all_pages: bool = False,
     ) -> List[Dict]:
         """
         List users in a course.
@@ -499,6 +510,7 @@ class CoursesAPI(CanvasAPIBase):
             user_id: Specific user ID to find
             user_ids: List of specific user IDs
             enrollment_state: Filter by enrollment state (active, invited_or_pending, completed)
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of user dictionaries
@@ -558,10 +570,13 @@ class CoursesAPI(CanvasAPIBase):
         if enrollment_state:
             params["enrollment_state[]"] = enrollment_state
 
-        response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/users", params=params
-        )
-        return response.json()
+        if all_pages:
+            return self._get_all_pages("GET", f"/api/v1/courses/{course_id}/users", params=params)
+        else:
+            response = self._make_request(
+                "GET", f"/api/v1/courses/{course_id}/users", params=params
+            )
+            return response.json()
 
     def get_course_user(
         self,
@@ -589,36 +604,44 @@ class CoursesAPI(CanvasAPIBase):
         )
         return response.json()
 
-    def list_students(self, course_id: Union[int, str]) -> List[Dict]:
+    def list_students(self, course_id: Union[int, str], all_pages: bool = False) -> List[Dict]:
         """
         List students in course (DEPRECATED - use list_course_users instead).
 
         Args:
             course_id: Course ID
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of student dictionaries
         """
-        response = self._make_request("GET", f"/api/v1/courses/{course_id}/students")
-        return response.json()
+        if all_pages:
+            return self._get_all_pages("GET", f"/api/v1/courses/{course_id}/students")
+        else:
+            response = self._make_request("GET", f"/api/v1/courses/{course_id}/students")
+            return response.json()
 
-    def list_recent_students(self, course_id: Union[int, str]) -> List[Dict]:
+    def list_recent_students(self, course_id: Union[int, str], all_pages: bool = False) -> List[Dict]:
         """
         List recently logged in students.
 
         Args:
             course_id: Course ID
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of student dictionaries with last_login
         """
-        response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/recent_students"
-        )
-        return response.json()
+        if all_pages:
+            return self._get_all_pages("GET", f"/api/v1/courses/{course_id}/recent_students")
+        else:
+            response = self._make_request(
+                "GET", f"/api/v1/courses/{course_id}/recent_students"
+            )
+            return response.json()
 
     def search_content_share_users(
-        self, course_id: Union[int, str], search_term: str
+        self, course_id: Union[int, str], search_term: str, all_pages: bool = False
     ) -> List[Dict]:
         """
         Search for users to share content with.
@@ -626,15 +649,19 @@ class CoursesAPI(CanvasAPIBase):
         Args:
             course_id: Course ID
             search_term: Search term
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of user dictionaries
         """
         data = {"search_term": search_term}
-        response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/content_share_users", data=data
-        )
-        return response.json()
+        if all_pages:
+            return self._get_all_pages("GET", f"/api/v1/courses/{course_id}/content_share_users", data=data)
+        else:
+            response = self._make_request(
+                "GET", f"/api/v1/courses/{course_id}/content_share_users", data=data
+            )
+            return response.json()
 
     # Course Progress Methods
 
@@ -706,20 +733,24 @@ class CoursesAPI(CanvasAPIBase):
 
     # Course Activity Methods
 
-    def get_activity_stream(self, course_id: Union[int, str]) -> List[Dict]:
+    def get_activity_stream(self, course_id: Union[int, str], all_pages: bool = False) -> List[Dict]:
         """
         Get course activity stream for current user.
 
         Args:
             course_id: Course ID
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of activity items
         """
-        response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/activity_stream"
-        )
-        return response.json()
+        if all_pages:
+            return self._get_all_pages("GET", f"/api/v1/courses/{course_id}/activity_stream")
+        else:
+            response = self._make_request(
+                "GET", f"/api/v1/courses/{course_id}/activity_stream"
+            )
+            return response.json()
 
     def get_activity_stream_summary(self, course_id: Union[int, str]) -> Dict:
         """
