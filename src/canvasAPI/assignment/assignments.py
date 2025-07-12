@@ -16,7 +16,9 @@ class AssignmentsAPI(CanvasAPIBase):
         """
         super().__init__(access_token, base_url)
 
-    def delete_assignment(self, course_id: Union[int, str], assignment_id: Union[int, str]) -> Dict:
+    def delete_assignment(
+        self, course_id: Union[int, str], assignment_id: Union[int, str]
+    ) -> Dict:
         """
         Delete an assignment.
 
@@ -54,12 +56,21 @@ class AssignmentsAPI(CanvasAPIBase):
         override_assignment_dates: bool = True,
         needs_grading_count_by_section: bool = False,
         bucket: Optional[
-            Literal["past", "overdue", "undated", "ungraded", "unsubmitted", "upcoming", "future"]
+            Literal[
+                "past",
+                "overdue",
+                "undated",
+                "ungraded",
+                "unsubmitted",
+                "upcoming",
+                "future",
+            ]
         ] = None,
         assignment_ids: Optional[List[Union[int, str]]] = None,
         order_by: Literal["position", "name", "due_at"] = "position",
         post_to_sis: Optional[bool] = None,
         new_quizzes: Optional[bool] = None,
+        all_pages: bool = False,
     ) -> List[Dict]:
         """
         List assignments for a course or assignment group.
@@ -76,6 +87,7 @@ class AssignmentsAPI(CanvasAPIBase):
             order_by: Determines the order of assignments
             post_to_sis: Return only assignments that have post_to_sis set or not set
             new_quizzes: Return only New Quizzes assignments
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of Assignment dictionaries
@@ -104,7 +116,15 @@ class AssignmentsAPI(CanvasAPIBase):
 
         # Validate bucket
         if bucket is not None:
-            valid_buckets = {"past", "overdue", "undated", "ungraded", "unsubmitted", "upcoming", "future"}
+            valid_buckets = {
+                "past",
+                "overdue",
+                "undated",
+                "ungraded",
+                "unsubmitted",
+                "upcoming",
+                "future",
+            }
             if bucket not in valid_buckets:
                 raise ValueError(
                     f"Invalid bucket '{bucket}'. "
@@ -146,14 +166,18 @@ class AssignmentsAPI(CanvasAPIBase):
         else:
             endpoint = f"/api/v1/courses/{course_id}/assignments"
 
-        response = self._make_request("GET", endpoint, params=params)
-        return response.json()
+        if all_pages:
+            return self._get_all_pages("GET", endpoint, params=params)
+        else:
+            response = self._make_request("GET", endpoint, params=params)
+            return response.json()
 
     def list_assignments_for_user(
         self,
         user_id: Union[int, str],
         course_id: Union[int, str],
-        **kwargs
+        all_pages: bool = False,
+        **kwargs,
     ) -> List[Dict]:
         """
         List assignments for a specific user if the current user has rights to view.
@@ -161,6 +185,7 @@ class AssignmentsAPI(CanvasAPIBase):
         Args:
             user_id: User ID
             course_id: Course ID
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
             **kwargs: Same arguments as list_assignments
 
         Returns:
@@ -168,10 +193,19 @@ class AssignmentsAPI(CanvasAPIBase):
         """
         params = kwargs
 
-        response = self._make_request(
-            "GET", f"/api/v1/users/{user_id}/courses/{course_id}/assignments", params=params
-        )
-        return response.json()
+        if all_pages:
+            return self._get_all_pages(
+                "GET",
+                f"/api/v1/users/{user_id}/courses/{course_id}/assignments",
+                params=params,
+            )
+        else:
+            response = self._make_request(
+                "GET",
+                f"/api/v1/users/{user_id}/courses/{course_id}/assignments",
+                params=params,
+            )
+            return response.json()
 
     def duplicate_assignment(
         self,
@@ -195,7 +229,9 @@ class AssignmentsAPI(CanvasAPIBase):
             params["result_type"] = result_type
 
         response = self._make_request(
-            "POST", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/duplicate", params=params
+            "POST",
+            f"/api/v1/courses/{course_id}/assignments/{assignment_id}/duplicate",
+            params=params,
         )
         return response.json()
 
@@ -217,7 +253,8 @@ class AssignmentsAPI(CanvasAPIBase):
             List of BasicUser dictionaries
         """
         response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/users/{user_id}/group_members"
+            "GET",
+            f"/api/v1/courses/{course_id}/assignments/{assignment_id}/users/{user_id}/group_members",
         )
         return response.json()
 
@@ -289,7 +326,9 @@ class AssignmentsAPI(CanvasAPIBase):
             params["all_dates"] = all_dates
 
         response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/assignments/{assignment_id}", params=params
+            "GET",
+            f"/api/v1/courses/{course_id}/assignments/{assignment_id}",
+            params=params,
         )
         return response.json()
 
@@ -325,7 +364,9 @@ class AssignmentsAPI(CanvasAPIBase):
         grade_group_students_individually: Optional[bool] = None,
         external_tool_tag_attributes: Optional[Dict] = None,
         points_possible: Optional[float] = None,
-        grading_type: Literal["pass_fail", "percent", "letter_grade", "gpa_scale", "points", "not_graded"] = "points",
+        grading_type: Literal[
+            "pass_fail", "percent", "letter_grade", "gpa_scale", "points", "not_graded"
+        ] = "points",
         due_at: Optional[datetime] = None,
         lock_at: Optional[datetime] = None,
         unlock_at: Optional[datetime] = None,
@@ -403,8 +444,16 @@ class AssignmentsAPI(CanvasAPIBase):
 
         # Validate submission_types
         valid_submission_types = {
-            "online_quiz", "none", "on_paper", "discussion_topic", "external_tool",
-            "online_upload", "online_text_entry", "online_url", "media_recording", "student_annotation"
+            "online_quiz",
+            "none",
+            "on_paper",
+            "discussion_topic",
+            "external_tool",
+            "online_upload",
+            "online_text_entry",
+            "online_url",
+            "media_recording",
+            "student_annotation",
         }
         invalid_types = [t for t in submission_types if t not in valid_submission_types]
         if invalid_types:
@@ -414,7 +463,14 @@ class AssignmentsAPI(CanvasAPIBase):
             )
 
         # Validate grading_type
-        valid_grading_types = {"pass_fail", "percent", "letter_grade", "gpa_scale", "points", "not_graded"}
+        valid_grading_types = {
+            "pass_fail",
+            "percent",
+            "letter_grade",
+            "gpa_scale",
+            "points",
+            "not_graded",
+        }
         if grading_type not in valid_grading_types:
             raise ValueError(
                 f"Invalid grading_type '{grading_type}'. "
@@ -428,7 +484,9 @@ class AssignmentsAPI(CanvasAPIBase):
         # Validate grader_count for moderated grading
         if moderated_grading and grader_count is not None:
             if grader_count < 1:
-                raise ValueError("Grader count must be at least 1 for moderated assignments")
+                raise ValueError(
+                    "Grader count must be at least 1 for moderated assignments"
+                )
 
         data = {
             "assignment[name]": name.strip(),
@@ -460,9 +518,13 @@ class AssignmentsAPI(CanvasAPIBase):
         if group_category_id is not None:
             data["assignment[group_category_id]"] = group_category_id
         if grade_group_students_individually is not None:
-            data["assignment[grade_group_students_individually]"] = grade_group_students_individually
+            data["assignment[grade_group_students_individually]"] = (
+                grade_group_students_individually
+            )
         if external_tool_tag_attributes:
-            data["assignment[external_tool_tag_attributes]"] = external_tool_tag_attributes
+            data["assignment[external_tool_tag_attributes]"] = (
+                external_tool_tag_attributes
+            )
         if points_possible is not None:
             data["assignment[points_possible]"] = points_possible
         if due_at is not None:
@@ -496,11 +558,17 @@ class AssignmentsAPI(CanvasAPIBase):
         if final_grader_id is not None:
             data["assignment[final_grader_id]"] = final_grader_id
         if grader_comments_visible_to_graders is not None:
-            data["assignment[grader_comments_visible_to_graders]"] = grader_comments_visible_to_graders
+            data["assignment[grader_comments_visible_to_graders]"] = (
+                grader_comments_visible_to_graders
+            )
         if graders_anonymous_to_graders is not None:
-            data["assignment[graders_anonymous_to_graders]"] = graders_anonymous_to_graders
+            data["assignment[graders_anonymous_to_graders]"] = (
+                graders_anonymous_to_graders
+            )
         if graders_names_visible_to_final_grader is not None:
-            data["assignment[graders_names_visible_to_final_grader]"] = graders_names_visible_to_final_grader
+            data["assignment[graders_names_visible_to_final_grader]"] = (
+                graders_names_visible_to_final_grader
+            )
         if anonymous_grading is not None:
             data["assignment[anonymous_grading]"] = anonymous_grading
         if allowed_attempts is not None:
@@ -508,7 +576,9 @@ class AssignmentsAPI(CanvasAPIBase):
         if annotatable_attachment_id is not None:
             data["assignment[annotatable_attachment_id]"] = annotatable_attachment_id
 
-        response = self._make_request("POST", f"/api/v1/courses/{course_id}/assignments", data=data)
+        response = self._make_request(
+            "POST", f"/api/v1/courses/{course_id}/assignments", data=data
+        )
         return response.json()
 
     def update_assignment(
@@ -548,7 +618,14 @@ class AssignmentsAPI(CanvasAPIBase):
         external_tool_tag_attributes: Optional[Dict] = None,
         points_possible: Optional[float] = None,
         grading_type: Optional[
-            Literal["pass_fail", "percent", "letter_grade", "gpa_scale", "points", "not_graded"]
+            Literal[
+                "pass_fail",
+                "percent",
+                "letter_grade",
+                "gpa_scale",
+                "points",
+                "not_graded",
+            ]
         ] = None,
         due_at: Optional[datetime] = None,
         lock_at: Optional[datetime] = None,
@@ -634,10 +711,20 @@ class AssignmentsAPI(CanvasAPIBase):
         # Validate submission_types if provided
         if submission_types is not None:
             valid_submission_types = {
-                "online_quiz", "none", "on_paper", "discussion_topic", "external_tool",
-                "online_upload", "online_text_entry", "online_url", "media_recording", "student_annotation"
+                "online_quiz",
+                "none",
+                "on_paper",
+                "discussion_topic",
+                "external_tool",
+                "online_upload",
+                "online_text_entry",
+                "online_url",
+                "media_recording",
+                "student_annotation",
             }
-            invalid_types = [t for t in submission_types if t not in valid_submission_types]
+            invalid_types = [
+                t for t in submission_types if t not in valid_submission_types
+            ]
             if invalid_types:
                 raise ValueError(
                     f"Invalid submission types: {', '.join(invalid_types)}. "
@@ -647,7 +734,14 @@ class AssignmentsAPI(CanvasAPIBase):
 
         # Validate grading_type if provided
         if grading_type is not None:
-            valid_grading_types = {"pass_fail", "percent", "letter_grade", "gpa_scale", "points", "not_graded"}
+            valid_grading_types = {
+                "pass_fail",
+                "percent",
+                "letter_grade",
+                "gpa_scale",
+                "points",
+                "not_graded",
+            }
             if grading_type not in valid_grading_types:
                 raise ValueError(
                     f"Invalid grading_type '{grading_type}'. "
@@ -685,9 +779,13 @@ class AssignmentsAPI(CanvasAPIBase):
         if group_category_id is not None:
             data["assignment[group_category_id]"] = group_category_id
         if grade_group_students_individually is not None:
-            data["assignment[grade_group_students_individually]"] = grade_group_students_individually
+            data["assignment[grade_group_students_individually]"] = (
+                grade_group_students_individually
+            )
         if external_tool_tag_attributes is not None:
-            data["assignment[external_tool_tag_attributes]"] = external_tool_tag_attributes
+            data["assignment[external_tool_tag_attributes]"] = (
+                external_tool_tag_attributes
+            )
         if points_possible is not None:
             data["assignment[points_possible]"] = points_possible
         if due_at is not None:
@@ -719,11 +817,17 @@ class AssignmentsAPI(CanvasAPIBase):
         if final_grader_id is not None:
             data["assignment[final_grader_id]"] = final_grader_id
         if grader_comments_visible_to_graders is not None:
-            data["assignment[grader_comments_visible_to_graders]"] = grader_comments_visible_to_graders
+            data["assignment[grader_comments_visible_to_graders]"] = (
+                grader_comments_visible_to_graders
+            )
         if graders_anonymous_to_graders is not None:
-            data["assignment[graders_anonymous_to_graders]"] = graders_anonymous_to_graders
+            data["assignment[graders_anonymous_to_graders]"] = (
+                graders_anonymous_to_graders
+            )
         if graders_names_visible_to_final_grader is not None:
-            data["assignment[graders_names_visible_to_final_grader]"] = graders_names_visible_to_final_grader
+            data["assignment[graders_names_visible_to_final_grader]"] = (
+                graders_names_visible_to_final_grader
+            )
         if anonymous_grading is not None:
             data["assignment[anonymous_grading]"] = anonymous_grading
         if allowed_attempts is not None:
@@ -778,10 +882,14 @@ class AssignmentsAPI(CanvasAPIBase):
             if "id" not in update:
                 raise ValueError(f"Assignment update at index {i} must include 'id'")
             if "all_dates" not in update:
-                raise ValueError(f"Assignment update at index {i} must include 'all_dates'")
+                raise ValueError(
+                    f"Assignment update at index {i} must include 'all_dates'"
+                )
 
         response = self._make_request(
-            "PUT", f"/api/v1/courses/{course_id}/assignments/bulk_update", json_data=assignment_updates
+            "PUT",
+            f"/api/v1/courses/{course_id}/assignments/bulk_update",
+            json_data=assignment_updates,
         )
         return response.json()
 
@@ -791,6 +899,7 @@ class AssignmentsAPI(CanvasAPIBase):
         self,
         course_id: Union[int, str],
         assignment_id: Union[int, str],
+        all_pages: bool = False,
     ) -> List[Dict]:
         """
         List assignment overrides for an assignment.
@@ -798,14 +907,23 @@ class AssignmentsAPI(CanvasAPIBase):
         Args:
             course_id: Course ID
             assignment_id: Assignment ID
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of AssignmentOverride dictionaries
         """
-        response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides"
-        )
-        return response.json()
+
+        if all_pages:
+            return self._get_all_pages(
+                "GET",
+                f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides",
+            )
+        else:
+            response = self._make_request(
+                "GET",
+                f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides",
+            )
+            return response.json()
 
     def get_assignment_override(
         self,
@@ -825,7 +943,8 @@ class AssignmentsAPI(CanvasAPIBase):
             AssignmentOverride dictionary
         """
         response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides/{override_id}"
+            "GET",
+            f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides/{override_id}",
         )
         return response.json()
 
@@ -865,7 +984,8 @@ class AssignmentsAPI(CanvasAPIBase):
             Redirect response to the override
         """
         response = self._make_request(
-            "GET", f"/api/v1/sections/{course_section_id}/assignments/{assignment_id}/override"
+            "GET",
+            f"/api/v1/sections/{course_section_id}/assignments/{assignment_id}/override",
         )
         return response.json()
 
@@ -908,7 +1028,9 @@ class AssignmentsAPI(CanvasAPIBase):
         # Validate that at least one target is specified
         targets = [student_ids, group_id, course_section_id]
         if not any(target is not None for target in targets):
-            raise ValueError("One of student_ids, group_id, or course_section_id must be provided")
+            raise ValueError(
+                "One of student_ids, group_id, or course_section_id must be provided"
+            )
 
         # Validate title requirement for adhoc overrides
         if student_ids is not None and not title:
@@ -941,7 +1063,9 @@ class AssignmentsAPI(CanvasAPIBase):
             data["assignment_override[lock_at]"] = lock_at.isoformat()
 
         response = self._make_request(
-            "POST", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides", data=data
+            "POST",
+            f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides",
+            data=data,
         )
         return response.json()
 
@@ -1003,7 +1127,9 @@ class AssignmentsAPI(CanvasAPIBase):
             data["assignment_override[lock_at]"] = lock_at.isoformat()
 
         response = self._make_request(
-            "PUT", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides/{override_id}", data=data
+            "PUT",
+            f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides/{override_id}",
+            data=data,
         )
         return response.json()
 
@@ -1025,7 +1151,8 @@ class AssignmentsAPI(CanvasAPIBase):
             Deleted AssignmentOverride dictionary
         """
         response = self._make_request(
-            "DELETE", f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides/{override_id}"
+            "DELETE",
+            f"/api/v1/courses/{course_id}/assignments/{assignment_id}/overrides/{override_id}",
         )
         return response.json()
 
@@ -1061,7 +1188,9 @@ class AssignmentsAPI(CanvasAPIBase):
             if not isinstance(override, dict):
                 raise ValueError(f"Override at index {i} must be a dictionary")
             if "id" not in override or "assignment_id" not in override:
-                raise ValueError(f"Override at index {i} must include both 'id' and 'assignment_id'")
+                raise ValueError(
+                    f"Override at index {i} must include both 'id' and 'assignment_id'"
+                )
 
         # Convert to query parameters format
         params = {}
@@ -1124,7 +1253,9 @@ class AssignmentsAPI(CanvasAPIBase):
             # Validate target specification
             targets = ["student_ids", "group_id", "course_section_id"]
             if not any(target in override for target in targets):
-                raise ValueError(f"Override at index {i} must include one of: {', '.join(targets)}")
+                raise ValueError(
+                    f"Override at index {i} must include one of: {', '.join(targets)}"
+                )
 
         data = {"assignment_overrides": assignment_overrides}
 
@@ -1178,7 +1309,9 @@ class AssignmentsAPI(CanvasAPIBase):
             if not isinstance(override, dict):
                 raise ValueError(f"Override at index {i} must be a dictionary")
             if "id" not in override or "assignment_id" not in override:
-                raise ValueError(f"Override at index {i} must include both 'id' and 'assignment_id'")
+                raise ValueError(
+                    f"Override at index {i} must include both 'id' and 'assignment_id'"
+                )
 
         data = {"assignment_overrides": assignment_overrides}
 
