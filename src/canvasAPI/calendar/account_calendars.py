@@ -15,12 +15,17 @@ class AccountCalendarsAPI(CanvasAPIBase):
         """
         super().__init__(access_token, base_url)
 
-    def list_account_calendars(self, search_term: str = None) -> List[Dict]:
+    def list_account_calendars(
+        self,
+        search_term: str = None,
+        all_pages: bool = False,
+    ) -> List[Dict]:
         """
         List available account calendars for the current user.
 
         Args:
             search_term: Search term for calendar names (minimum 2 characters)
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of AccountCalendar dictionaries
@@ -35,8 +40,15 @@ class AccountCalendarsAPI(CanvasAPIBase):
         if search_term:
             params["search_term"] = search_term
 
-        response = self._make_request("GET", "/api/v1/account_calendars", params=params)
-        return response.json()
+        if all_pages:
+            return self._get_all_pages(
+                "GET", "/api/v1/account_calendars", params=params
+            )
+        else:
+            response = self._make_request(
+                "GET", "/api/v1/account_calendars", params=params
+            )
+            return response.json()
 
     def get_account_calendar(self, account_id: Union[int, str]) -> Dict:
         """
@@ -118,6 +130,7 @@ class AccountCalendarsAPI(CanvasAPIBase):
         account_id: Union[int, str],
         search_term: str = None,
         filter: Literal["visible", "hidden"] = None,
+        all_page: bool = False,
     ) -> List[Dict]:
         """
         List all account calendars for an account and its sub-accounts.
@@ -126,6 +139,7 @@ class AccountCalendarsAPI(CanvasAPIBase):
             account_id: Account ID
             search_term: Search term for calendar names (minimum 2 characters)
             filter: Filter by visibility (visible or hidden)
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of AccountCalendar dictionaries
@@ -145,10 +159,15 @@ class AccountCalendarsAPI(CanvasAPIBase):
         if filter:
             params["filter"] = filter
 
-        response = self._make_request(
-            "GET", f"/api/v1/accounts/{account_id}/account_calendars", params=params
-        )
-        return response.json()
+        if all_page:
+            return self._get_all_pages(
+                "GET", f"/api/v1/accounts/{account_id}/account_calendars", params=params
+            )
+        else:
+            response = self._make_request(
+                "GET", f"/api/v1/accounts/{account_id}/account_calendars", params=params
+            )
+            return response.json()
 
     def get_visible_calendars_count(self, account_id: Union[int, str]) -> Dict:
         """
