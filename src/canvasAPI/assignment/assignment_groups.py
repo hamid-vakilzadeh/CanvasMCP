@@ -42,6 +42,7 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         override_assignment_dates: bool = True,
         grading_period_id: Optional[int] = None,
         scope_assignments_to_student: bool = False,
+        all_page: bool = False,
     ) -> List[Dict]:
         """
         List assignment groups for a course.
@@ -54,6 +55,7 @@ class AssignmentGroupsAPI(CanvasAPIBase):
             override_assignment_dates: Apply assignment overrides for each assignment
             grading_period_id: Filter by grading period ID
             scope_assignments_to_student: Filter assignments to current user in grading period
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of AssignmentGroup dictionaries
@@ -142,10 +144,15 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         if scope_assignments_to_student:
             params["scope_assignments_to_student"] = scope_assignments_to_student
 
-        response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/assignment_groups", params=params
-        )
-        return response.json()
+        if all_page:
+            return self._get_all_pages(
+                "GET", f"/api/v1/courses/{course_id}/assignment_groups", params=params
+            )
+        else:
+            response = self._make_request(
+                "GET", f"/api/v1/courses/{course_id}/assignment_groups", params=params
+            )
+            return response.json()
 
     def get_assignment_group(
         self,
