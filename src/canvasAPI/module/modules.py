@@ -5,7 +5,15 @@ from ..base import CanvasAPIBase
 
 class CompletionRequirement(TypedDict, total=False):
     """Completion requirement for module items."""
-    type: Literal["must_view", "must_contribute", "must_submit", "min_score", "min_percentage", "must_mark_done"]
+
+    type: Literal[
+        "must_view",
+        "must_contribute",
+        "must_submit",
+        "min_score",
+        "min_percentage",
+        "must_mark_done",
+    ]
     min_score: Optional[int]
     min_percentage: Optional[int]
     completed: Optional[bool]
@@ -13,6 +21,7 @@ class CompletionRequirement(TypedDict, total=False):
 
 class ModuleOverride(TypedDict, total=False):
     """Module assignment override object."""
+
     id: Optional[int]
     title: Optional[str]
     student_ids: Optional[List[int]]
@@ -39,6 +48,7 @@ class ModulesAPI(CanvasAPIBase):
         include: Optional[List[Literal["items", "content_details"]]] = None,
         search_term: Optional[str] = None,
         student_id: Optional[Union[int, str]] = None,
+        all_pages: bool = False,
     ) -> List[Dict]:
         """
         List modules in a course.
@@ -48,6 +58,7 @@ class ModulesAPI(CanvasAPIBase):
             include: Additional data to include
             search_term: Partial name of modules to match
             student_id: Returns module completion information for this student
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of Module dictionaries
@@ -78,8 +89,15 @@ class ModulesAPI(CanvasAPIBase):
         if student_id is not None:
             params["student_id"] = student_id
 
-        response = self._make_request("GET", f"/api/v1/courses/{course_id}/modules", params=params)
-        return response.json()
+        if all_pages:
+            return self._get_all_pages(
+                "GET", f"/api/v1/courses/{course_id}/modules", params=params
+            )
+        else:
+            response = self._make_request(
+                "GET", f"/api/v1/courses/{course_id}/modules", params=params
+            )
+            return response.json()
 
     def show_module(
         self,
@@ -124,7 +142,9 @@ class ModulesAPI(CanvasAPIBase):
         if student_id is not None:
             params["student_id"] = student_id
 
-        response = self._make_request("GET", f"/api/v1/courses/{course_id}/modules/{module_id}", params=params)
+        response = self._make_request(
+            "GET", f"/api/v1/courses/{course_id}/modules/{module_id}", params=params
+        )
         return response.json()
 
     def create_module(
@@ -174,7 +194,9 @@ class ModulesAPI(CanvasAPIBase):
         if publish_final_grade is not None:
             data["module[publish_final_grade]"] = publish_final_grade
 
-        response = self._make_request("POST", f"/api/v1/courses/{course_id}/modules", data=data)
+        response = self._make_request(
+            "POST", f"/api/v1/courses/{course_id}/modules", data=data
+        )
         return response.json()
 
     def update_module(
@@ -232,10 +254,14 @@ class ModulesAPI(CanvasAPIBase):
         if published is not None:
             data["module[published]"] = published
 
-        response = self._make_request("PUT", f"/api/v1/courses/{course_id}/modules/{module_id}", data=data)
+        response = self._make_request(
+            "PUT", f"/api/v1/courses/{course_id}/modules/{module_id}", data=data
+        )
         return response.json()
 
-    def delete_module(self, course_id: Union[int, str], module_id: Union[int, str]) -> Dict:
+    def delete_module(
+        self, course_id: Union[int, str], module_id: Union[int, str]
+    ) -> Dict:
         """
         Delete a module.
 
@@ -246,10 +272,14 @@ class ModulesAPI(CanvasAPIBase):
         Returns:
             Deleted Module dictionary
         """
-        response = self._make_request("DELETE", f"/api/v1/courses/{course_id}/modules/{module_id}")
+        response = self._make_request(
+            "DELETE", f"/api/v1/courses/{course_id}/modules/{module_id}"
+        )
         return response.json()
 
-    def relock_module(self, course_id: Union[int, str], module_id: Union[int, str]) -> Dict:
+    def relock_module(
+        self, course_id: Union[int, str], module_id: Union[int, str]
+    ) -> Dict:
         """
         Re-lock module progressions.
 
@@ -264,7 +294,9 @@ class ModulesAPI(CanvasAPIBase):
             Resets module progressions to their default locked state and recalculates
             them based on current requirements.
         """
-        response = self._make_request("PUT", f"/api/v1/courses/{course_id}/modules/{module_id}/relock")
+        response = self._make_request(
+            "PUT", f"/api/v1/courses/{course_id}/modules/{module_id}/relock"
+        )
         return response.json()
 
     def list_module_items(
@@ -274,6 +306,7 @@ class ModulesAPI(CanvasAPIBase):
         include: Optional[List[Literal["content_details"]]] = None,
         search_term: Optional[str] = None,
         student_id: Optional[Union[int, str]] = None,
+        all_pages: bool = False,
     ) -> List[Dict]:
         """
         List items in a module.
@@ -284,6 +317,7 @@ class ModulesAPI(CanvasAPIBase):
             include: Additional data to include
             search_term: Partial title of items to match
             student_id: Returns module completion information for this student
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of ModuleItem dictionaries
@@ -310,8 +344,19 @@ class ModulesAPI(CanvasAPIBase):
         if student_id is not None:
             params["student_id"] = student_id
 
-        response = self._make_request("GET", f"/api/v1/courses/{course_id}/modules/{module_id}/items", params=params)
-        return response.json()
+        if all_pages:
+            return self._get_all_pages(
+                "GET",
+                f"/api/v1/courses/{course_id}/modules/{module_id}/items",
+                params=params,
+            )
+        else:
+            response = self._make_request(
+                "GET",
+                f"/api/v1/courses/{course_id}/modules/{module_id}/items",
+                params=params,
+            )
+            return response.json()
 
     def show_module_item(
         self,
@@ -355,7 +400,9 @@ class ModulesAPI(CanvasAPIBase):
             params["student_id"] = student_id
 
         response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}", params=params
+            "GET",
+            f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}",
+            params=params,
         )
         return response.json()
 
@@ -363,7 +410,16 @@ class ModulesAPI(CanvasAPIBase):
         self,
         course_id: Union[int, str],
         module_id: Union[int, str],
-        item_type: Literal["File", "Page", "Discussion", "Assignment", "Quiz", "SubHeader", "ExternalUrl", "ExternalTool"],
+        item_type: Literal[
+            "File",
+            "Page",
+            "Discussion",
+            "Assignment",
+            "Quiz",
+            "SubHeader",
+            "ExternalUrl",
+            "ExternalTool",
+        ],
         title: Optional[str] = None,
         content_id: Optional[Union[int, str]] = None,
         position: Optional[int] = None,
@@ -371,7 +427,9 @@ class ModulesAPI(CanvasAPIBase):
         page_url: Optional[str] = None,
         external_url: Optional[str] = None,
         new_tab: Optional[bool] = None,
-        completion_requirement_type: Optional[Literal["must_view", "must_contribute", "must_submit", "must_mark_done"]] = None,
+        completion_requirement_type: Optional[
+            Literal["must_view", "must_contribute", "must_submit", "must_mark_done"]
+        ] = None,
         completion_requirement_min_score: Optional[int] = None,
         iframe_width: Optional[int] = None,
         iframe_height: Optional[int] = None,
@@ -402,7 +460,16 @@ class ModulesAPI(CanvasAPIBase):
             ValueError: If validation fails for item type requirements
         """
         # Validate item type
-        valid_types = {"File", "Page", "Discussion", "Assignment", "Quiz", "SubHeader", "ExternalUrl", "ExternalTool"}
+        valid_types = {
+            "File",
+            "Page",
+            "Discussion",
+            "Assignment",
+            "Quiz",
+            "SubHeader",
+            "ExternalUrl",
+            "ExternalTool",
+        }
         if item_type not in valid_types:
             raise ValueError(
                 f"Invalid item_type '{item_type}'. "
@@ -421,7 +488,12 @@ class ModulesAPI(CanvasAPIBase):
 
         # Validate completion requirement
         if completion_requirement_type is not None:
-            valid_completion_types = {"must_view", "must_contribute", "must_submit", "must_mark_done"}
+            valid_completion_types = {
+                "must_view",
+                "must_contribute",
+                "must_submit",
+                "must_mark_done",
+            }
             if completion_requirement_type not in valid_completion_types:
                 raise ValueError(
                     f"Invalid completion_requirement_type '{completion_requirement_type}'. "
@@ -432,7 +504,7 @@ class ModulesAPI(CanvasAPIBase):
             type_requirements = {
                 "must_contribute": {"Assignment", "Discussion", "Page"},
                 "must_submit": {"Assignment", "Quiz"},
-                "must_mark_done": {"Assignment", "Page"}
+                "must_mark_done": {"Assignment", "Page"},
             }
 
             if completion_requirement_type in type_requirements:
@@ -466,15 +538,21 @@ class ModulesAPI(CanvasAPIBase):
         if new_tab is not None:
             data["module_item[new_tab]"] = new_tab
         if completion_requirement_type:
-            data["module_item[completion_requirement][type]"] = completion_requirement_type
+            data["module_item[completion_requirement][type]"] = (
+                completion_requirement_type
+            )
         if completion_requirement_min_score is not None:
-            data["module_item[completion_requirement][min_score]"] = completion_requirement_min_score
+            data["module_item[completion_requirement][min_score]"] = (
+                completion_requirement_min_score
+            )
         if iframe_width is not None:
             data["module_item[iframe][width]"] = iframe_width
         if iframe_height is not None:
             data["module_item[iframe][height]"] = iframe_height
 
-        response = self._make_request("POST", f"/api/v1/courses/{course_id}/modules/{module_id}/items", data=data)
+        response = self._make_request(
+            "POST", f"/api/v1/courses/{course_id}/modules/{module_id}/items", data=data
+        )
         return response.json()
 
     def update_module_item(
@@ -487,7 +565,9 @@ class ModulesAPI(CanvasAPIBase):
         indent: Optional[int] = None,
         external_url: Optional[str] = None,
         new_tab: Optional[bool] = None,
-        completion_requirement_type: Optional[Literal["must_view", "must_contribute", "must_submit", "must_mark_done"]] = None,
+        completion_requirement_type: Optional[
+            Literal["must_view", "must_contribute", "must_submit", "must_mark_done"]
+        ] = None,
         completion_requirement_min_score: Optional[int] = None,
         published: Optional[bool] = None,
         target_module_id: Optional[Union[int, str]] = None,
@@ -517,7 +597,12 @@ class ModulesAPI(CanvasAPIBase):
         """
         # Validate completion requirement
         if completion_requirement_type is not None:
-            valid_completion_types = {"must_view", "must_contribute", "must_submit", "must_mark_done"}
+            valid_completion_types = {
+                "must_view",
+                "must_contribute",
+                "must_submit",
+                "must_mark_done",
+            }
             if completion_requirement_type not in valid_completion_types:
                 raise ValueError(
                     f"Invalid completion_requirement_type '{completion_requirement_type}'. "
@@ -544,16 +629,22 @@ class ModulesAPI(CanvasAPIBase):
         if new_tab is not None:
             data["module_item[new_tab]"] = new_tab
         if completion_requirement_type is not None:
-            data["module_item[completion_requirement][type]"] = completion_requirement_type
+            data["module_item[completion_requirement][type]"] = (
+                completion_requirement_type
+            )
         if completion_requirement_min_score is not None:
-            data["module_item[completion_requirement][min_score]"] = completion_requirement_min_score
+            data["module_item[completion_requirement][min_score]"] = (
+                completion_requirement_min_score
+            )
         if published is not None:
             data["module_item[published]"] = published
         if target_module_id is not None:
             data["module_item[module_id]"] = target_module_id
 
         response = self._make_request(
-            "PUT", f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}", data=data
+            "PUT",
+            f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}",
+            data=data,
         )
         return response.json()
 
@@ -587,7 +678,9 @@ class ModulesAPI(CanvasAPIBase):
             data["student_id"] = student_id
 
         response = self._make_request(
-            "POST", f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}/select_mastery_path", data=data
+            "POST",
+            f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}/select_mastery_path",
+            data=data,
         )
         return response.json()
 
@@ -608,7 +701,9 @@ class ModulesAPI(CanvasAPIBase):
         Returns:
             Deleted ModuleItem dictionary
         """
-        response = self._make_request("DELETE", f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}")
+        response = self._make_request(
+            "DELETE", f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}"
+        )
         return response.json()
 
     def mark_module_item_done(
@@ -631,13 +726,24 @@ class ModulesAPI(CanvasAPIBase):
             Response dictionary
         """
         method = "PUT" if done else "DELETE"
-        response = self._make_request(method, f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}/done")
+        response = self._make_request(
+            method,
+            f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}/done",
+        )
         return response.json()
 
     def get_module_item_sequence(
         self,
         course_id: Union[int, str],
-        asset_type: Literal["ModuleItem", "File", "Page", "Discussion", "Assignment", "Quiz", "ExternalTool"],
+        asset_type: Literal[
+            "ModuleItem",
+            "File",
+            "Page",
+            "Discussion",
+            "Assignment",
+            "Quiz",
+            "ExternalTool",
+        ],
         asset_id: Union[int, str],
     ) -> Dict:
         """
@@ -655,7 +761,15 @@ class ModulesAPI(CanvasAPIBase):
             ValueError: If invalid asset_type is provided
         """
         # Validate asset_type
-        valid_asset_types = {"ModuleItem", "File", "Page", "Discussion", "Assignment", "Quiz", "ExternalTool"}
+        valid_asset_types = {
+            "ModuleItem",
+            "File",
+            "Page",
+            "Discussion",
+            "Assignment",
+            "Quiz",
+            "ExternalTool",
+        }
         if asset_type not in valid_asset_types:
             raise ValueError(
                 f"Invalid asset_type '{asset_type}'. "
@@ -667,7 +781,9 @@ class ModulesAPI(CanvasAPIBase):
             "asset_id": asset_id,
         }
 
-        response = self._make_request("GET", f"/api/v1/courses/{course_id}/module_item_sequence", params=params)
+        response = self._make_request(
+            "GET", f"/api/v1/courses/{course_id}/module_item_sequence", params=params
+        )
         return response.json()
 
     def mark_module_item_read(
@@ -692,7 +808,8 @@ class ModulesAPI(CanvasAPIBase):
             that need to access external content directly.
         """
         response = self._make_request(
-            "POST", f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}/mark_read"
+            "POST",
+            f"/api/v1/courses/{course_id}/modules/{module_id}/items/{item_id}/mark_read",
         )
         return response.json()
 
@@ -700,6 +817,7 @@ class ModulesAPI(CanvasAPIBase):
         self,
         course_id: Union[int, str],
         module_id: Union[int, str],
+        all_pages: bool = False,
     ) -> List[Dict]:
         """
         List assignment overrides that apply to a module.
@@ -707,14 +825,23 @@ class ModulesAPI(CanvasAPIBase):
         Args:
             course_id: Course ID
             module_id: Module ID
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of ModuleAssignmentOverride dictionaries
         """
-        response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/modules/{module_id}/assignment_overrides"
-        )
-        return response.json()
+        if all_pages:
+            return self._get_all_pages(
+                "GET",
+                f"/api/v1/courses/{course_id}/modules/{module_id}/assignment_overrides",
+            )
+
+        else:
+            response = self._make_request(
+                "GET",
+                f"/api/v1/courses/{course_id}/modules/{module_id}/assignment_overrides",
+            )
+            return response.json()
 
     def update_module_overrides(
         self,
@@ -752,12 +879,16 @@ class ModulesAPI(CanvasAPIBase):
             if not any(target in override for target in targets):
                 # Allow overrides with just ID for updates/deletes
                 if "id" not in override:
-                    raise ValueError(f"Override at index {i} must include 'id' or one of: {', '.join(targets)}")
+                    raise ValueError(
+                        f"Override at index {i} must include 'id' or one of: {', '.join(targets)}"
+                    )
 
         json_data = {"overrides": overrides}
 
         self._make_request(
-            "PUT", f"/api/v1/courses/{course_id}/modules/{module_id}/assignment_overrides", json_data=json_data
+            "PUT",
+            f"/api/v1/courses/{course_id}/modules/{module_id}/assignment_overrides",
+            json_data=json_data,
         )
         # 204 No Content response, so no JSON to return
         return None
