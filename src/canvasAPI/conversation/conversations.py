@@ -23,6 +23,7 @@ class ConversationsAPI(CanvasAPIBase):
         interleave_submissions: Optional[bool] = None,
         include_all_conversation_ids: bool = False,
         include: Optional[List[Literal["participant_avatars"]]] = None,
+        all_pages: bool = False,
     ) -> Union[List[Dict], Dict]:
         """
         List conversations for the current user.
@@ -34,6 +35,7 @@ class ConversationsAPI(CanvasAPIBase):
             interleave_submissions: (Obsolete) Ignored parameter
             include_all_conversation_ids: Return object with conversation_ids array
             include: Additional data to include
+            all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
             List of Conversation dictionaries or object with conversations and conversation_ids
@@ -83,8 +85,11 @@ class ConversationsAPI(CanvasAPIBase):
         if include:
             params["include[]"] = include
 
-        response = self._make_request("GET", "/api/v1/conversations", params=params)
-        return response.json()
+        if all_pages:
+            return self._get_all_pages("GET", "/api/v1/conversations", params=params)
+        else:
+            response = self._make_request("GET", "/api/v1/conversations", params=params)
+            return response.json()
 
     def create_conversation(
         self,
@@ -272,7 +277,9 @@ class ConversationsAPI(CanvasAPIBase):
         if auto_mark_as_read is not True:
             params["auto_mark_as_read"] = auto_mark_as_read
 
-        response = self._make_request("GET", f"/api/v1/conversations/{conversation_id}", params=params)
+        response = self._make_request(
+            "GET", f"/api/v1/conversations/{conversation_id}", params=params
+        )
         return response.json()
 
     def update_conversation(
@@ -344,7 +351,9 @@ class ConversationsAPI(CanvasAPIBase):
         if filter_mode != "or":
             data["filter_mode"] = filter_mode
 
-        response = self._make_request("PUT", f"/api/v1/conversations/{conversation_id}", data=data)
+        response = self._make_request(
+            "PUT", f"/api/v1/conversations/{conversation_id}", data=data
+        )
         return response.json()
 
     def mark_all_as_read(self) -> Dict:
@@ -370,7 +379,9 @@ class ConversationsAPI(CanvasAPIBase):
         Note:
             This only deletes the current user's view of the conversation.
         """
-        response = self._make_request("DELETE", f"/api/v1/conversations/{conversation_id}")
+        response = self._make_request(
+            "DELETE", f"/api/v1/conversations/{conversation_id}"
+        )
         return response.json()
 
     def add_recipients(
@@ -490,14 +501,18 @@ class ConversationsAPI(CanvasAPIBase):
         data = {"remove[]": remove}
 
         response = self._make_request(
-            "POST", f"/api/v1/conversations/{conversation_id}/remove_messages", data=data
+            "POST",
+            f"/api/v1/conversations/{conversation_id}/remove_messages",
+            data=data,
         )
         return response.json()
 
     def batch_update_conversations(
         self,
         conversation_ids: List[Union[int, str]],
-        event: Literal["mark_as_read", "mark_as_unread", "star", "unstar", "archive", "destroy"],
+        event: Literal[
+            "mark_as_read", "mark_as_unread", "star", "unstar", "archive", "destroy"
+        ],
     ) -> Dict:
         """
         Perform a change on a set of conversations.
@@ -522,7 +537,14 @@ class ConversationsAPI(CanvasAPIBase):
             raise ValueError("Cannot update more than 500 conversations at once")
 
         # Validate event
-        valid_events = {"mark_as_read", "mark_as_unread", "star", "unstar", "archive", "destroy"}
+        valid_events = {
+            "mark_as_read",
+            "mark_as_unread",
+            "star",
+            "unstar",
+            "archive",
+            "destroy",
+        }
         if event not in valid_events:
             raise ValueError(
                 f"Invalid event '{event}'. "
@@ -550,7 +572,9 @@ class ConversationsAPI(CanvasAPIBase):
         Note:
             This endpoint is deprecated. Use the Find recipients endpoint in the Search API instead.
         """
-        response = self._make_request("GET", "/api/v1/conversations/find_recipients", params=kwargs)
+        response = self._make_request(
+            "GET", "/api/v1/conversations/find_recipients", params=kwargs
+        )
         return response.json()
 
     def unread_count(self) -> Dict:
