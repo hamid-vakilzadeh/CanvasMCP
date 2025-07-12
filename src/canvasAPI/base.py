@@ -89,20 +89,20 @@ class CanvasAPIBase:
         """
         all_items = []
         response = self._make_request(method, endpoint, params, data, json_data)
-        
+
         while True:
             items = response.json()
             if isinstance(items, list):
                 all_items.extend(items)
             else:
                 all_items.append(items)
-            
+
             # Check if there's a next page using the links attribute
-            if 'next' in response.links:
-                next_url = response.links['next']['url']
+            if "next" in response.links:
+                next_url = response.links["next"]["url"]
                 response = requests.get(next_url, headers=self.headers)
                 response.raise_for_status()
             else:
                 break
-                
+
         return all_items
