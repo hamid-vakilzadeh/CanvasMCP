@@ -154,10 +154,6 @@ async def list_modules(
         str | int | None,
         Field(description="Returns module completion information for this student"),
     ] = None,
-    all_pages: Annotated[
-        bool | str | None,
-        Field(description="If true, fetch all pages automatically"),
-    ] = False,
 ) -> list[dict]:
     """List modules in a course."""
     params = validate_and_convert_params(
@@ -165,19 +161,15 @@ async def list_modules(
         include=include,
         search_term=search_term,
         student_id=student_id,
-        all_pages=all_pages,
+        all_pages=True,
     )
     return modules.list_modules(**params)
 
 
 @mcp.tool(tags={"module"})
 async def show_module(
-    course_id: Annotated[
-        str | int, Field(description="The course ID")
-    ],
-    module_id: Annotated[
-        str | int, Field(description="The module ID to show")
-    ],
+    course_id: Annotated[str | int, Field(description="The course ID")],
+    module_id: Annotated[str | int, Field(description="The module ID to show")],
     include: Annotated[
         list[str] | str | None,
         Field(description="Additional data to include: 'items', 'content_details'"),
@@ -199,15 +191,9 @@ async def show_module(
 
 @mcp.tool(tags={"module"})
 async def update_module(
-    course_id: Annotated[
-        str | int, Field(description="The course ID")
-    ],
-    module_id: Annotated[
-        str | int, Field(description="The module ID to update")
-    ],
-    name: Annotated[
-        str | None, Field(description="The name of the module")
-    ] = None,
+    course_id: Annotated[str | int, Field(description="The course ID")],
+    module_id: Annotated[str | int, Field(description="The module ID to update")],
+    name: Annotated[str | None, Field(description="The name of the module")] = None,
     unlock_at: Annotated[
         datetime | None, Field(description="The date the module will unlock")
     ] = None,
@@ -249,12 +235,8 @@ async def update_module(
 
 @mcp.tool(tags={"module"})
 async def delete_module(
-    course_id: Annotated[
-        str | int, Field(description="The course ID")
-    ],
-    module_id: Annotated[
-        str | int, Field(description="The module ID to delete")
-    ],
+    course_id: Annotated[str | int, Field(description="The course ID")],
+    module_id: Annotated[str | int, Field(description="The module ID to delete")],
 ) -> dict:
     """Delete a module."""
     params = validate_and_convert_params(
@@ -266,12 +248,8 @@ async def delete_module(
 
 @mcp.tool(tags={"module"})
 async def relock_module(
-    course_id: Annotated[
-        str | int, Field(description="The course ID")
-    ],
-    module_id: Annotated[
-        str | int, Field(description="The module ID to relock")
-    ],
+    course_id: Annotated[str | int, Field(description="The course ID")],
+    module_id: Annotated[str | int, Field(description="The module ID to relock")],
 ) -> dict:
     """Re-lock module progressions to reset them to default locked state."""
     params = validate_and_convert_params(
@@ -283,9 +261,7 @@ async def relock_module(
 
 @mcp.tool(tags={"module"})
 async def list_module_items(
-    course_id: Annotated[
-        str | int, Field(description="The course ID")
-    ],
+    course_id: Annotated[str | int, Field(description="The course ID")],
     module_id: Annotated[
         str | int, Field(description="The module ID to list items from")
     ],
@@ -300,10 +276,6 @@ async def list_module_items(
         str | int | None,
         Field(description="Returns module completion information for this student"),
     ] = None,
-    all_pages: Annotated[
-        bool | str | None,
-        Field(description="If true, fetch all pages automatically"),
-    ] = False,
 ) -> list[dict]:
     """List items in a module."""
     params = validate_and_convert_params(
@@ -312,22 +284,16 @@ async def list_module_items(
         include=include,
         search_term=search_term,
         student_id=student_id,
-        all_pages=all_pages,
+        all_pages=True,
     )
     return modules.list_module_items(**params)
 
 
 @mcp.tool(tags={"module"})
 async def show_module_item(
-    course_id: Annotated[
-        str | int, Field(description="The course ID")
-    ],
-    module_id: Annotated[
-        str | int, Field(description="The module ID")
-    ],
-    item_id: Annotated[
-        str | int, Field(description="The module item ID to show")
-    ],
+    course_id: Annotated[str | int, Field(description="The course ID")],
+    module_id: Annotated[str | int, Field(description="The module ID")],
+    item_id: Annotated[str | int, Field(description="The module item ID to show")],
     include: Annotated[
         list[str] | str | None,
         Field(description="Additional data to include: 'content_details'"),
@@ -350,22 +316,20 @@ async def show_module_item(
 
 @mcp.tool(tags={"module"})
 async def create_module_item(
-    course_id: Annotated[
-        str | int, Field(description="The course ID")
-    ],
-    module_id: Annotated[
-        str | int, Field(description="The module ID to add item to")
-    ],
+    course_id: Annotated[str | int, Field(description="The course ID")],
+    module_id: Annotated[str | int, Field(description="The module ID to add item to")],
     item_type: Annotated[
         str,
-        Field(description="Type of content: File, Page, Discussion, Assignment, Quiz, SubHeader, ExternalUrl, ExternalTool"),
+        Field(
+            description="Type of content: File, Page, Discussion, Assignment, Quiz, SubHeader, ExternalUrl, ExternalTool"
+        ),
     ],
-    title: Annotated[
-        str | None, Field(description="Name of the module item")
-    ] = None,
+    title: Annotated[str | None, Field(description="Name of the module item")] = None,
     content_id: Annotated[
         str | int | None,
-        Field(description="ID of content to link (required except for ExternalUrl, Page, SubHeader)"),
+        Field(
+            description="ID of content to link (required except for ExternalUrl, Page, SubHeader)"
+        ),
     ] = None,
     position: Annotated[
         int | str | None,
@@ -379,7 +343,8 @@ async def create_module_item(
         str | None, Field(description="Wiki page URL suffix (required for Page type)")
     ] = None,
     external_url: Annotated[
-        str | None, Field(description="External URL (required for ExternalUrl and ExternalTool)")
+        str | None,
+        Field(description="External URL (required for ExternalUrl and ExternalTool)"),
     ] = None,
     new_tab: Annotated[
         bool | str | None,
@@ -387,7 +352,9 @@ async def create_module_item(
     ] = None,
     completion_requirement_type: Annotated[
         str | None,
-        Field(description="Completion requirement: must_view, must_contribute, must_submit, must_mark_done"),
+        Field(
+            description="Completion requirement: must_view, must_contribute, must_submit, must_mark_done"
+        ),
     ] = None,
     completion_requirement_min_score: Annotated[
         int | str | None,
@@ -424,18 +391,10 @@ async def create_module_item(
 
 @mcp.tool(tags={"module"})
 async def update_module_item(
-    course_id: Annotated[
-        str | int, Field(description="The course ID")
-    ],
-    module_id: Annotated[
-        str | int, Field(description="The module ID")
-    ],
-    item_id: Annotated[
-        str | int, Field(description="The module item ID to update")
-    ],
-    title: Annotated[
-        str | None, Field(description="Name of the module item")
-    ] = None,
+    course_id: Annotated[str | int, Field(description="The course ID")],
+    module_id: Annotated[str | int, Field(description="The module ID")],
+    item_id: Annotated[str | int, Field(description="The module item ID to update")],
+    title: Annotated[str | None, Field(description="Name of the module item")] = None,
     position: Annotated[
         int | str | None,
         Field(description="Position in module (1-based)"),
@@ -453,7 +412,9 @@ async def update_module_item(
     ] = None,
     completion_requirement_type: Annotated[
         str | None,
-        Field(description="Completion requirement: must_view, must_contribute, must_submit, must_mark_done"),
+        Field(
+            description="Completion requirement: must_view, must_contribute, must_submit, must_mark_done"
+        ),
     ] = None,
     completion_requirement_min_score: Annotated[
         int | str | None,
@@ -488,15 +449,9 @@ async def update_module_item(
 
 @mcp.tool(tags={"module"})
 async def delete_module_item(
-    course_id: Annotated[
-        str | int, Field(description="The course ID")
-    ],
-    module_id: Annotated[
-        str | int, Field(description="The module ID")
-    ],
-    item_id: Annotated[
-        str | int, Field(description="The module item ID to delete")
-    ],
+    course_id: Annotated[str | int, Field(description="The course ID")],
+    module_id: Annotated[str | int, Field(description="The module ID")],
+    item_id: Annotated[str | int, Field(description="The module item ID to delete")],
 ) -> dict:
     """Delete a module item."""
     params = validate_and_convert_params(
