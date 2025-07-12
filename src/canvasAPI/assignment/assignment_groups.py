@@ -35,7 +35,9 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         ] = None,
         assignment_ids: Optional[List[Union[int, str]]] = None,
         exclude_assignment_submission_types: Optional[
-            List[Literal["online_quiz", "discussion_topic", "wiki_page", "external_tool"]]
+            List[
+                Literal["online_quiz", "discussion_topic", "wiki_page", "external_tool"]
+            ]
         ] = None,
         override_assignment_dates: bool = True,
         grading_period_id: Optional[int] = None,
@@ -81,21 +83,36 @@ class AssignmentGroupsAPI(CanvasAPIBase):
 
             # Validate include dependencies
             if "discussion_topic" in include and "assignments" not in include:
-                raise ValueError("'discussion_topic' requires 'assignments' to be included")
+                raise ValueError(
+                    "'discussion_topic' requires 'assignments' to be included"
+                )
             if "all_dates" in include and "assignments" not in include:
                 raise ValueError("'all_dates' requires 'assignments' to be included")
             if "assignment_visibility" in include and "assignments" not in include:
-                raise ValueError("'assignment_visibility' requires 'assignments' to be included")
+                raise ValueError(
+                    "'assignment_visibility' requires 'assignments' to be included"
+                )
             if "submission" in include and "assignments" not in include:
                 raise ValueError("'submission' requires 'assignments' to be included")
             if "score_statistics" in include:
                 if "assignments" not in include or "submission" not in include:
-                    raise ValueError("'score_statistics' requires both 'assignments' and 'submission' to be included")
+                    raise ValueError(
+                        "'score_statistics' requires both 'assignments' and 'submission' to be included"
+                    )
 
         # Validate exclude_assignment_submission_types
         if exclude_assignment_submission_types is not None:
-            valid_submission_types = {"online_quiz", "discussion_topic", "wiki_page", "external_tool"}
-            invalid_types = [t for t in exclude_assignment_submission_types if t not in valid_submission_types]
+            valid_submission_types = {
+                "online_quiz",
+                "discussion_topic",
+                "wiki_page",
+                "external_tool",
+            }
+            invalid_types = [
+                t
+                for t in exclude_assignment_submission_types
+                if t not in valid_submission_types
+            ]
             if invalid_types:
                 raise ValueError(
                     f"Invalid submission types: {', '.join(invalid_types)}. "
@@ -104,7 +121,9 @@ class AssignmentGroupsAPI(CanvasAPIBase):
 
         # Validate scope_assignments_to_student requires grading_period_id
         if scope_assignments_to_student and grading_period_id is None:
-            raise ValueError("'scope_assignments_to_student' requires 'grading_period_id' to be provided")
+            raise ValueError(
+                "'scope_assignments_to_student' requires 'grading_period_id' to be provided"
+            )
 
         params = {}
 
@@ -113,7 +132,9 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         if assignment_ids:
             params["assignment_ids[]"] = assignment_ids
         if exclude_assignment_submission_types:
-            params["exclude_assignment_submission_types[]"] = exclude_assignment_submission_types
+            params["exclude_assignment_submission_types[]"] = (
+                exclude_assignment_submission_types
+            )
         if override_assignment_dates is not None:
             params["override_assignment_dates"] = override_assignment_dates
         if grading_period_id is not None:
@@ -178,14 +199,20 @@ class AssignmentGroupsAPI(CanvasAPIBase):
 
             # Validate include dependencies
             if "discussion_topic" in include and "assignments" not in include:
-                raise ValueError("'discussion_topic' requires 'assignments' to be included")
+                raise ValueError(
+                    "'discussion_topic' requires 'assignments' to be included"
+                )
             if "assignment_visibility" in include and "assignments" not in include:
-                raise ValueError("'assignment_visibility' requires 'assignments' to be included")
+                raise ValueError(
+                    "'assignment_visibility' requires 'assignments' to be included"
+                )
             if "submission" in include and "assignments" not in include:
                 raise ValueError("'submission' requires 'assignments' to be included")
             if "score_statistics" in include:
                 if "assignments" not in include or "submission" not in include:
-                    raise ValueError("'score_statistics' requires both 'assignments' and 'submission' to be included")
+                    raise ValueError(
+                        "'score_statistics' requires both 'assignments' and 'submission' to be included"
+                    )
 
         params = {}
 
@@ -197,7 +224,9 @@ class AssignmentGroupsAPI(CanvasAPIBase):
             params["grading_period_id"] = grading_period_id
 
         response = self._make_request(
-            "GET", f"/api/v1/courses/{course_id}/assignment_groups/{assignment_group_id}", params=params
+            "GET",
+            f"/api/v1/courses/{course_id}/assignment_groups/{assignment_group_id}",
+            params=params,
         )
         return response.json()
 
@@ -289,7 +318,7 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         if rules is not None:
             if not isinstance(rules, dict):
                 raise ValueError("Rules must be a dictionary")
-            
+
             valid_rule_keys = {"drop_lowest", "drop_highest", "never_drop"}
             invalid_keys = set(rules.keys()) - valid_rule_keys
             if invalid_keys:
@@ -298,12 +327,16 @@ class AssignmentGroupsAPI(CanvasAPIBase):
                     f"Allowed keys: {', '.join(sorted(valid_rule_keys))}"
                 )
 
-            if "drop_lowest" in rules and (not isinstance(rules["drop_lowest"], int) or rules["drop_lowest"] < 0):
+            if "drop_lowest" in rules and (
+                not isinstance(rules["drop_lowest"], int) or rules["drop_lowest"] < 0
+            ):
                 raise ValueError("drop_lowest must be a non-negative integer")
-            
-            if "drop_highest" in rules and (not isinstance(rules["drop_highest"], int) or rules["drop_highest"] < 0):
+
+            if "drop_highest" in rules and (
+                not isinstance(rules["drop_highest"], int) or rules["drop_highest"] < 0
+            ):
                 raise ValueError("drop_highest must be a non-negative integer")
-            
+
             if "never_drop" in rules and not isinstance(rules["never_drop"], list):
                 raise ValueError("never_drop must be a list of assignment IDs")
 
@@ -323,7 +356,9 @@ class AssignmentGroupsAPI(CanvasAPIBase):
             data["rules"] = rules
 
         response = self._make_request(
-            "PUT", f"/api/v1/courses/{course_id}/assignment_groups/{assignment_group_id}", data=data
+            "PUT",
+            f"/api/v1/courses/{course_id}/assignment_groups/{assignment_group_id}",
+            data=data,
         )
         return response.json()
 
@@ -348,7 +383,7 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         Example:
             # Delete group and move assignments to another group
             result = api.delete_assignment_group(123, 456, move_assignments_to=789)
-            
+
             # Delete group and all its assignments
             result = api.delete_assignment_group(123, 456)
         """
@@ -357,7 +392,9 @@ class AssignmentGroupsAPI(CanvasAPIBase):
             params["move_assignments_to"] = move_assignments_to
 
         response = self._make_request(
-            "DELETE", f"/api/v1/courses/{course_id}/assignment_groups/{assignment_group_id}", params=params
+            "DELETE",
+            f"/api/v1/courses/{course_id}/assignment_groups/{assignment_group_id}",
+            params=params,
         )
         return response.json()
 
