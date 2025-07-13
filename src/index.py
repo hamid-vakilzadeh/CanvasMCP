@@ -1,5 +1,5 @@
 from fastmcp import FastMCP
-from typing import Annotated
+from typing import Annotated, Literal
 from datetime import datetime
 
 from pydantic import Field
@@ -144,7 +144,7 @@ async def list_modules(
         str | int, Field(description="The course ID to list modules from")
     ],
     include: Annotated[
-        list[str] | str | None,
+        list[Literal["items", "content_details"]] | str | None,
         Field(description="Additional data to include: 'items', 'content_details'"),
     ] = None,
     search_term: Annotated[
@@ -171,7 +171,7 @@ async def show_module(
     course_id: Annotated[str | int, Field(description="The course ID")],
     module_id: Annotated[str | int, Field(description="The module ID to show")],
     include: Annotated[
-        list[str] | str | None,
+        list[Literal["items", "content_details"]] | str | None,
         Field(description="Additional data to include: 'items', 'content_details'"),
     ] = None,
     student_id: Annotated[
@@ -266,7 +266,7 @@ async def list_module_items(
         str | int, Field(description="The module ID to list items from")
     ],
     include: Annotated[
-        list[str] | str | None,
+        list[Literal["content_details"]] | str | None,
         Field(description="Additional data to include: 'content_details'"),
     ] = None,
     search_term: Annotated[
@@ -295,7 +295,7 @@ async def show_module_item(
     module_id: Annotated[str | int, Field(description="The module ID")],
     item_id: Annotated[str | int, Field(description="The module item ID to show")],
     include: Annotated[
-        list[str] | str | None,
+        list[Literal["content_details"]] | str | None,
         Field(description="Additional data to include: 'content_details'"),
     ] = None,
     student_id: Annotated[
@@ -319,7 +319,16 @@ async def create_module_item(
     course_id: Annotated[str | int, Field(description="The course ID")],
     module_id: Annotated[str | int, Field(description="The module ID to add item to")],
     item_type: Annotated[
-        str,
+        Literal[
+            "File",
+            "Page",
+            "Discussion",
+            "Assignment",
+            "Quiz",
+            "SubHeader",
+            "ExternalUrl",
+            "ExternalTool",
+        ],
         Field(
             description="Type of content: File, Page, Discussion, Assignment, Quiz, SubHeader, ExternalUrl, ExternalTool"
         ),
@@ -351,7 +360,7 @@ async def create_module_item(
         Field(description="Whether external tool opens in new tab (ExternalTool only)"),
     ] = None,
     completion_requirement_type: Annotated[
-        str | None,
+        Literal["must_view", "must_contribute", "must_submit", "must_mark_done"] | None,
         Field(
             description="Completion requirement: must_view, must_contribute, must_submit, must_mark_done"
         ),
@@ -411,7 +420,7 @@ async def update_module_item(
         Field(description="Whether external tool opens in new tab (ExternalTool only)"),
     ] = None,
     completion_requirement_type: Annotated[
-        str | None,
+        Literal["must_view", "must_contribute", "must_submit", "must_mark_done"] | None,
         Field(
             description="Completion requirement: must_view, must_contribute, must_submit, must_mark_done"
         ),
