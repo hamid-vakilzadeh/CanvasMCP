@@ -183,7 +183,7 @@ class QuizQuestionsAPI(CanvasAPIBase):
             data["question[answers]"] = answers
 
         endpoint = f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/questions"
-        response = self._make_request("POST", endpoint, json_data=data)
+        response = self._make_request("POST", endpoint, data=data)
         return response.json()
 
     def update_quiz_question(
@@ -288,7 +288,7 @@ class QuizQuestionsAPI(CanvasAPIBase):
             data["question[answers]"] = answers
 
         endpoint = f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/questions/{question_id}"
-        response = self._make_request("PUT", endpoint, json_data=data)
+        response = self._make_request("PUT", endpoint, data=data)
         return response.json()
 
     def delete_quiz_question(
