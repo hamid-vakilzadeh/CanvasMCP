@@ -180,7 +180,9 @@ class QuizQuestionsAPI(CanvasAPIBase):
         if quiz_group_id is not None:
             data["question[quiz_group_id]"] = quiz_group_id
         if answers is not None:
-            data["question[answers]"] = answers
+            for i, answer in enumerate(answers):
+                for key, value in answer.items():
+                    data[f"question[answers][{i}][{key}]"] = value
 
         endpoint = f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/questions"
         response = self._make_request("POST", endpoint, data=data)
@@ -285,7 +287,9 @@ class QuizQuestionsAPI(CanvasAPIBase):
         if quiz_group_id is not None:
             data["question[quiz_group_id]"] = quiz_group_id
         if answers is not None:
-            data["question[answers]"] = answers
+            for i, answer in enumerate(answers):
+                for key, value in answer.items():
+                    data[f"question[answers][{i}][{key}]"] = value
 
         endpoint = f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/questions/{question_id}"
         response = self._make_request("PUT", endpoint, data=data)
