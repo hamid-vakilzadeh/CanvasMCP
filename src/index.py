@@ -11,16 +11,8 @@ from canvasAPI.quiz import quizzes, quiz_questions
 
 def validate_and_convert_params(**kwargs):
     """
-    Validate and convert parameter values to their expected types.
-
-    Converts:
-    - String representations of numbers to int/float
-    - String representations of booleans to bool
-    - String representations of lists to actual lists
-    - JSON-like string representations of lists
+    Validate and convert parameter values to their expected types using eval().
     """
-    import json
-    import re
 
     converted = {}
 
@@ -29,39 +21,16 @@ def validate_and_convert_params(**kwargs):
             converted[key] = value
             continue
 
-        # Convert string numbers to int
-        if isinstance(value, str) and value.isdigit():
-            converted[key] = int(value)
-        # Convert string floats to float
-        elif isinstance(value, str) and value.replace(".", "", 1).isdigit():
-            converted[key] = float(value)
-        # Convert string booleans to bool
-        elif isinstance(value, str) and value.lower() in ("true", "false"):
-            converted[key] = value.lower() == "true"
-        # Convert JSON-like string lists [1,2,3] or [3872065]
-        elif (
-            isinstance(value, str)
-            and value.strip().startswith("[")
-            and value.strip().endswith("]")
-        ):
-            try:
-                # Try to parse as JSON
-                converted[key] = json.loads(value)
-            except json.JSONDecodeError:
-                # Fallback: extract numbers from [3872065] format
-                numbers = re.findall(r"\d+", value)
-                if numbers:
-                    converted[key] = [int(num) for num in numbers]
-                else:
-                    converted[key] = value
-        # Convert string lists (basic comma-separated)
-        elif isinstance(value, str) and "," in value:
-            # Try to convert to list of ints if all elements are numeric
-            try:
-                converted[key] = [int(x.strip()) for x in value.split(",")]
-            except ValueError:
-                converted[key] = [x.strip() for x in value.split(",")]
-        else:
+        # Keep non-strings as-is
+        if not isinstance(value, str):
+            converted[key] = value
+            continue
+
+        # Try to eval the string to convert it to proper type
+        try:
+            converted[key] = eval(value)
+        except (SyntaxError, NameError, ValueError, TypeError):
+            # If eval fails, keep as string
             converted[key] = value
 
     return converted
@@ -844,6 +813,10 @@ async def create_quiz_question(
         int | str | None,
         Field(description="The id of the quiz group to assign the question to"),
     ] = None,
+    answers: Annotated[
+        list[dict] | str | None,
+        Field(description="The answers"),
+    ] = None,
 ) -> dict:
     """Create a new quiz question for this quiz."""
     params = validate_and_convert_params(
@@ -859,6 +832,7 @@ async def create_quiz_question(
         neutral_comments=neutral_comments,
         text_after_answers=text_after_answers,
         quiz_group_id=quiz_group_id,
+        answers=answers,
     )
     return quiz_questions.create_quiz_question(**params)
 
@@ -924,6 +898,10 @@ async def update_quiz_question(
         int | str | None,
         Field(description="The id of the quiz group to assign the question to"),
     ] = None,
+    answers: Annotated[
+        list[dict] | str | None,
+        Field(description="The answers"),
+    ] = None,
 ) -> dict:
     """Update an existing quiz question for this quiz."""
     params = validate_and_convert_params(
@@ -940,6 +918,7 @@ async def update_quiz_question(
         neutral_comments=neutral_comments,
         text_after_answers=text_after_answers,
         quiz_group_id=quiz_group_id,
+        answers=answers,
     )
     return quiz_questions.update_quiz_question(**params)
 
