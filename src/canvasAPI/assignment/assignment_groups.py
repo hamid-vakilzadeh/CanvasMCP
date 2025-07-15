@@ -1,5 +1,42 @@
-from typing import List, Dict, Union, Literal, Optional
+from typing import List, Dict, Union, Literal, Optional, TypedDict
 from ..base import CanvasAPIBase
+
+
+class Appointment(TypedDict):
+    """Date and time for an appointment."""
+    id: int
+    start_at: str
+    end_at: str
+
+
+class AppointmentGroup(TypedDict):
+    """An appointment group object."""
+    id: int
+    title: str
+    start_at: str
+    end_at: str
+    description: str
+    location_name: str
+    location_address: str
+    participant_count: int
+    reserved_times: List[Appointment]
+    allow_observer_signup: bool
+    context_codes: List[str]
+    sub_context_codes: List[str]
+    workflow_state: Literal["pending", "active", "deleted"]
+    requiring_action: bool
+    appointments_count: int
+    appointments: List[Dict]
+    new_appointments: List[Dict]
+    max_appointments_per_participant: Optional[int]
+    min_appointments_per_participant: Optional[int]
+    participants_per_appointment: Optional[int]
+    participant_visibility: Literal["private", "protected"]
+    participant_type: Literal["User", "Group"]
+    url: str
+    html_url: str
+    created_at: str
+    updated_at: str
 
 
 class AssignmentGroupsAPI(CanvasAPIBase):
