@@ -1,42 +1,26 @@
-from typing import List, Dict, Union, Literal, Optional, TypedDict
+from typing import List, Dict, Union, Literal, Optional
 from ..base import CanvasAPIBase
 
 
-class Appointment(TypedDict):
-    """Date and time for an appointment."""
-    id: int
-    start_at: str
-    end_at: str
+class GradingRules(Dict):
+    """Grading Rules for an assignment."""
+
+    drop_lowest: int
+    drop_highest: int
+    never_drop: List[int]
 
 
-class AppointmentGroup(TypedDict):
-    """An appointment group object."""
+class AssignmentGroup(Dict):
+    """An assignment group object."""
+
     id: int
-    title: str
-    start_at: str
-    end_at: str
-    description: str
-    location_name: str
-    location_address: str
-    participant_count: int
-    reserved_times: List[Appointment]
-    allow_observer_signup: bool
-    context_codes: List[str]
-    sub_context_codes: List[str]
-    workflow_state: Literal["pending", "active", "deleted"]
-    requiring_action: bool
-    appointments_count: int
-    appointments: List[Dict]
-    new_appointments: List[Dict]
-    max_appointments_per_participant: Optional[int]
-    min_appointments_per_participant: Optional[int]
-    participants_per_appointment: Optional[int]
-    participant_visibility: Literal["private", "protected"]
-    participant_type: Literal["User", "Group"]
-    url: str
-    html_url: str
-    created_at: str
-    updated_at: str
+    name: str
+    position: int
+    group_weight: int
+    sis_source_id: str
+    integration_data: dict
+    assignments: list
+    rules: Union[GradingRules, None]
 
 
 class AssignmentGroupsAPI(CanvasAPIBase):
@@ -80,7 +64,7 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         grading_period_id: Optional[int] = None,
         scope_assignments_to_student: bool = False,
         all_page: bool = False,
-    ) -> List[Dict]:
+    ) -> List[AssignmentGroup]:
         """
         List assignment groups for a course.
 
@@ -208,7 +192,7 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         ] = None,
         override_assignment_dates: bool = True,
         grading_period_id: Optional[int] = None,
-    ) -> Dict:
+    ) -> AssignmentGroup:
         """
         Get a specific assignment group.
 
@@ -282,7 +266,7 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         group_weight: Optional[float] = None,
         sis_source_id: Optional[str] = None,
         integration_data: Optional[Dict] = None,
-    ) -> Dict:
+    ) -> AssignmentGroup:
         """
         Create a new assignment group.
 
@@ -332,7 +316,7 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         sis_source_id: Optional[str] = None,
         integration_data: Optional[Dict] = None,
         rules: Optional[Dict] = None,
-    ) -> Dict:
+    ) -> AssignmentGroup:
         """
         Update an existing assignment group.
 
@@ -411,7 +395,7 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         course_id: Union[int, str],
         assignment_group_id: Union[int, str],
         move_assignments_to: Optional[Union[int, str]] = None,
-    ) -> Dict:
+    ) -> AssignmentGroup:
         """
         Delete an assignment group.
 
