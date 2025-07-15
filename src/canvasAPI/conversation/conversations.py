@@ -1,5 +1,106 @@
-from typing import List, Dict, Union, Literal, Optional
+from typing import List, Dict, Union, Literal, Optional, TypedDict
 from ..base import CanvasAPIBase
+
+
+class ConversationParticipant(TypedDict):
+    """A participant in a conversation."""
+    id: int
+    name: str
+    full_name: str
+    avatar_url: Optional[str]  # Only included if participant_avatars is requested
+
+
+class ConversationAudienceContexts(TypedDict):
+    """Audience contexts for a conversation."""
+    courses: Dict[str, List[str]]
+    groups: Dict[str, List[str]]
+
+
+class ConversationAttachment(TypedDict):
+    """An attachment in a conversation message."""
+    id: int
+    display_name: str
+    uuid: str
+    filename: Optional[str]
+    url: Optional[str]
+    content_type: Optional[str]
+
+
+class ConversationMediaComment(TypedDict):
+    """A media comment in a conversation message."""
+    display_name: str
+    content_type: str
+    media_id: str
+    media_type: str
+    url: str
+
+
+class ConversationMessage(TypedDict):
+    """A message in a conversation."""
+    id: int
+    created_at: str
+    body: str
+    author_id: int
+    generated: bool
+    media_comment: Optional[ConversationMediaComment]
+    forwarded_messages: List['ConversationMessage']
+    attachments: List[ConversationAttachment]
+
+
+class ConversationBatchMessage(TypedDict):
+    """A message in a conversation batch."""
+    id: int
+    created_at: str
+    body: str
+    author_id: int
+    generated: bool
+    media_comment: Optional[ConversationMediaComment]
+    forwarded_messages: List[ConversationMessage]
+    attachments: List[ConversationAttachment]
+
+
+class ConversationBatch(TypedDict):
+    """A conversation batch for tracking async operations."""
+    id: int
+    subject: str
+    workflow_state: str
+    completion: float
+    tags: List[str]
+    message: ConversationBatchMessage
+
+
+class Conversation(TypedDict):
+    """A conversation object."""
+    id: int
+    subject: str
+    workflow_state: Literal["read", "unread", "archived"]
+    last_message: Optional[str]
+    last_message_at: Optional[str]
+    start_at: Optional[str]  # deprecated field, shown in docs but use last_message_at
+    message_count: int
+    subscribed: bool
+    private: bool
+    starred: Optional[bool]  # Can be null in some responses
+    properties: Optional[List[str]]  # Can contain "last_author", "attachments", "media_objects"
+    audience: Optional[List[int]]
+    audience_contexts: Optional[ConversationAudienceContexts]
+    avatar_url: Optional[str]
+    participants: Optional[List[ConversationParticipant]]
+    visible: bool
+    context_name: Optional[str]
+    messages: Optional[List[ConversationMessage]]  # Only present in get_conversation
+    submissions: Optional[List[Dict]]  # Obsolete field
+
+
+class ConversationListResponse(TypedDict):
+    """Response for list_conversations when include_all_conversation_ids is True."""
+    conversations: List[Conversation]
+    conversation_ids: List[int]
+
+
+class UnreadCountResponse(TypedDict):
+    """Response for unread_count method."""
+    unread_count: str
 
 
 class ConversationsAPI(CanvasAPIBase):
@@ -24,7 +125,7 @@ class ConversationsAPI(CanvasAPIBase):
         include_all_conversation_ids: bool = False,
         include: Optional[List[Literal["participant_avatars"]]] = None,
         all_pages: bool = False,
-    ) -> Union[List[Dict], Dict]:
+    ) -> Union[List[Conversation], ConversationListResponse]:
         """
         List conversations for the current user.
 
@@ -38,7 +139,7 @@ class ConversationsAPI(CanvasAPIBase):
             all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
-            List of Conversation dictionaries or object with conversations and conversation_ids
+            List of Conversation objects or ConversationListResponse with conversations and conversation_ids
 
         Raises:
             ValueError: If invalid scope, filter_mode, or include values are provided
@@ -106,7 +207,7 @@ class ConversationsAPI(CanvasAPIBase):
         filter: Optional[List[str]] = None,
         filter_mode: Literal["and", "or"] = "or",
         context_code: Optional[str] = None,
-    ) -> Union[List[Dict], Dict]:
+    ) -> Union[List[Conversation], Conversation]:
         """
         Create a new conversation with one or more recipients.
 
@@ -208,12 +309,12 @@ class ConversationsAPI(CanvasAPIBase):
         response = self._make_request("POST", "/api/v1/conversations", data=data)
         return response.json()
 
-    def get_running_batches(self) -> List[Dict]:
+    def get_running_batches(self) -> List[ConversationBatch]:
         """
         Get any currently running conversation batches for the current user.
 
         Returns:
-            List of batch dictionaries with id, subject, workflow_state, completion, etc.
+            List of ConversationBatch objects with id, subject, workflow_state, completion, etc.
 
         Note:
             Conversation batches are created when bulk private messages are sent asynchronously.
@@ -229,7 +330,7 @@ class ConversationsAPI(CanvasAPIBase):
         filter: Optional[List[str]] = None,
         filter_mode: Literal["and", "or"] = "or",
         auto_mark_as_read: bool = True,
-    ) -> Dict:
+    ) -> Conversation:
         """
         Get information for a single conversation.
 
@@ -242,7 +343,7 @@ class ConversationsAPI(CanvasAPIBase):
             auto_mark_as_read: Automatically mark unread conversations as read
 
         Returns:
-            Conversation dictionary with messages and extended participant info
+            Conversation object with messages and extended participant info
 
         Raises:
             ValueError: If invalid scope or filter_mode values are provided
@@ -291,7 +392,7 @@ class ConversationsAPI(CanvasAPIBase):
         scope: Optional[Literal["unread", "starred", "archived"]] = None,
         filter: Optional[List[str]] = None,
         filter_mode: Literal["and", "or"] = "or",
-    ) -> Dict:
+    ) -> Conversation:
         """
         Update attributes for a single conversation.
 
@@ -305,7 +406,7 @@ class ConversationsAPI(CanvasAPIBase):
             filter_mode: How to combine filters
 
         Returns:
-            Updated Conversation dictionary
+            Updated Conversation object
 
         Raises:
             ValueError: If invalid workflow_state, scope, or filter_mode values are provided
@@ -366,7 +467,7 @@ class ConversationsAPI(CanvasAPIBase):
         response = self._make_request("POST", "/api/v1/conversations/mark_all_as_read")
         return response.json()
 
-    def delete_conversation(self, conversation_id: Union[int, str]) -> Dict:
+    def delete_conversation(self, conversation_id: Union[int, str]) -> Conversation:
         """
         Delete a conversation and its messages.
 
@@ -374,7 +475,7 @@ class ConversationsAPI(CanvasAPIBase):
             conversation_id: Conversation ID
 
         Returns:
-            Deleted conversation dictionary
+            Deleted conversation object
 
         Note:
             This only deletes the current user's view of the conversation.
@@ -388,7 +489,7 @@ class ConversationsAPI(CanvasAPIBase):
         self,
         conversation_id: Union[int, str],
         recipients: List[str],
-    ) -> Dict:
+    ) -> Conversation:
         """
         Add recipients to an existing group conversation.
 
@@ -397,7 +498,7 @@ class ConversationsAPI(CanvasAPIBase):
             recipients: Array of recipient IDs (user_123, course_456, group_789)
 
         Returns:
-            Updated conversation dictionary with latest message
+            Updated conversation object with latest message
 
         Raises:
             ValueError: If recipients is empty
@@ -421,7 +522,7 @@ class ConversationsAPI(CanvasAPIBase):
         media_comment_type: Optional[Literal["audio", "video"]] = None,
         recipients: Optional[List[str]] = None,
         included_messages: Optional[List[str]] = None,
-    ) -> Dict:
+    ) -> Conversation:
         """
         Add a message to an existing conversation.
 
@@ -435,7 +536,7 @@ class ConversationsAPI(CanvasAPIBase):
             included_messages: Message IDs from this conversation to forward
 
         Returns:
-            Updated conversation dictionary with latest message
+            Updated conversation object with latest message
 
         Raises:
             ValueError: If body is empty or media_comment_type is invalid
@@ -477,7 +578,7 @@ class ConversationsAPI(CanvasAPIBase):
         self,
         conversation_id: Union[int, str],
         remove: List[str],
-    ) -> Dict:
+    ) -> Conversation:
         """
         Delete messages from a conversation.
 
@@ -486,7 +587,7 @@ class ConversationsAPI(CanvasAPIBase):
             remove: Array of message IDs to delete
 
         Returns:
-            Updated conversation dictionary
+            Updated conversation object
 
         Raises:
             ValueError: If remove list is empty
@@ -577,12 +678,12 @@ class ConversationsAPI(CanvasAPIBase):
         )
         return response.json()
 
-    def unread_count(self) -> Dict:
+    def unread_count(self) -> UnreadCountResponse:
         """
         Get the number of unread conversations for the current user.
 
         Returns:
-            Dictionary with unread_count key
+            UnreadCountResponse object with unread_count key
         """
         response = self._make_request("GET", "/api/v1/conversations/unread_count")
         return response.json()
