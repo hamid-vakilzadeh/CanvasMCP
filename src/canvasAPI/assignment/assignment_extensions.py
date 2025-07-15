@@ -1,5 +1,19 @@
-from typing import List, Dict, Union
+from typing import List, Dict, Union, TypedDict
 from ..base import CanvasAPIBase
+
+
+class AssignmentExtension(TypedDict, total=False):
+    "Assignment Extension Object"
+
+    assignment_id: int
+    user_id: int
+    extra_attempts: int
+
+
+class AssignmentExtensions(Dict):
+    "Response of the AssignmentExtensionsAPI"
+
+    assignment_extensions: AssignmentExtension
 
 
 class AssignmentExtensionsAPI(CanvasAPIBase):
@@ -20,7 +34,7 @@ class AssignmentExtensionsAPI(CanvasAPIBase):
         course_id: Union[int, str],
         assignment_id: Union[int, str],
         extensions: List[Dict[str, int]],
-    ) -> Dict:
+    ) -> AssignmentExtensions:
         """
         Set extensions for student assignment submissions.
 
@@ -82,13 +96,13 @@ class AssignmentExtensionsAPI(CanvasAPIBase):
         )
         return response.json()
 
-    def set_single_assignment_extension(
+    def set_single_student_assignment_extension(
         self,
         course_id: Union[int, str],
         assignment_id: Union[int, str],
         user_id: int,
         extra_attempts: int,
-    ) -> Dict:
+    ) -> AssignmentExtensions:
         """
         Set extension for a single student assignment submission.
 
