@@ -1,6 +1,7 @@
-from typing import List, Dict, Union, Optional, Literal
+from typing import List, Union, Optional, Literal
 from datetime import datetime, date
 from ..base import CanvasAPIBase
+from ..discussionTopic.discussionTopics import DiscussionTopic
 
 
 class AnnouncementsAPI(CanvasAPIBase):
@@ -26,7 +27,7 @@ class AnnouncementsAPI(CanvasAPIBase):
         latest_only: Optional[bool] = None,
         include: Optional[List[Literal["sections", "sections_user_count"]]] = None,
         all_pages: bool = False,
-    ) -> List[Dict]:
+    ) -> List[DiscussionTopic]:
         """
         List announcements for the given courses and date range.
 
