@@ -1,6 +1,66 @@
-from typing import List, Dict, Union, Optional, Literal
+from typing import List, Dict, Union, Optional, Literal, TypedDict
 from datetime import datetime
 from ..base import CanvasAPIBase
+
+
+class BlockEditorAttributes(TypedDict):
+    """Block editor attributes for a page."""
+
+    id: int
+    version: str
+    blocks: str  # JSON string containing block data
+
+
+class PageUser(TypedDict):
+    """A user associated with a page (e.g., last_edited_by)."""
+
+    id: int
+    name: str
+    full_name: str
+    avatar_url: Optional[str]
+
+
+class PageLockInfo(TypedDict):
+    """Information about page locks."""
+
+    asset_string: str
+    unlock_at: Optional[str]
+    lock_at: Optional[str]
+    context_module: Optional[Dict]
+
+
+class Page(TypedDict):
+    """A wiki page object."""
+
+    page_id: int
+    url: str
+    title: str
+    created_at: str
+    updated_at: str
+    hide_from_students: bool  # Deprecated, always reflects inverse of published
+    editing_roles: Optional[str]
+    last_edited_by: Optional[PageUser]
+    body: Optional[str]  # Present when requesting single page or when included
+    published: bool
+    publish_at: Optional[str]
+    front_page: bool
+    locked_for_user: bool
+    lock_info: Optional[PageLockInfo]
+    lock_explanation: Optional[str]
+    editor: Optional[Literal["rce", "block_editor"]]
+    block_editor_attributes: Optional[BlockEditorAttributes]
+
+
+class PageRevision(TypedDict):
+    """A page revision object."""
+
+    revision_id: int
+    updated_at: str
+    latest: bool
+    edited_by: Optional[PageUser]
+    url: Optional[str]  # Only in show action, not index
+    title: Optional[str]  # Only in show action, not index
+    body: Optional[str]  # Only in show action, not index
 
 
 class PagesAPI(CanvasAPIBase):
@@ -20,7 +80,7 @@ class PagesAPI(CanvasAPIBase):
         self,
         context_type: Literal["courses", "groups"],
         context_id: Union[int, str],
-    ) -> Dict:
+    ) -> Page:
         """
         Retrieve the content of the front page.
 
@@ -29,7 +89,7 @@ class PagesAPI(CanvasAPIBase):
             context_id: Course or group ID
 
         Returns:
-            Page dictionary
+            Page object
         """
         response = self._make_request(
             "GET", f"/api/v1/{context_type}/{context_id}/front_page"
@@ -40,7 +100,7 @@ class PagesAPI(CanvasAPIBase):
         self,
         course_id: Union[int, str],
         url_or_id: Union[str, int],
-    ) -> Dict:
+    ) -> Page:
         """
         Duplicate a wiki page.
 
@@ -49,7 +109,7 @@ class PagesAPI(CanvasAPIBase):
             url_or_id: Page URL or ID
 
         Returns:
-            Duplicated Page dictionary
+            Duplicated Page object
         """
         response = self._make_request(
             "POST", f"/api/v1/courses/{course_id}/pages/{url_or_id}/duplicate"
@@ -65,7 +125,7 @@ class PagesAPI(CanvasAPIBase):
         editing_roles: Optional[str] = None,
         notify_of_update: Optional[bool] = None,
         published: Optional[bool] = None,
-    ) -> Dict:
+    ) -> Page:
         """
         Update the title or contents of the front page.
 
@@ -79,7 +139,7 @@ class PagesAPI(CanvasAPIBase):
             published: Whether the page is published (true) or draft state (false)
 
         Returns:
-            Updated Page dictionary
+            Updated Page object
 
         Raises:
             ValueError: If editing_roles contains invalid values
@@ -122,7 +182,7 @@ class PagesAPI(CanvasAPIBase):
         published: Optional[bool] = None,
         include: Optional[List[Literal["body"]]] = None,
         all_pages: bool = False,
-    ) -> List[Dict]:
+    ) -> List[Page]:
         """
         List wiki pages associated with a course or group.
 
@@ -137,7 +197,7 @@ class PagesAPI(CanvasAPIBase):
             all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
-            List of Page dictionaries
+            List of Page objects
 
         Raises:
             ValueError: If sort, order, or include values are invalid
@@ -204,7 +264,7 @@ class PagesAPI(CanvasAPIBase):
         published: Optional[bool] = None,
         front_page: Optional[bool] = None,
         publish_at: Optional[datetime] = None,
-    ) -> Dict:
+    ) -> Page:
         """
         Create a new wiki page.
 
@@ -220,7 +280,7 @@ class PagesAPI(CanvasAPIBase):
             publish_at: Schedule a future date/time to publish the page
 
         Returns:
-            Created Page dictionary
+            Created Page object
 
         Raises:
             ValueError: If title is empty or editing_roles contains invalid values
@@ -263,7 +323,7 @@ class PagesAPI(CanvasAPIBase):
         context_type: Literal["courses", "groups"],
         context_id: Union[int, str],
         url_or_id: Union[str, int],
-    ) -> Dict:
+    ) -> Page:
         """
         Retrieve the content of a wiki page.
 
@@ -273,7 +333,7 @@ class PagesAPI(CanvasAPIBase):
             url_or_id: Page URL or ID
 
         Returns:
-            Page dictionary
+            Page object
         """
         response = self._make_request(
             "GET", f"/api/v1/{context_type}/{context_id}/pages/{url_or_id}"
@@ -292,7 +352,7 @@ class PagesAPI(CanvasAPIBase):
         published: Optional[bool] = None,
         publish_at: Optional[datetime] = None,
         front_page: Optional[bool] = None,
-    ) -> Dict:
+    ) -> Page:
         """
         Update the title or contents of a wiki page.
 
@@ -309,7 +369,7 @@ class PagesAPI(CanvasAPIBase):
             front_page: Set an unhidden page as the front page (if true)
 
         Returns:
-            Updated Page dictionary
+            Updated Page object
 
         Raises:
             ValueError: If title is empty or editing_roles contains invalid values
@@ -354,7 +414,7 @@ class PagesAPI(CanvasAPIBase):
         context_type: Literal["courses", "groups"],
         context_id: Union[int, str],
         url_or_id: Union[str, int],
-    ) -> Dict:
+    ) -> Page:
         """
         Delete a wiki page.
 
@@ -364,7 +424,7 @@ class PagesAPI(CanvasAPIBase):
             url_or_id: Page URL or ID
 
         Returns:
-            Deleted Page dictionary
+            Deleted Page object
         """
         response = self._make_request(
             "DELETE", f"/api/v1/{context_type}/{context_id}/pages/{url_or_id}"
@@ -377,7 +437,7 @@ class PagesAPI(CanvasAPIBase):
         context_id: Union[int, str],
         url_or_id: Union[str, int],
         all_pages: bool = False,
-    ) -> List[Dict]:
+    ) -> List[PageRevision]:
         """
         List revisions of a page. Requires update rights on the page.
 
@@ -388,15 +448,17 @@ class PagesAPI(CanvasAPIBase):
             all_pages: If True, fetch all pages automatically. If False, return only first page.
 
         Returns:
-            List of PageRevision dictionaries
+            List of PageRevision objects
         """
         if all_pages:
             return self._get_all_pages(
-                "GET", f"/api/v1/{context_type}/{context_id}/pages/{url_or_id}/revisions"
+                "GET",
+                f"/api/v1/{context_type}/{context_id}/pages/{url_or_id}/revisions",
             )
         else:
             response = self._make_request(
-                "GET", f"/api/v1/{context_type}/{context_id}/pages/{url_or_id}/revisions"
+                "GET",
+                f"/api/v1/{context_type}/{context_id}/pages/{url_or_id}/revisions",
             )
             return response.json()
 
@@ -407,7 +469,7 @@ class PagesAPI(CanvasAPIBase):
         url_or_id: Union[str, int],
         revision_id: Union[str, int] = "latest",
         summary: Optional[bool] = None,
-    ) -> Dict:
+    ) -> PageRevision:
         """
         Retrieve the metadata and optionally content of a revision of the page.
 
@@ -419,7 +481,7 @@ class PagesAPI(CanvasAPIBase):
             summary: If set, exclude page content from results
 
         Returns:
-            PageRevision dictionary
+            PageRevision object
         """
         params = {}
 
@@ -439,7 +501,7 @@ class PagesAPI(CanvasAPIBase):
         context_id: Union[int, str],
         url_or_id: Union[str, int],
         revision_id: Union[int, str],
-    ) -> Dict:
+    ) -> PageRevision:
         """
         Revert a page to a prior revision.
 
@@ -450,7 +512,7 @@ class PagesAPI(CanvasAPIBase):
             revision_id: The revision to revert to
 
         Returns:
-            PageRevision dictionary
+            PageRevision object
         """
         response = self._make_request(
             "POST",
