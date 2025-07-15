@@ -1,8 +1,8 @@
-from typing import List, Dict, Union, Literal, Optional
+from typing import List, Dict, Union, Literal, Optional, TypedDict
 from ..base import CanvasAPIBase
 
 
-class GradingRules(Dict):
+class GradingRules(TypedDict):
     """Grading Rules for an assignment."""
 
     drop_lowest: int
@@ -10,7 +10,7 @@ class GradingRules(Dict):
     never_drop: List[int]
 
 
-class AssignmentGroup(Dict):
+class AssignmentGroup(TypedDict):
     """An assignment group object."""
 
     id: int
@@ -20,7 +20,7 @@ class AssignmentGroup(Dict):
     sis_source_id: str
     integration_data: dict
     assignments: list
-    rules: Union[GradingRules, None]
+    rules: Optional[GradingRules]
 
 
 class AssignmentGroupsAPI(CanvasAPIBase):
