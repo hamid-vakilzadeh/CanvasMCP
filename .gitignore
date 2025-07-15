@@ -18,3 +18,7 @@ temp
 __pycache__
 docs
 examples
+
+# temp files
+src/tools/README.md
+src/MIGRATION_GUIDE.md
