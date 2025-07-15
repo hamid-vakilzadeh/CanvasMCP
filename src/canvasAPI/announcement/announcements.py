@@ -32,11 +32,11 @@ class AnnouncementsAPI(CanvasAPIBase):
 
         Args:
             context_codes: List of context codes to retrieve announcements for (e.g., ['course_123'])
-            start_date: Only return announcements posted since the start_date (inclusive). 
+            start_date: Only return announcements posted since the start_date (inclusive).
                        Defaults to 14 days ago. Format: yyyy-mm-dd or ISO 8601 YYYY-MM-DDTHH:MM:SSZ
-            end_date: Only return announcements posted before the end_date (inclusive). 
+            end_date: Only return announcements posted before the end_date (inclusive).
                      Defaults to 28 days from start_date. Format: yyyy-mm-dd or ISO 8601 YYYY-MM-DDTHH:MM:SSZ
-            available_after: Only return announcements having locked_at nil or after available_after. 
+            available_after: Only return announcements having locked_at nil or after available_after.
                            Format: yyyy-mm-dd or ISO 8601 YYYY-MM-DDTHH:MM:SSZ
             active_only: Only return active announcements that have been published
             latest_only: Only return the latest announcement for each associated context
@@ -54,8 +54,10 @@ class AnnouncementsAPI(CanvasAPIBase):
 
         # Validate context codes format (should be like 'course_123')
         for context_code in context_codes:
-            if not isinstance(context_code, str) or '_' not in context_code:
-                raise ValueError(f"Invalid context_code format: '{context_code}'. Expected format: 'course_123'")
+            if not isinstance(context_code, str) or "_" not in context_code:
+                raise ValueError(
+                    f"Invalid context_code format: '{context_code}'. Expected format: 'course_123'"
+                )
 
         # Validate include values
         if include is not None:
@@ -69,6 +71,7 @@ class AnnouncementsAPI(CanvasAPIBase):
 
         params = {}
 
+        # TODO: Is this correct?
         # Add context codes as array parameters
         for i, context_code in enumerate(context_codes):
             params[f"context_codes[{i}]"] = context_code
