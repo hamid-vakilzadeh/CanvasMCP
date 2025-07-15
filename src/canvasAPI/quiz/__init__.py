@@ -7,6 +7,7 @@ from .course_quiz_extensions import CourseQuizExtensionsAPI, course_quiz_extensi
 from .quizzes import QuizzesAPI, quizzes
 from .quiz_questions import QuizQuestionsAPI, quiz_questions
 from .quiz_question_groups import QuizQuestionGroupsAPI, quiz_question_groups
+from .quiz_assignment_overrides import QuizAssignmentOverridesAPI, quiz_assignment_overrides
 
 __all__ = [
     "CourseQuizExtensionsAPI",
@@ -17,4 +18,6 @@ __all__ = [
     "quiz_questions",
     "QuizQuestionGroupsAPI",
     "quiz_question_groups",
+    "QuizAssignmentOverridesAPI",
+    "quiz_assignment_overrides",
 ]
