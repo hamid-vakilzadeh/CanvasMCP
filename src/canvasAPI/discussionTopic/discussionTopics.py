@@ -47,6 +47,49 @@ class DiscussionSummary(TypedDict, total=False):
     usage: Dict[str, int]
 
 
+class DiscussionTopic(TypedDict, total=False):
+    """Discussion topic object."""
+    
+    id: int
+    title: str
+    message: Optional[str]
+    html_url: str
+    posted_at: Optional[str]
+    last_reply_at: Optional[str]
+    require_initial_post: bool
+    user_can_see_posts: bool
+    discussion_subentry_count: int
+    read_state: Literal["read", "unread"]
+    unread_count: int
+    subscribed: bool
+    subscription_hold: Optional[Literal["initial_post_required", "not_in_group_set", "not_in_group", "topic_is_announcement"]]
+    assignment_id: Optional[int]
+    delayed_post_at: Optional[str]
+    published: bool
+    lock_at: Optional[str]
+    locked: bool
+    pinned: bool
+    locked_for_user: bool
+    lock_info: Optional[Dict]
+    lock_explanation: Optional[str]
+    user_name: str
+    topic_children: Optional[List[int]]  # Deprecated
+    group_topic_children: Optional[List[GroupTopicChild]]
+    root_topic_id: Optional[int]
+    podcast_url: Optional[str]
+    discussion_type: Literal["side_comment", "not_threaded", "threaded"]
+    group_category_id: Optional[int]
+    attachments: Optional[List[FileAttachment]]
+    permissions: Optional[DiscussionTopicPermissions]
+    allow_rating: bool
+    only_graders_can_rate: bool
+    sort_by_rating: bool  # Deprecated
+    sort_order: Literal["asc", "desc"]
+    sort_order_locked: bool
+    expand: bool
+    expand_locked: bool
+
+
 class DiscussionEntry(TypedDict, total=False):
     """Discussion entry object."""
     
@@ -64,6 +107,8 @@ class DiscussionEntry(TypedDict, total=False):
     recent_replies: Optional[List[Dict]]
     has_more_replies: Optional[bool]
     deleted: Optional[bool]
+    parent_id: Optional[int]
+    replies: Optional[List[Dict]]
 
 
 class DiscussionTopicsAPI(CanvasAPIBase):
@@ -91,7 +136,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         search_term: Optional[str] = None,
         exclude_context_module_locked_topics: Optional[bool] = None,
         all_pages: bool = False,
-    ) -> List[Dict]:
+    ) -> List[DiscussionTopic]:
         """
         List discussion topics for a course or group.
 
@@ -213,7 +258,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         sort_by_rating: Optional[bool] = None,
         specific_sections: Optional[str] = None,
         lock_comment: Optional[bool] = None,
-    ) -> Dict:
+    ) -> DiscussionTopic:
         """
         Create a new discussion topic for a course or group.
 
@@ -339,7 +384,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         group_id: Union[int, str] = None,
         topic_id: Union[int, str] = None,
         include: Optional[List[Literal["all_dates", "sections", "sections_user_count", "overrides"]]] = None,
-    ) -> Dict:
+    ) -> DiscussionTopic:
         """
         Get a single discussion topic.
 
@@ -415,7 +460,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         sort_by_rating: Optional[bool] = None,
         specific_sections: Optional[str] = None,
         lock_comment: Optional[bool] = None,
-    ) -> Dict:
+    ) -> DiscussionTopic:
         """
         Update an existing discussion topic.
 
@@ -622,7 +667,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         course_id: Union[int, str] = None,
         group_id: Union[int, str] = None,
         topic_id: Union[int, str] = None,
-    ) -> Dict:
+    ) -> DiscussionTopic:
         """
         Duplicate a discussion topic.
 
@@ -705,7 +750,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         group_id: Union[int, str] = None,
         topic_id: Union[int, str] = None,
         all_pages: bool = False,
-    ) -> List[Dict]:
+    ) -> List[DiscussionEntry]:
         """
         List top-level entries in a discussion topic.
 
@@ -748,7 +793,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         group_id: Union[int, str] = None,
         topic_id: Union[int, str] = None,
         message: str = None,
-    ) -> Dict:
+    ) -> DiscussionEntry:
         """
         Post a new entry to a discussion topic.
 
@@ -794,7 +839,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         topic_id: Union[int, str] = None,
         entry_id: Union[int, str] = None,
         all_pages: bool = False,
-    ) -> List[Dict]:
+    ) -> List[DiscussionEntry]:
         """
         List replies to a discussion entry.
 
@@ -842,7 +887,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         topic_id: Union[int, str] = None,
         entry_id: Union[int, str] = None,
         message: str = None,
-    ) -> Dict:
+    ) -> DiscussionEntry:
         """
         Post a reply to a discussion entry.
 
@@ -892,7 +937,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         topic_id: Union[int, str] = None,
         ids: List[Union[int, str]] = None,
         all_pages: bool = False,
-    ) -> List[Dict]:
+    ) -> List[DiscussionEntry]:
         """
         List specific discussion entries by their IDs.
 
@@ -942,7 +987,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         topic_id: Union[int, str] = None,
         entry_id: Union[int, str] = None,
         message: str = None,
-    ) -> Dict:
+    ) -> DiscussionEntry:
         """
         Update a discussion entry.
 
@@ -1447,7 +1492,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         course_id: Union[int, str] = None,
         group_id: Union[int, str] = None,
         topic_id: Union[int, str] = None,
-    ) -> Dict:
+    ) -> DiscussionSummary:
         """
         Find the last summary for a discussion topic.
 
@@ -1486,7 +1531,7 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         group_id: Union[int, str] = None,
         topic_id: Union[int, str] = None,
         userInput: str = None,
-    ) -> Dict:
+    ) -> DiscussionSummary:
         """
         Generate or find a summary for a discussion topic.
 
