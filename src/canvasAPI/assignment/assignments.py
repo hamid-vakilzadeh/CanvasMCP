@@ -1,6 +1,225 @@
-from typing import List, Dict, Union, Literal, Optional
+from typing import List, Dict, Union, Literal, Optional, TypedDict
 from datetime import datetime
 from ..base import CanvasAPIBase
+
+
+class ExternalToolTagAttributes(TypedDict):
+    """Assignment External Tool Tag Attributes Object"""
+
+    url: str
+    new_tab: bool
+    resource_link_id: str
+
+
+class LockInfo(TypedDict):
+    """Assignment Lock Info Object"""
+
+    asset_string: str
+    unlock_at: Optional[str]
+    lock_at: Optional[str]
+    context_module: Optional[str]
+    manually_locked: bool
+
+
+class RubricRating(TypedDict):
+    """Assignment Rubric Rating Object"""
+
+    points: int
+    id: str
+    description: str
+    long_description: str
+
+
+class RubricCriteria(TypedDict):
+    """Assignment Rubric Criteria Object"""
+
+    points: int
+    id: str
+    learning_outcome_id: Optional[str]
+    vendor_guid: Optional[str]
+    description: str
+    long_description: str
+    criterion_use_range: bool
+    ratings: Optional[List[RubricRating]]
+    ignore_for_scoring: bool
+
+
+class AssignmentDate(TypedDict):
+    """Assignment Date Object"""
+
+    id: Optional[int]
+    base: Optional[bool]
+    title: str
+    due_at: Optional[str]
+    unlock_at: Optional[str]
+    lock_at: Optional[str]
+
+
+class TurnitinSettings(TypedDict):
+    """Turn It In Settings Object"""
+
+    originality_report_visibility: Literal[
+        "immediate", "after_grading", "after_due_date", "never"
+    ]
+    s_paper_check: bool
+    internet_check: bool
+    journal_check: bool
+    exclude_biblio: bool
+    exclude_quoted: bool
+    exclude_small_matches_type: Optional[Literal["percent", "words"]]
+    exclude_small_matches_value: Optional[int]
+
+
+class NeedsGradingCount(TypedDict):
+    """Needs Grading Count Object"""
+
+    section_id: str
+    needs_grading_count: int
+
+
+class ScoreStatistic(TypedDict):
+    """Score Statistics Object"""
+
+    min: float
+    max: float
+    mean: float
+    upper_q: float
+    median: float
+    lower_q: float
+
+
+class BasicUser(TypedDict):
+    """Basic User Object"""
+
+    id: str
+    name: str
+
+
+class Assignment(TypedDict, total=False):
+    """Assignment Object"""
+
+    id: int
+    name: str
+    description: Optional[str]
+    created_at: str
+    updated_at: str
+    due_at: Optional[str]
+    lock_at: Optional[str]
+    unlock_at: Optional[str]
+    has_overrides: bool
+    all_dates: Optional[List[AssignmentDate]]
+    course_id: int
+    html_url: str
+    submissions_download_url: str
+    assignment_group_id: int
+    due_date_required: bool
+    allowed_extensions: Optional[List[str]]
+    max_name_length: int
+    turnitin_enabled: Optional[bool]
+    vericite_enabled: Optional[bool]
+    turnitin_settings: Optional[TurnitinSettings]
+    grade_group_students_individually: bool
+    external_tool_tag_attributes: Optional[ExternalToolTagAttributes]
+    peer_reviews: bool
+    automatic_peer_reviews: bool
+    peer_review_count: Optional[int]
+    peer_reviews_assign_at: Optional[str]
+    intra_group_peer_reviews: bool
+    group_category_id: Optional[int]
+    needs_grading_count: Optional[int]
+    needs_grading_count_by_section: Optional[List[NeedsGradingCount]]
+    position: int
+    post_to_sis: Optional[bool]
+    integration_id: Optional[str]
+    integration_data: Optional[Dict]
+    points_possible: Optional[float]
+    submission_types: List[
+        Literal[
+            "discussion_topic",
+            "online_quiz",
+            "on_paper",
+            "none",
+            "external_tool",
+            "online_text_entry",
+            "online_url",
+            "online_upload",
+            "media_recording",
+            "student_annotation",
+        ]
+    ]
+    has_submitted_submissions: bool
+    grading_type: Literal["pass_fail", "percent", "letter_grade", "gpa_scale", "points"]
+    grading_standard_id: Optional[int]
+    published: bool
+    unpublishable: bool
+    only_visible_to_overrides: bool
+    locked_for_user: bool
+    lock_info: Optional[LockInfo]
+    lock_explanation: Optional[str]
+    quiz_id: Optional[int]
+    anonymous_submissions: Optional[bool]
+    discussion_topic: Optional[Dict]
+    freeze_on_copy: Optional[bool]
+    frozen: Optional[bool]
+    frozen_attributes: Optional[List[str]]
+    submission: Optional[Dict]
+    use_rubric_for_grading: Optional[bool]
+    rubric_settings: Optional[Dict]
+    rubric: Optional[List[RubricCriteria]]
+    assignment_visibility: Optional[List[int]]
+    overrides: Optional[List[Dict]]
+    omit_from_final_grade: Optional[bool]
+    hide_in_gradebook: Optional[bool]
+    moderated_grading: bool
+    grader_count: Optional[int]
+    final_grader_id: Optional[int]
+    grader_comments_visible_to_graders: Optional[bool]
+    graders_anonymous_to_graders: Optional[bool]
+    grader_names_visible_to_final_grader: Optional[bool]
+    anonymous_grading: bool
+    allowed_attempts: Optional[int]
+    post_manually: Optional[bool]
+    score_statistics: Optional[ScoreStatistic]
+    can_submit: Optional[bool]
+    ab_guid: Optional[List[str]]
+    annotatable_attachment_id: Optional[int]
+    anonymize_students: Optional[bool]
+    require_lockdown_browser: Optional[bool]
+    important_dates: Optional[bool]
+    muted: Optional[bool]
+    anonymous_peer_reviews: bool
+    anonymous_instructor_annotations: bool
+    graded_submissions_exist: bool
+    is_quiz_assignment: bool
+    in_closed_grading_period: bool
+    can_duplicate: bool
+    original_course_id: Optional[int]
+    original_assignment_id: Optional[int]
+    original_lti_resource_link_id: Optional[int]
+    original_assignment_name: Optional[str]
+    original_quiz_id: Optional[int]
+    workflow_state: str
+
+
+class AssignmentOverride(TypedDict, total=False):
+    """Assignment Override Object"""
+
+    id: int
+    assignment_id: Optional[int]
+    quiz_id: Optional[int]
+    context_module_id: Optional[int]
+    discussion_topic_id: Optional[int]
+    wiki_page_id: Optional[int]
+    attachment_id: Optional[int]
+    student_ids: Optional[List[int]]
+    group_id: Optional[int]
+    course_section_id: Optional[int]
+    title: str
+    due_at: Optional[str]
+    all_day: Optional[bool]
+    all_day_date: Optional[str]
+    unlock_at: Optional[str]
+    lock_at: Optional[str]
 
 
 class AssignmentsAPI(CanvasAPIBase):
@@ -18,7 +237,7 @@ class AssignmentsAPI(CanvasAPIBase):
 
     def delete_assignment(
         self, course_id: Union[int, str], assignment_id: Union[int, str]
-    ) -> Dict:
+    ) -> Assignment:
         """
         Delete an assignment.
 
@@ -71,7 +290,7 @@ class AssignmentsAPI(CanvasAPIBase):
         post_to_sis: Optional[bool] = None,
         new_quizzes: Optional[bool] = None,
         all_pages: bool = False,
-    ) -> List[Dict]:
+    ) -> List[Assignment]:
         """
         List assignments for a course or assignment group.
 
@@ -178,7 +397,7 @@ class AssignmentsAPI(CanvasAPIBase):
         course_id: Union[int, str],
         all_pages: bool = False,
         **kwargs,
-    ) -> List[Dict]:
+    ) -> List[Assignment]:
         """
         List assignments for a specific user if the current user has rights to view.
 
@@ -212,7 +431,7 @@ class AssignmentsAPI(CanvasAPIBase):
         course_id: Union[int, str],
         assignment_id: Union[int, str],
         result_type: Optional[Literal["Quiz"]] = None,
-    ) -> Dict:
+    ) -> Assignment:
         """
         Duplicate an assignment.
 
@@ -240,7 +459,7 @@ class AssignmentsAPI(CanvasAPIBase):
         course_id: Union[int, str],
         assignment_id: Union[int, str],
         user_id: Union[int, str],
-    ) -> List[Dict]:
+    ) -> List[BasicUser]:
         """
         List group members for a student on an assignment.
 
@@ -278,7 +497,7 @@ class AssignmentsAPI(CanvasAPIBase):
         override_assignment_dates: bool = True,
         needs_grading_count_by_section: bool = False,
         all_dates: bool = False,
-    ) -> Dict:
+    ) -> Assignment:
         """
         Get a single assignment.
 
@@ -388,7 +607,7 @@ class AssignmentsAPI(CanvasAPIBase):
         anonymous_grading: Optional[bool] = None,
         allowed_attempts: Optional[int] = None,
         annotatable_attachment_id: Optional[int] = None,
-    ) -> Dict:
+    ) -> Assignment:
         """
         Create a new assignment.
 
@@ -648,7 +867,7 @@ class AssignmentsAPI(CanvasAPIBase):
         allowed_attempts: Optional[int] = None,
         annotatable_attachment_id: Optional[int] = None,
         force_updated_at: Optional[bool] = None,
-    ) -> Dict:
+    ) -> Assignment:
         """
         Update an existing assignment.
 
@@ -900,7 +1119,7 @@ class AssignmentsAPI(CanvasAPIBase):
         course_id: Union[int, str],
         assignment_id: Union[int, str],
         all_pages: bool = False,
-    ) -> List[Dict]:
+    ) -> List[AssignmentOverride]:
         """
         List assignment overrides for an assignment.
 
@@ -930,7 +1149,7 @@ class AssignmentsAPI(CanvasAPIBase):
         course_id: Union[int, str],
         assignment_id: Union[int, str],
         override_id: Union[int, str],
-    ) -> Dict:
+    ) -> AssignmentOverride:
         """
         Get a single assignment override.
 
@@ -1000,7 +1219,7 @@ class AssignmentsAPI(CanvasAPIBase):
         due_at: Optional[datetime] = None,
         unlock_at: Optional[datetime] = None,
         lock_at: Optional[datetime] = None,
-    ) -> Dict:
+    ) -> AssignmentOverride:
         """
         Create an assignment override.
 
@@ -1079,7 +1298,7 @@ class AssignmentsAPI(CanvasAPIBase):
         due_at: Optional[datetime] = None,
         unlock_at: Optional[datetime] = None,
         lock_at: Optional[datetime] = None,
-    ) -> Dict:
+    ) -> AssignmentOverride:
         """
         Update an assignment override.
 
@@ -1138,7 +1357,7 @@ class AssignmentsAPI(CanvasAPIBase):
         course_id: Union[int, str],
         assignment_id: Union[int, str],
         override_id: Union[int, str],
-    ) -> Dict:
+    ) -> AssignmentOverride:
         """
         Delete an assignment override.
 
@@ -1160,7 +1379,7 @@ class AssignmentsAPI(CanvasAPIBase):
         self,
         course_id: Union[int, str],
         assignment_overrides: List[Dict[str, Union[int, str]]],
-    ) -> List[Dict]:
+    ) -> List[Optional[AssignmentOverride]]:
         """
         Batch retrieve assignment overrides in a course.
 
@@ -1207,7 +1426,7 @@ class AssignmentsAPI(CanvasAPIBase):
         self,
         course_id: Union[int, str],
         assignment_overrides: List[Dict],
-    ) -> List[Dict]:
+    ) -> List[AssignmentOverride]:
         """
         Batch create assignment overrides in a course.
 
@@ -1268,7 +1487,7 @@ class AssignmentsAPI(CanvasAPIBase):
         self,
         course_id: Union[int, str],
         assignment_overrides: List[Dict],
-    ) -> List[Dict]:
+    ) -> List[AssignmentOverride]:
         """
         Batch update assignment overrides in a course.
 
