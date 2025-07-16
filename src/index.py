@@ -4,7 +4,8 @@ from fastmcp import FastMCP
 
 from tools.courses import CourseTools
 from tools.modules import ModuleTools
-from tools.quizzes import QuizTools, QuizQuestionTools
+from tools.quizzes import QuizTools, QuizQuestionTools, QuizQuestionGroupTools
+from tools.pages import PageTools
 
 
 def main():
@@ -17,6 +18,8 @@ def main():
     ModuleTools(mcp)
     QuizTools(mcp)
     QuizQuestionTools(mcp)
+    QuizQuestionGroupTools(mcp)
+    PageTools(mcp)
 
     return mcp
 

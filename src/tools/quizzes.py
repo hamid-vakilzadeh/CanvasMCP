@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from pydantic import Field
 
 from .base import ToolProvider
-from canvasAPI.quiz import quizzes, quiz_questions
+from canvasAPI.quiz import quizzes, quiz_questions, quiz_question_groups
 
 
 class QuizTools(ToolProvider):
@@ -531,3 +531,107 @@ class QuizQuestionTools(ToolProvider):
         )
         quiz_questions.delete_quiz_question(**params)
         return {"success": True, "message": "Question deleted successfully"}
+
+
+class QuizQuestionGroupTools(ToolProvider):
+    """Tools for managing Canvas quiz question groups."""
+
+    def _register_tools(self):
+        """Register all quiz question group-related tools."""
+        self.mcp.tool(self.get_quiz_question_group, tags={"quiz", "question_group"})
+        self.mcp.tool(self.create_quiz_question_group, tags={"quiz", "question_group"})
+        self.mcp.tool(self.update_quiz_question_group, tags={"quiz", "question_group"})
+        self.mcp.tool(self.delete_quiz_question_group, tags={"quiz", "question_group"})
+        self.mcp.tool(self.reorder_quiz_question_group_questions, tags={"quiz", "question_group"})
+
+    async def get_quiz_question_group(
+        self,
+        course_id: Annotated[str | int, Field(description="The course ID")],
+        quiz_id: Annotated[str | int, Field(description="The quiz ID")],
+        group_id: Annotated[str | int, Field(description="The quiz question group ID")],
+    ) -> dict:
+        """Get a single quiz question group."""
+        params = self._validate_params(
+            course_id=course_id,
+            quiz_id=quiz_id,
+            group_id=group_id,
+        )
+        return quiz_question_groups.get_quiz_group(**params)
+
+    async def create_quiz_question_group(
+        self,
+        course_id: Annotated[str | int, Field(description="The course ID")],
+        quiz_id: Annotated[str | int, Field(description="The quiz ID")],
+        name: Annotated[str, Field(description="The name of the question group")],
+        pick_count: Annotated[int, Field(description="The number of questions to randomly select for this group")],
+        question_points: Annotated[int, Field(description="The number of points to assign to each question in the group")],
+        assessment_question_bank_id: Annotated[
+            int | None,
+            Field(description="The id of the assessment question bank to pull questions from"),
+        ] = None,
+    ) -> dict:
+        """Create a new question group for a quiz."""
+        params = self._validate_params(
+            course_id=course_id,
+            quiz_id=quiz_id,
+            name=name,
+            pick_count=pick_count,
+            question_points=question_points,
+            assessment_question_bank_id=assessment_question_bank_id,
+        )
+        return quiz_question_groups.create_quiz_group(**params)
+
+    async def update_quiz_question_group(
+        self,
+        course_id: Annotated[str | int, Field(description="The course ID")],
+        quiz_id: Annotated[str | int, Field(description="The quiz ID")],
+        group_id: Annotated[str | int, Field(description="The quiz question group ID")],
+        name: Annotated[str | None, Field(description="The name of the question group")] = None,
+        pick_count: Annotated[int | None, Field(description="The number of questions to randomly select for this group")] = None,
+        question_points: Annotated[int | None, Field(description="The number of points to assign to each question in the group")] = None,
+    ) -> dict:
+        """Update a question group."""
+        params = self._validate_params(
+            course_id=course_id,
+            quiz_id=quiz_id,
+            group_id=group_id,
+            name=name,
+            pick_count=pick_count,
+            question_points=question_points,
+        )
+        return quiz_question_groups.update_quiz_group(**params)
+
+    async def delete_quiz_question_group(
+        self,
+        course_id: Annotated[str | int, Field(description="The course ID")],
+        quiz_id: Annotated[str | int, Field(description="The quiz ID")],
+        group_id: Annotated[str | int, Field(description="The quiz question group ID")],
+    ) -> dict:
+        """Delete a question group."""
+        params = self._validate_params(
+            course_id=course_id,
+            quiz_id=quiz_id,
+            group_id=group_id,
+        )
+        quiz_question_groups.delete_quiz_group(**params)
+        return {"success": True, "message": "Question group deleted successfully"}
+
+    async def reorder_quiz_question_group_questions(
+        self,
+        course_id: Annotated[str | int, Field(description="The course ID")],
+        quiz_id: Annotated[str | int, Field(description="The quiz ID")],
+        group_id: Annotated[str | int, Field(description="The quiz question group ID")],
+        order: Annotated[
+            list[dict],
+            Field(description="List of order items with 'id' and 'type' (always 'question')"),
+        ],
+    ) -> dict:
+        """Change the order of quiz questions within the group."""
+        params = self._validate_params(
+            course_id=course_id,
+            quiz_id=quiz_id,
+            group_id=group_id,
+            order=order,
+        )
+        quiz_question_groups.reorder_quiz_group_questions(**params)
+        return {"success": True, "message": "Questions reordered successfully"}
