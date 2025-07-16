@@ -4,8 +4,10 @@ import requests
 import json
 from typing import Dict, List
 
-
+# Load environment variables as fallback
 load_dotenv()
+
+# Global variables that can be set by the server
 access_token = os.getenv("canvas_api_key")
 url = os.getenv("main_url")
 
@@ -21,8 +23,17 @@ class CanvasAPIBase:
             access_token: Canvas API access token
             base_url: Canvas base URL (e.g., https://yourdomain.instructure.com)
         """
-        self.access_token = access_token or globals()["access_token"]
-        self.base_url = base_url or globals()["url"]
+        # Use provided arguments, then fall back to globals, then environment
+        self.access_token = (
+            access_token or globals().get("access_token") or os.getenv("canvas_api_key")
+        )
+        self.base_url = base_url or globals().get("url") or os.getenv("main_url")
+
+        if not self.access_token or not self.base_url:
+            raise ValueError(
+                "Canvas API credentials not provided. Please provide access_token and base_url."
+            )
+
         self.headers = {"Authorization": f"Bearer {self.access_token}"}
 
     def _make_request(
