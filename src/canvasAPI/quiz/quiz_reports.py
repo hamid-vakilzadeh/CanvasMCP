@@ -1,6 +1,6 @@
 """Quiz Reports API for Canvas MCP."""
 
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 from pydantic import Field
 
 from ..base import ToolProvider
