@@ -11,7 +11,7 @@ class CourseTools(ToolProvider):
         """Register all course-related tools."""
         self.mcp.tool(self.list_courses, tags={"course"})
 
-    async def list_courses(self) -> list[dict]:
+    async def list_courses(self) -> str:
         """Get a list of all the courses the user has taught as a teacher.
         Use this function to get course information such as course name, course ID and term information.
         """
@@ -29,4 +29,11 @@ class CourseTools(ToolProvider):
             for item in result
         ]
 
-        return courses_list
+        # Generate a markdown list of courses
+        course_list_md = "\n".join(
+            f"- {course['course_name']}, (Course ID: {course['course_id']}, Term: {course['term_name']})"
+            for course in courses_list
+        )
+        course_list_md = f"# Courses List\n\n{course_list_md}"
+
+        return course_list_md
