@@ -894,5 +894,13 @@ class ModulesAPI(CanvasAPIBase):
         return None
 
 
-# Convenience instance using environment variables
-modules = ModulesAPI()
+# Lazy-loaded convenience instance
+def get_modules():
+    from ..base import access_token, url
+    return ModulesAPI(access_token, url)
+
+class _LazyModulesAPI:
+    def __getattr__(self, name):
+        return getattr(get_modules(), name)
+
+modules = _LazyModulesAPI()

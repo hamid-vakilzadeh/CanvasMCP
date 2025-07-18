@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "test-mcp": {
+      "transport": {
+        "type": "streamable_http",
+        "url": "http://127.0.0.1:8002"
+      }
+    }
+  }
+}

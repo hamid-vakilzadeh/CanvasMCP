@@ -689,5 +689,13 @@ class ConversationsAPI(CanvasAPIBase):
         return response.json()
 
 
-# Convenience instance using environment variables
-conversations = ConversationsAPI()
+# Lazy-loaded convenience instance
+def get_conversations():
+    from ..base import access_token, url
+    return ConversationsAPI(access_token, url)
+
+class _LazyConversationsAPI:
+    def __getattr__(self, name):
+        return getattr(get_conversations(), name)
+
+conversations = _LazyConversationsAPI()

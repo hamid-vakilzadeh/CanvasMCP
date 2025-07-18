@@ -938,5 +938,13 @@ class CoursesAPI(CanvasAPIBase):
         return response.json()
 
 
-# Convenience instance using environment variables
-courses = CoursesAPI()
+# Lazy-loaded convenience instance
+def get_courses():
+    from ..base import access_token, url
+    return CoursesAPI(access_token, url)
+
+class _LazyCoursesAPI:
+    def __getattr__(self, name):
+        return getattr(get_courses(), name)
+
+courses = _LazyCoursesAPI()

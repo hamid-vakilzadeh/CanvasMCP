@@ -1,0 +1,30 @@
+apiVersion: 2023-05-01
+kind: ContainerApp
+metadata:
+  name: canvas-mcp-app
+spec:
+  configuration:
+    ingress:
+      external: true
+      targetPort: 8000
+      transport: http
+    secrets:
+      - name: canvas-url
+        value: "<your-canvas-url>" # Set this when deploying
+      - name: canvas-access-token
+        value: "<your-canvas-access-token>" # Set this when deploying
+  template:
+    containers:
+      - name: canvas-mcp
+        image: # Set this to your container registry image
+        env:
+          - name: CANVAS_URL
+            secretRef: canvas-url
+          - name: CANVAS_ACCESS_TOKEN
+            secretRef: canvas-access-token
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+    scale:
+      minReplicas: 1
+      maxReplicas: 1

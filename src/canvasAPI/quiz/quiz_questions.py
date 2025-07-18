@@ -505,5 +505,13 @@ class QuizQuestionsAPI(CanvasAPIBase):
         return answer
 
 
-# Convenience instance using environment variables
-quiz_questions = QuizQuestionsAPI()
+# Lazy-loaded convenience instance
+def get_quiz_questions():
+    from ..base import access_token, url
+    return QuizQuestionsAPI(access_token, url)
+
+class _LazyQuizQuestionsAPI:
+    def __getattr__(self, name):
+        return getattr(get_quiz_questions(), name)
+
+quiz_questions = _LazyQuizQuestionsAPI()

@@ -82,5 +82,13 @@ class QuizSubmissionUserListAPI(CanvasAPIBase):
         )
 
 
-# Convenience instance using environment variables
-quiz_submission_user_list = QuizSubmissionUserListAPI()
+# Lazy-loaded convenience instance
+def get_quiz_submission_user_list():
+    from ..base import access_token, url
+    return QuizSubmissionUserListAPI(access_token, url)
+
+class _LazyQuizSubmissionUserListAPI:
+    def __getattr__(self, name):
+        return getattr(get_quiz_submission_user_list(), name)
+
+quiz_submission_user_list = _LazyQuizSubmissionUserListAPI()

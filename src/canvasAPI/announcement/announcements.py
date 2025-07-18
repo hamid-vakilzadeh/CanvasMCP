@@ -114,5 +114,13 @@ class AnnouncementsAPI(CanvasAPIBase):
             return response.json()
 
 
-# Convenience instance using environment variables
-announcements = AnnouncementsAPI()
+# Lazy-loaded convenience instance
+def get_announcements():
+    from ..base import access_token, url
+    return AnnouncementsAPI(access_token, url)
+
+class _LazyAnnouncementsAPI:
+    def __getattr__(self, name):
+        return getattr(get_announcements(), name)
+
+announcements = _LazyAnnouncementsAPI()

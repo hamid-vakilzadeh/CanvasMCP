@@ -417,5 +417,13 @@ class AuthenticationProvidersAPI(CanvasAPIBase):
         )
 
 
-# Convenience instance using environment variables
-authentication_providers = AuthenticationProvidersAPI()
+# Lazy-loaded convenience instance
+def get_authentication_providers():
+    from ..base import access_token, url
+    return AuthenticationProvidersAPI(access_token, url)
+
+class _LazyAuthenticationProvidersAPI:
+    def __getattr__(self, name):
+        return getattr(get_authentication_providers(), name)
+
+authentication_providers = _LazyAuthenticationProvidersAPI()

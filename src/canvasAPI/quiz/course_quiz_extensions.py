@@ -235,5 +235,13 @@ class CourseQuizExtensionsAPI(CanvasAPIBase):
         return self.set_quiz_extensions(course_id, [extension])
 
 
-# Convenience instance using environment variables
-course_quiz_extensions = CourseQuizExtensionsAPI()
+# Lazy-loaded convenience instance
+def get_course_quiz_extensions():
+    from ..base import access_token, url
+    return CourseQuizExtensionsAPI(access_token, url)
+
+class _LazyCourseQuizExtensionsAPI:
+    def __getattr__(self, name):
+        return getattr(get_course_quiz_extensions(), name)
+
+course_quiz_extensions = _LazyCourseQuizExtensionsAPI()

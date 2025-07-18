@@ -48,5 +48,13 @@ class QuizIPFiltersAPI(CanvasAPIBase):
         return result.get("quiz_ip_filters", [])
 
 
-# Convenience instance using environment variables
-quiz_ip_filters = QuizIPFiltersAPI()
+# Lazy-loaded convenience instance
+def get_quiz_ip_filters():
+    from ..base import access_token, url
+    return QuizIPFiltersAPI(access_token, url)
+
+class _LazyQuizIPFiltersAPI:
+    def __getattr__(self, name):
+        return getattr(get_quiz_ip_filters(), name)
+
+quiz_ip_filters = _LazyQuizIPFiltersAPI()

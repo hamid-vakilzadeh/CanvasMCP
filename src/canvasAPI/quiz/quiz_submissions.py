@@ -380,5 +380,13 @@ class QuizSubmissionsAPI(CanvasAPIBase):
         return response.json()
 
 
-# Convenience instance using environment variables
-quiz_submissions = QuizSubmissionsAPI()
+# Lazy-loaded convenience instance
+def get_quiz_submissions():
+    from ..base import access_token, url
+    return QuizSubmissionsAPI(access_token, url)
+
+class _LazyQuizSubmissionsAPI:
+    def __getattr__(self, name):
+        return getattr(get_quiz_submissions(), name)
+
+quiz_submissions = _LazyQuizSubmissionsAPI()

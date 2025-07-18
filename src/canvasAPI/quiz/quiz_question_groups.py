@@ -220,5 +220,13 @@ class QuizQuestionGroupsAPI(CanvasAPIBase):
         return None
 
 
-# Convenience instance using environment variables
-quiz_question_groups = QuizQuestionGroupsAPI()
+# Lazy-loaded convenience instance
+def get_quiz_question_groups():
+    from ..base import access_token, url
+    return QuizQuestionGroupsAPI(access_token, url)
+
+class _LazyQuizQuestionGroupsAPI:
+    def __getattr__(self, name):
+        return getattr(get_quiz_question_groups(), name)
+
+quiz_question_groups = _LazyQuizQuestionGroupsAPI()

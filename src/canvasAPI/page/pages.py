@@ -521,5 +521,13 @@ class PagesAPI(CanvasAPIBase):
         return response.json()
 
 
-# Convenience instance using environment variables
-pages = PagesAPI()
+# Lazy-loaded convenience instance
+def get_pages():
+    from ..base import access_token, url
+    return PagesAPI(access_token, url)
+
+class _LazyPagesAPI:
+    def __getattr__(self, name):
+        return getattr(get_pages(), name)
+
+pages = _LazyPagesAPI()

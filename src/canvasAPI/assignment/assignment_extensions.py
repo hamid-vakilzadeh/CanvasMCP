@@ -126,5 +126,13 @@ class AssignmentExtensionsAPI(CanvasAPIBase):
         return self.set_assignment_extensions(course_id, assignment_id, [extension])
 
 
-# Convenience instance using environment variables
-assignment_extensions = AssignmentExtensionsAPI()
+# Lazy-loaded convenience instance
+def get_assignment_extensions():
+    from ..base import access_token, url
+    return AssignmentExtensionsAPI(access_token, url)
+
+class _LazyAssignmentExtensionsAPI:
+    def __getattr__(self, name):
+        return getattr(get_assignment_extensions(), name)
+
+assignment_extensions = _LazyAssignmentExtensionsAPI()

@@ -72,5 +72,13 @@ class QuizAssignmentOverridesAPI(CanvasAPIBase):
         return response.json()
 
 
-# Convenience instance using environment variables
-quiz_assignment_overrides = QuizAssignmentOverridesAPI()
+# Lazy-loaded convenience instance
+def get_quiz_assignment_overrides():
+    from ..base import access_token, url
+    return QuizAssignmentOverridesAPI(access_token, url)
+
+class _LazyQuizAssignmentOverridesAPI:
+    def __getattr__(self, name):
+        return getattr(get_quiz_assignment_overrides(), name)
+
+quiz_assignment_overrides = _LazyQuizAssignmentOverridesAPI()
