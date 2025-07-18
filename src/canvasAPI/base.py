@@ -31,22 +31,22 @@ def _make_request(
     Raises:
         requests.exceptions.RequestException: For HTTP errors
     """
-    
+
     # Extract credentials from JWT if not provided
     if base_url is None or access_token is None:
         token = get_access_token()
-        
+
         if base_url is None:
-            base_url = getattr(token, 'canvas_url', None)
-            if not base_url and hasattr(token, 'additional_claims'):
-                base_url = token.additional_claims.get('canvas_url')
+            base_url = getattr(token, "canvas_url", None)
+            if not base_url and hasattr(token, "additional_claims"):
+                base_url = token.additional_claims.get("canvas_url")
             if not base_url:
                 raise ValueError("canvas_url not found in JWT token")
-        
+
         if access_token is None:
-            access_token = getattr(token, 'canvas_access_token', None)
-            if not access_token and hasattr(token, 'additional_claims'):
-                access_token = token.additional_claims.get('canvas_access_token')
+            access_token = getattr(token, "canvas_access_token", None)
+            if not access_token and hasattr(token, "additional_claims"):
+                access_token = token.additional_claims.get("canvas_access_token")
             if not access_token:
                 raise ValueError("canvas_access_token not found in JWT token")
 
@@ -86,15 +86,36 @@ def _get_all_pages(
         params: Query parameters
         data: Form data
         json_data: JSON data
+        base_url: Canvas base URL (extracted from JWT if not provided)
+        access_token: Canvas API token (extracted from JWT if not provided)
 
     Returns:
         List of all items from all pages
     """
+
+    # Extract credentials from JWT if not provided
+    if base_url is None or access_token is None:
+        token = get_access_token()
+
+        if base_url is None:
+            base_url = getattr(token, "canvas_url", None)
+            if not base_url and hasattr(token, "additional_claims"):
+                base_url = token.additional_claims.get("canvas_url")
+            if not base_url:
+                raise ValueError("canvas_url not found in JWT token")
+
+        if access_token is None:
+            access_token = getattr(token, "canvas_access_token", None)
+            if not access_token and hasattr(token, "additional_claims"):
+                access_token = token.additional_claims.get("canvas_access_token")
+            if not access_token:
+                raise ValueError("canvas_access_token not found in JWT token")
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
     all_items = []
     response = _make_request(
-        base_url, access_token, method, endpoint, params, data, json_data
+        method, endpoint, params, data, json_data, base_url, access_token
     )
 
     while True:
