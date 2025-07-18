@@ -4,9 +4,9 @@ from fastmcp import FastMCP
 from fastmcp.server.auth import BearerAuthProvider
 
 from tools.courses import CourseTools
-from tools.modules import ModuleTools
-from tools.quizzes import QuizTools, QuizQuestionTools, QuizQuestionGroupTools
-from tools.pages import PageTools
+# from tools.modules import ModuleTools
+# from tools.quizzes import QuizTools, QuizQuestionTools, QuizQuestionGroupTools
+# from tools.pages import PageTools
 
 
 def create_server():
@@ -20,19 +20,19 @@ def create_server():
         # jwks_uri="https://your-auth-provider.com/.well-known/jwks.json",
         # public_key="your-public-key-here",
         issuer="canvas-mcp",
-        audience="canvas-assistant"
+        audience="canvas-assistant",
     )
-    
+
     mcp = FastMCP(name="Canvas Assistant", auth=auth)
 
     # Register all tool providers
     # Each provider automatically registers its tools with the MCP instance
     CourseTools(mcp)
-    ModuleTools(mcp)
-    QuizTools(mcp)
-    QuizQuestionTools(mcp)
-    QuizQuestionGroupTools(mcp)
-    PageTools(mcp)
+    # ModuleTools(mcp)
+    # QuizTools(mcp)
+    # QuizQuestionTools(mcp)
+    # QuizQuestionGroupTools(mcp)
+    # PageTools(mcp)
 
     return mcp
 
