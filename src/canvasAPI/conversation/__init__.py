@@ -3,9 +3,8 @@
 Provides APIs for managing conversations and messages.
 """
 
-from .conversations import ConversationsAPI, conversations
+from . import conversations
 
 __all__ = [
-    "ConversationsAPI",
     "conversations",
 ]

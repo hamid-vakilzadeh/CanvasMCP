@@ -3,9 +3,8 @@
 Provides APIs for managing authentication providers and SSO settings.
 """
 
-from .authenticationProviders import AuthenticationProvidersAPI, authentication_providers
+from . import authenticationProviders
 
 __all__ = [
-    "AuthenticationProvidersAPI",
-    "authentication_providers",
+    "authenticationProviders",
 ]

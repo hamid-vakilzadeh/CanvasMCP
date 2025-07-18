@@ -3,15 +3,12 @@
 Provides APIs for managing assignments, assignment groups, and extensions.
 """
 
-from .assignment_extensions import AssignmentExtensionsAPI, assignment_extensions
-from .assignment_groups import AssignmentGroupsAPI, assignment_groups
-from .assignments import AssignmentsAPI, assignments
+from . import assignment_extensions
+from . import assignment_groups
+from . import assignments
 
 __all__ = [
-    "AssignmentExtensionsAPI",
-    "assignment_extensions", 
-    "AssignmentGroupsAPI",
+    "assignment_extensions",
     "assignment_groups",
-    "AssignmentsAPI",
     "assignments",
 ]

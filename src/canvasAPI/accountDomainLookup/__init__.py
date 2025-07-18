@@ -3,6 +3,8 @@
 Provides APIs for looking up account domains.
 """
 
-from .accountDomainLookups import AccountDomainLookups, account_domain_lookups
+from . import accountDomainLookups
 
-__all__ = ["AccountDomainLookups", "account_domain_lookups"]
+__all__ = [
+    "accountDomainLookups",
+]

@@ -3,9 +3,8 @@
 Provides APIs for managing courses and course-related operations.
 """
 
-from .courses import CoursesAPI, courses
+from . import courses
 
 __all__ = [
-    "CoursesAPI",
     "courses",
 ]
