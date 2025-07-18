@@ -121,5 +121,13 @@ class QuizSubmissionEventsAPI(CanvasAPIBase):
         return result.get("quiz_submission_events", [])
 
 
-# Convenience instance using environment variables
-quiz_submission_events = QuizSubmissionEventsAPI()
+# Lazy-loaded convenience instance
+def get_quiz_submission_events():
+    from ..base import access_token, url
+    return QuizSubmissionEventsAPI(access_token, url)
+
+class _LazyQuizSubmissionEventsAPI:
+    def __getattr__(self, name):
+        return getattr(get_quiz_submission_events(), name)
+
+quiz_submission_events = _LazyQuizSubmissionEventsAPI()

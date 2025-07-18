@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "canvas-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch",
+        "https://canvas-mcp-app.nicebeach-51a88eb3.eastus.azurecontainerapps.io/mcp/"
+      ],
+      "env": {}
+    }
+  }
+}

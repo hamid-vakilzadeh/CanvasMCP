@@ -185,5 +185,13 @@ class AccountCalendarsAPI(CanvasAPIBase):
         return response.json()
 
 
-# Convenience instance using environment variables
-account_calendars = AccountCalendarsAPI()
+# Lazy-loaded convenience instance
+def get_account_calendars():
+    from ..base import access_token, url
+    return AccountCalendarsAPI(access_token, url)
+
+class _LazyAccountCalendarsAPI:
+    def __getattr__(self, name):
+        return getattr(get_account_calendars(), name)
+
+account_calendars = _LazyAccountCalendarsAPI()

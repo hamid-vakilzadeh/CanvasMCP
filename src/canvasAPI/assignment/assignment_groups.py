@@ -427,5 +427,13 @@ class AssignmentGroupsAPI(CanvasAPIBase):
         return response.json()
 
 
-# Convenience instance using environment variables
-assignment_groups = AssignmentGroupsAPI()
+# Lazy-loaded convenience instance
+def get_assignment_groups():
+    from ..base import access_token, url
+    return AssignmentGroupsAPI(access_token, url)
+
+class _LazyAssignmentGroupsAPI:
+    def __getattr__(self, name):
+        return getattr(get_assignment_groups(), name)
+
+assignment_groups = _LazyAssignmentGroupsAPI()

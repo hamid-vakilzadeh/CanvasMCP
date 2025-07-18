@@ -1668,5 +1668,13 @@ class DiscussionTopicsAPI(CanvasAPIBase):
         return response.json()
 
 
-# Convenience instance using environment variables
-discussion_topics = DiscussionTopicsAPI()
+# Lazy-loaded convenience instance
+def get_discussion_topics():
+    from ..base import access_token, url
+    return DiscussionTopicsAPI(access_token, url)
+
+class _LazyDiscussionTopicsAPI:
+    def __getattr__(self, name):
+        return getattr(get_discussion_topics(), name)
+
+discussion_topics = _LazyDiscussionTopicsAPI()

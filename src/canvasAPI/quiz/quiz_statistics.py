@@ -135,5 +135,13 @@ class QuizStatisticsAPI(CanvasAPIBase):
         return result.get("quiz_statistics", [])
 
 
-# Convenience instance using environment variables
-quiz_statistics = QuizStatisticsAPI()
+# Lazy-loaded convenience instance
+def get_quiz_statistics():
+    from ..base import access_token, url
+    return QuizStatisticsAPI(access_token, url)
+
+class _LazyQuizStatisticsAPI:
+    def __getattr__(self, name):
+        return getattr(get_quiz_statistics(), name)
+
+quiz_statistics = _LazyQuizStatisticsAPI()

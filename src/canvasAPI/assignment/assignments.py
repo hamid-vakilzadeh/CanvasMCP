@@ -1540,5 +1540,13 @@ class AssignmentsAPI(CanvasAPIBase):
         return response.json()
 
 
-# Convenience instance using environment variables
-assignments = AssignmentsAPI()
+# Lazy-loaded convenience instance
+def get_assignments():
+    from ..base import access_token, url
+    return AssignmentsAPI(access_token, url)
+
+class _LazyAssignmentsAPI:
+    def __getattr__(self, name):
+        return getattr(get_assignments(), name)
+
+assignments = _LazyAssignmentsAPI()

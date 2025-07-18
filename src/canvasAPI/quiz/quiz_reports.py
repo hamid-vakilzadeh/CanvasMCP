@@ -195,5 +195,13 @@ class QuizReportsAPI(CanvasAPIBase):
         )
 
 
-# Convenience instance using environment variables
-quiz_reports = QuizReportsAPI()
+# Lazy-loaded convenience instance
+def get_quiz_reports():
+    from ..base import access_token, url
+    return QuizReportsAPI(access_token, url)
+
+class _LazyQuizReportsAPI:
+    def __getattr__(self, name):
+        return getattr(get_quiz_reports(), name)
+
+quiz_reports = _LazyQuizReportsAPI()
