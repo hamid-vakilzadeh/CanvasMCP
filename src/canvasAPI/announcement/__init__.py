@@ -3,9 +3,8 @@
 Provides APIs for retrieving announcements.
 """
 
-from .announcements import AnnouncementsAPI, announcements
+from . import announcements
 
 __all__ = [
-    "AnnouncementsAPI",
     "announcements",
 ]
