@@ -1,7 +1,7 @@
 """Canvas MCP Server - Organized with Tool Providers."""
 
-import argparse
 from fastmcp import FastMCP
+from fastmcp.server.auth import BearerAuthProvider
 
 from tools.courses import CourseTools
 from tools.modules import ModuleTools
@@ -9,23 +9,21 @@ from tools.quizzes import QuizTools, QuizQuestionTools, QuizQuestionGroupTools
 from tools.pages import PageTools
 
 
-def main():
-    """Initialize the Canvas MCP server with organized tool providers."""
-    parser = argparse.ArgumentParser(description="Canvas MCP Server")
-    parser.add_argument("--canvas-url", required=True, help="Canvas base URL")
-    parser.add_argument("--access-token", required=True, help="Canvas API access token")
-    parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
-
-    args = parser.parse_args()
-
-    mcp = FastMCP(name="Canvas Assistant")
-
-    # Store credentials globally for API classes to access
-    import canvasAPI.base
-
-    canvasAPI.base.access_token = args.access_token
-    canvasAPI.base.url = args.canvas_url
+def create_server():
+    """Initialize the Canvas MCP server with JWT authentication."""
+    # Configure Bearer token authentication
+    # The JWT should contain 'canvas_url' and 'access_token' claims
+    auth = BearerAuthProvider(
+        # You'll need to provide either public_key or jwks_uri
+        # For development, you can use RSAKeyPair.generate() to create keys
+        # For production, use your OAuth provider's JWKS endpoint
+        # jwks_uri="https://your-auth-provider.com/.well-known/jwks.json",
+        # public_key="your-public-key-here",
+        issuer="canvas-mcp",
+        audience="canvas-assistant"
+    )
+    
+    mcp = FastMCP(name="Canvas Assistant", auth=auth)
 
     # Register all tool providers
     # Each provider automatically registers its tools with the MCP instance
@@ -36,9 +34,9 @@ def main():
     QuizQuestionGroupTools(mcp)
     PageTools(mcp)
 
-    return mcp, args
+    return mcp
 
 
 if __name__ == "__main__":
-    mcp, args = main()
-    mcp.run(transport="http", host=args.host, port=args.port)
+    mcp = create_server()
+    mcp.run(transport="http", host="0.0.0.0", port=8000)
