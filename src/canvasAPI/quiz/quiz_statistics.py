@@ -1,5 +1,5 @@
 from typing import List, Dict, Union, Optional, TypedDict, Any
-from ..base import CanvasAPIBase
+from ..base import _make_request
 
 
 class QuizStatisticsAnswerStatistics(TypedDict, total=False):
@@ -75,73 +75,53 @@ class QuizStatistics(TypedDict, total=False):
     links: Optional[QuizStatisticsLinks]
 
 
-class QuizStatisticsAPI(CanvasAPIBase):
-    """Canvas LMS Quiz Statistics API client for accessing quiz submission statistics."""
+def get_quiz_statistics(
+    base_url: str,
+    access_token: str,
+    course_id: Union[int, str],
+    quiz_id: Union[int, str],
+    all_versions: bool = False,
+) -> List[QuizStatistics]:
+    """
+    Fetch the latest quiz statistics.
 
-    def __init__(self, access_token: str = None, base_url: str = None):
-        """
-        Initialize the Canvas Quiz Statistics API client.
+    This endpoint provides statistics for all quiz versions, or for a specific quiz version,
+    in which case the output is guaranteed to represent the latest and most current version of the quiz.
 
-        Args:
-            access_token: Canvas API access token
-            base_url: Canvas base URL (e.g., https://yourdomain.instructure.com)
-        """
-        super().__init__(access_token, base_url)
+    The statistics provided by this interface are an aggregate of what is known as Student and
+    Item Analysis for a quiz. These statistics are extracted (and composed) from graded
+    (manually or, when viable, automatically) submissions for a quiz and provide an insight
+    into how the participant students had responded to each question, as well as insights
+    into the reception of each question answer individually.
 
-    def get_quiz_statistics(
-        self,
-        course_id: Union[int, str],
-        quiz_id: Union[int, str],
-        all_versions: bool = False,
-    ) -> List[QuizStatistics]:
-        """
-        Fetch the latest quiz statistics.
+    Args:
+        base_url: Canvas instance base URL
+        access_token: Canvas API access token
+        course_id: Course ID
+        quiz_id: Quiz ID
+        all_versions: Whether the statistics report should include all submissions attempts
 
-        This endpoint provides statistics for all quiz versions, or for a specific quiz version,
-        in which case the output is guaranteed to represent the latest and most current version of the quiz.
+    Returns:
+        List of quiz statistics dictionaries containing:
+        - id: The ID of the quiz statistics report
+        - quiz_id: The ID of the Quiz the statistics report is for (non-JSON-API only)
+        - multiple_attempts_exist: Whether there are any students that have made multiple submissions
+        - includes_all_versions: Whether statistics describe all submission attempts or only latest
+        - generated_at: The time at which the statistics were generated
+        - url: The API HTTP/HTTPS URL to this quiz statistics
+        - html_url: The HTTP/HTTPS URL to the page where statistics can be seen visually
+        - question_statistics: Question-specific statistics for each question and its answers
+        - submission_statistics: Generic statistics for all submissions for a quiz
+        - links: JSON-API construct with links to media related to this quiz statistics object
+    """
+    params = {"all_versions": all_versions}
 
-        The statistics provided by this interface are an aggregate of what is known as Student and
-        Item Analysis for a quiz. These statistics are extracted (and composed) from graded
-        (manually or, when viable, automatically) submissions for a quiz and provide an insight
-        into how the participant students had responded to each question, as well as insights
-        into the reception of each question answer individually.
-
-        Args:
-            course_id: Course ID
-            quiz_id: Quiz ID
-            all_versions: Whether the statistics report should include all submissions attempts
-
-        Returns:
-            List of quiz statistics dictionaries containing:
-            - id: The ID of the quiz statistics report
-            - quiz_id: The ID of the Quiz the statistics report is for (non-JSON-API only)
-            - multiple_attempts_exist: Whether there are any students that have made multiple submissions
-            - includes_all_versions: Whether statistics describe all submission attempts or only latest
-            - generated_at: The time at which the statistics were generated
-            - url: The API HTTP/HTTPS URL to this quiz statistics
-            - html_url: The HTTP/HTTPS URL to the page where statistics can be seen visually
-            - question_statistics: Question-specific statistics for each question and its answers
-            - submission_statistics: Generic statistics for all submissions for a quiz
-            - links: JSON-API construct with links to media related to this quiz statistics object
-        """
-        params = {"all_versions": all_versions}
-
-        response = self._make_request(
-            "GET",
-            f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/statistics",
-            params=params,
-        )
-        result = response.json()
-        return result.get("quiz_statistics", [])
-
-
-# Lazy-loaded convenience instance
-def get_quiz_statistics():
-    from ..base import access_token, url
-    return QuizStatisticsAPI(access_token, url)
-
-class _LazyQuizStatisticsAPI:
-    def __getattr__(self, name):
-        return getattr(get_quiz_statistics(), name)
-
-quiz_statistics = _LazyQuizStatisticsAPI()
+    response = _make_request(
+        base_url,
+        access_token,
+        "GET",
+        f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/statistics",
+        params=params,
+    )
+    result = response.json()
+    return result.get("quiz_statistics", [])
