@@ -31,9 +31,13 @@ def list_account_calendars(
         params["search_term"] = search_term
 
     if all_pages:
-        return _get_all_pages(base_url, access_token, "GET", "/api/v1/account_calendars", params=params)
+        return _get_all_pages(
+            base_url, access_token, "GET", "/api/v1/account_calendars", params=params
+        )
     else:
-        response = _make_request(base_url, access_token, "GET", "/api/v1/account_calendars", params=params)
+        response = _make_request(
+            base_url, access_token, "GET", "/api/v1/account_calendars", params=params
+        )
         return response.json()
 
 
@@ -53,7 +57,9 @@ def get_account_calendar(
     Returns:
         AccountCalendar dictionary
     """
-    response = _make_request(base_url, access_token, "GET", f"/api/v1/account_calendars/{account_id}")
+    response = _make_request(
+        base_url, access_token, "GET", f"/api/v1/account_calendars/{account_id}"
+    )
     return response.json()
 
 
@@ -84,7 +90,11 @@ def update_account_calendar(
         data["auto_subscribe"] = auto_subscribe
 
     response = _make_request(
-        base_url, access_token, "PUT", f"/api/v1/account_calendars/{account_id}", data=data
+        base_url,
+        access_token,
+        "PUT",
+        f"/api/v1/account_calendars/{account_id}",
+        data=data,
     )
     return response.json()
 
@@ -170,11 +180,19 @@ def list_all_account_calendars(
 
     if all_pages:
         return _get_all_pages(
-            base_url, access_token, "GET", f"/api/v1/accounts/{account_id}/account_calendars", params=params
+            base_url,
+            access_token,
+            "GET",
+            f"/api/v1/accounts/{account_id}/account_calendars",
+            params=params,
         )
     else:
         response = _make_request(
-            base_url, access_token, "GET", f"/api/v1/accounts/{account_id}/account_calendars", params=params
+            base_url,
+            access_token,
+            "GET",
+            f"/api/v1/accounts/{account_id}/account_calendars",
+            params=params,
         )
         return response.json()
 
@@ -196,6 +214,9 @@ def get_visible_calendars_count(
         Dictionary with count of visible calendars
     """
     response = _make_request(
-        base_url, access_token, "GET", f"/api/v1/accounts/{account_id}/visible_calendars_count"
+        base_url,
+        access_token,
+        "GET",
+        f"/api/v1/accounts/{account_id}/visible_calendars_count",
     )
     return response.json()

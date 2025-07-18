@@ -22,11 +22,17 @@ def list_authentication_providers(
     """
     if all_pages:
         return _get_all_pages(
-            base_url, access_token, "GET", f"/api/v1/accounts/{account_id}/authentication_providers"
+            base_url,
+            access_token,
+            "GET",
+            f"/api/v1/accounts/{account_id}/authentication_providers",
         )
     else:
         response = _make_request(
-            base_url, access_token, "GET", f"/api/v1/accounts/{account_id}/authentication_providers"
+            base_url,
+            access_token,
+            "GET",
+            f"/api/v1/accounts/{account_id}/authentication_providers",
         )
         return response.json()
 
@@ -50,7 +56,10 @@ def get_authentication_provider(
         AuthenticationProvider dictionary
     """
     response = _make_request(
-        base_url, access_token, "GET", f"/api/v1/accounts/{account_id}/authentication_providers/{provider_id}"
+        base_url,
+        access_token,
+        "GET",
+        f"/api/v1/accounts/{account_id}/authentication_providers/{provider_id}",
     )
     return response.json()
 
@@ -137,7 +146,11 @@ def create_authentication_provider(
         data[key] = value
 
     response = _make_request(
-        base_url, access_token, "POST", f"/api/v1/accounts/{account_id}/authentication_providers", data=data
+        base_url,
+        access_token,
+        "POST",
+        f"/api/v1/accounts/{account_id}/authentication_providers",
+        data=data,
     )
     return response.json()
 
@@ -272,7 +285,9 @@ def show_sso_settings(
     Returns:
         SSOSettings dictionary
     """
-    response = _make_request(base_url, access_token, "GET", f"/api/v1/accounts/{account_id}/sso_settings")
+    response = _make_request(
+        base_url, access_token, "GET", f"/api/v1/accounts/{account_id}/sso_settings"
+    )
     return response.json()
 
 
@@ -316,7 +331,11 @@ def update_sso_settings(
         data["sso_settings[unknown_user_url]"] = unknown_user_url
 
     response = _make_request(
-        base_url, access_token, "PUT", f"/api/v1/accounts/{account_id}/sso_settings", data=data
+        base_url,
+        access_token,
+        "PUT",
+        f"/api/v1/accounts/{account_id}/sso_settings",
+        data=data,
     )
     return response.json()
 
