@@ -3,9 +3,8 @@
 Provides APIs for managing modules and module items.
 """
 
-from .modules import ModulesAPI, modules
+from . import modules
 
 __all__ = [
-    "ModulesAPI",
     "modules",
 ]

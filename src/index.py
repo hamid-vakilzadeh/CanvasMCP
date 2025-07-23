@@ -1,44 +1,74 @@
-"""Canvas MCP Server - Organized with Tool Providers."""
-
-import argparse
 from fastmcp import FastMCP
+from fastmcp.server.dependencies import get_http_request
+from utils import verify_key
+from canvasAPI.course.courses import list_courses
 
-from tools.courses import CourseTools
-from tools.modules import ModuleTools
-from tools.quizzes import QuizTools, QuizQuestionTools, QuizQuestionGroupTools
-from tools.pages import PageTools
+mcp = FastMCP("Canvas-MCP")
 
 
-def main():
-    """Initialize the Canvas MCP server with organized tool providers."""
-    parser = argparse.ArgumentParser(description="Canvas MCP Server")
-    parser.add_argument("--canvas-url", required=True, help="Canvas base URL")
-    parser.add_argument("--access-token", required=True, help="Canvas API access token")
-    parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
+@mcp.tool
+async def list_courses_tool() -> str:
+    """Get a list of all the courses the user has taught as a teacher.
+    Use this function to get course information such as course name, course ID and term information.
+    """
+    # Get the HTTP request to access query parameters
+    request = get_http_request()
+    
+    # Extract API key from query parameters
+    api_key = request.query_params.get("apikey")
+    if not api_key:
+        raise ValueError("API key required in query parameters")
 
-    args = parser.parse_args()
+    # Verify the API key
+    try:
+        verification_result = verify_key(api_key)
+        if not verification_result.get("valid", False):
+            raise ValueError("Invalid API key")
 
-    mcp = FastMCP(name="Canvas Assistant")
+        # Extract Canvas credentials from meta object
+        meta = verification_result.get("meta", {})
+        base_url = meta.get("URL")
+        access_token = meta.get("ACCESS_TOKEN")
 
-    # Store credentials globally for API classes to access
-    import canvasAPI.base
+        if not base_url or not access_token:
+            raise ValueError("Canvas credentials not found in API key metadata")
 
-    canvasAPI.base.access_token = args.access_token
-    canvasAPI.base.url = args.canvas_url
+        # Call the Canvas API
+        result = list_courses(
+            base_url=base_url,
+            access_token=access_token,
+            enrollment_type="teacher",
+            include=["term"],
+            all_pages=True,
+        )
 
-    # Register all tool providers
-    # Each provider automatically registers its tools with the MCP instance
-    CourseTools(mcp)
-    ModuleTools(mcp)
-    QuizTools(mcp)
-    QuizQuestionTools(mcp)
-    QuizQuestionGroupTools(mcp)
-    PageTools(mcp)
+        courses_list = [
+            {
+                "course_id": item["id"],
+                "course_name": item["name"],
+                "term_id": item["term"]["id"],
+                "term_name": item["term"]["name"],
+            }
+            for item in result
+        ]
 
-    return mcp, args
+        # Generate a markdown list of courses
+        course_list_md = "\n".join(
+            f"- {course['course_name']}, (Course ID: {course['course_id']}, Term: {course['term_name']})"
+            for course in courses_list
+        )
+        course_list_md = f"# Courses List\n\n{course_list_md}"
+
+        return course_list_md
+
+    except Exception as e:
+        raise ValueError(f"Error processing request: {str(e)}")
 
 
 if __name__ == "__main__":
-    mcp, args = main()
-    mcp.run(transport="http", host=args.host, port=args.port)
+    mcp.run(
+        transport="http",
+        host="0.0.0.0",
+        port=3000,
+        path="/mcp"
+    )

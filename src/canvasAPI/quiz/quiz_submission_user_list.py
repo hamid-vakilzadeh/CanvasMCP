@@ -1,5 +1,5 @@
 from typing import Dict, Union, List, TypedDict, Literal, Any
-from ..base import CanvasAPIBase
+from ..base import _make_request
 
 
 class JSONAPIPagination(TypedDict, total=False):
@@ -25,70 +25,50 @@ class QuizUserConversation(TypedDict):
     subject: str
 
 
-class QuizSubmissionUserListAPI(CanvasAPIBase):
-    """Canvas LMS Quiz Submission User List API client for managing users who have or haven't submitted for a quiz."""
+def send_message_to_users(
+    base_url: str,
+    access_token: str,
+    course_id: Union[int, str],
+    quiz_id: Union[int, str],
+    body: str,
+    recipients: Literal["submitted", "unsubmitted"],
+    subject: str,
+) -> None:
+    """
+    Send a message to unsubmitted or submitted users for the quiz.
 
-    def __init__(self, access_token: str = None, base_url: str = None):
-        """
-        Initialize the Canvas Quiz Submission User List API client.
+    Send a message to users who have either submitted or not submitted the quiz.
 
-        Args:
-            access_token: Canvas API access token
-            base_url: Canvas base URL (e.g., https://yourdomain.instructure.com)
-        """
-        super().__init__(access_token, base_url)
+    Args:
+        base_url: Canvas instance base URL
+        access_token: Canvas API access token
+        course_id: Course ID
+        quiz_id: Quiz ID
+        body: Message body of the conversation to be created
+        recipients: Who to send the message to ("submitted" or "unsubmitted")
+        subject: Subject of the new Conversation created
 
-    def send_message_to_users(
-        self,
-        course_id: Union[int, str],
-        quiz_id: Union[int, str],
-        body: str,
-        recipients: Literal["submitted", "unsubmitted"],
-        subject: str,
-    ) -> None:
-        """
-        Send a message to unsubmitted or submitted users for the quiz.
-
-        Send a message to users who have either submitted or not submitted the quiz.
-
-        Args:
-            course_id: Course ID
-            quiz_id: Quiz ID
-            body: Message body of the conversation to be created
-            recipients: Who to send the message to ("submitted" or "unsubmitted")
-            subject: Subject of the new Conversation created
-
-        Raises:
-            ValueError: If recipients value is invalid
-        """
-        # Validate recipients
-        valid_recipients = {"submitted", "unsubmitted"}
-        if recipients not in valid_recipients:
-            raise ValueError(
-                f"Invalid recipients '{recipients}'. "
-                f"Allowed values: {', '.join(sorted(valid_recipients))}"
-            )
-
-        data = {
-            "conversations[body]": body,
-            "conversations[recipients]": recipients,
-            "conversations[subject]": subject,
-        }
-
-        self._make_request(
-            "POST",
-            f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/submission_users/message",
-            data=data,
+    Raises:
+        ValueError: If recipients value is invalid
+    """
+    # Validate recipients
+    valid_recipients = {"submitted", "unsubmitted"}
+    if recipients not in valid_recipients:
+        raise ValueError(
+            f"Invalid recipients '{recipients}'. "
+            f"Allowed values: {', '.join(sorted(valid_recipients))}"
         )
 
+    data = {
+        "conversations[body]": body,
+        "conversations[recipients]": recipients,
+        "conversations[subject]": subject,
+    }
 
-# Lazy-loaded convenience instance
-def get_quiz_submission_user_list():
-    from ..base import access_token, url
-    return QuizSubmissionUserListAPI(access_token, url)
-
-class _LazyQuizSubmissionUserListAPI:
-    def __getattr__(self, name):
-        return getattr(get_quiz_submission_user_list(), name)
-
-quiz_submission_user_list = _LazyQuizSubmissionUserListAPI()
+    _make_request(
+        base_url,
+        access_token,
+        "POST",
+        f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/submission_users/message",
+        data=data,
+    )

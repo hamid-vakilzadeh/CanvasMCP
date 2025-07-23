@@ -1,5 +1,5 @@
 from typing import List, Dict, Union, TypedDict
-from ..base import CanvasAPIBase
+from ..base import _make_request
 
 
 class AssignmentExtension(TypedDict, total=False):
@@ -16,123 +16,107 @@ class AssignmentExtensions(Dict):
     assignment_extensions: AssignmentExtension
 
 
-class AssignmentExtensionsAPI(CanvasAPIBase):
-    """Canvas LMS Assignment Extensions API client for managing student assignment extensions."""
+def set_assignment_extensions(
+    base_url: str,
+    access_token: str,
+    course_id: Union[int, str],
+    assignment_id: Union[int, str],
+    extensions: List[Dict[str, int]],
+) -> Dict:
+    """
+    Set extensions for student assignment submissions.
 
-    def __init__(self, access_token: str = None, base_url: str = None):
-        """
-        Initialize the Canvas Assignment Extensions API client.
+    Args:
+        base_url: Canvas instance base URL
+        access_token: Canvas API access token
+        course_id: Course ID
+        assignment_id: Assignment ID
+        extensions: List of extension objects with 'user_id' and 'extra_attempts' keys
 
-        Args:
-            access_token: Canvas API access token
-            base_url: Canvas base URL (e.g., https://yourdomain.instructure.com)
-        """
-        super().__init__(access_token, base_url)
+    Returns:
+        Dictionary containing list of AssignmentExtension objects
 
-    def set_assignment_extensions(
-        self,
-        course_id: Union[int, str],
-        assignment_id: Union[int, str],
-        extensions: List[Dict[str, int]],
-    ) -> AssignmentExtensions:
-        """
-        Set extensions for student assignment submissions.
+    Raises:
+        ValueError: If extensions list is empty or contains invalid extension objects
+        requests.exceptions.RequestException: For HTTP errors (403 Forbidden, 400 Bad Request)
 
-        Args:
-            course_id: Course ID
-            assignment_id: Assignment ID
-            extensions: List of extension objects with 'user_id' and 'extra_attempts' keys
+    Example:
+        extensions = [
+            {"user_id": 3, "extra_attempts": 2},
+            {"user_id": 2, "extra_attempts": 1}
+        ]
+        result = set_assignment_extensions(base_url, access_token, 123, 456, extensions)
+    """
+    if not extensions:
+        raise ValueError("Extensions list cannot be empty")
 
-        Returns:
-            Dictionary containing list of AssignmentExtension objects
+    # Validate each extension object
+    for i, extension in enumerate(extensions):
+        if not isinstance(extension, dict):
+            raise ValueError(f"Extension at index {i} must be a dictionary")
 
-        Raises:
-            ValueError: If extensions list is empty or contains invalid extension objects
-            requests.exceptions.RequestException: For HTTP errors (403 Forbidden, 400 Bad Request)
+        if "user_id" not in extension:
+            raise ValueError(f"Extension at index {i} must include 'user_id'")
 
-        Example:
-            extensions = [
-                {"user_id": 3, "extra_attempts": 2},
-                {"user_id": 2, "extra_attempts": 1}
-            ]
-            result = api.set_assignment_extensions(123, 456, extensions)
-        """
-        if not extensions:
-            raise ValueError("Extensions list cannot be empty")
+        if "extra_attempts" not in extension:
+            raise ValueError(
+                f"Extension at index {i} must include 'extra_attempts'"
+            )
 
-        # Validate each extension object
-        for i, extension in enumerate(extensions):
-            if not isinstance(extension, dict):
-                raise ValueError(f"Extension at index {i} must be a dictionary")
+        if not isinstance(extension["user_id"], int) or extension["user_id"] <= 0:
+            raise ValueError(
+                f"Extension at index {i}: 'user_id' must be a positive integer"
+            )
 
-            if "user_id" not in extension:
-                raise ValueError(f"Extension at index {i} must include 'user_id'")
+        if (
+            not isinstance(extension["extra_attempts"], int)
+            or extension["extra_attempts"] < 0
+        ):
+            raise ValueError(
+                f"Extension at index {i}: 'extra_attempts' must be a non-negative integer"
+            )
 
-            if "extra_attempts" not in extension:
-                raise ValueError(
-                    f"Extension at index {i} must include 'extra_attempts'"
-                )
+    # Format data for Canvas API
+    json_data = {"assignment_extensions": extensions}
 
-            if not isinstance(extension["user_id"], int) or extension["user_id"] <= 0:
-                raise ValueError(
-                    f"Extension at index {i}: 'user_id' must be a positive integer"
-                )
-
-            if (
-                not isinstance(extension["extra_attempts"], int)
-                or extension["extra_attempts"] < 0
-            ):
-                raise ValueError(
-                    f"Extension at index {i}: 'extra_attempts' must be a non-negative integer"
-                )
-
-        # Format data for Canvas API
-        json_data = {"assignment_extensions": extensions}
-
-        response = self._make_request(
-            "POST",
-            f"/api/v1/courses/{course_id}/assignments/{assignment_id}/extensions",
-            json_data=json_data,
-        )
-        return response.json()
-
-    def set_single_student_assignment_extension(
-        self,
-        course_id: Union[int, str],
-        assignment_id: Union[int, str],
-        user_id: int,
-        extra_attempts: int,
-    ) -> AssignmentExtensions:
-        """
-        Set extension for a single student assignment submission.
-
-        Args:
-            course_id: Course ID
-            assignment_id: Assignment ID
-            user_id: Student user ID
-            extra_attempts: Number of extra attempts to allow
-
-        Returns:
-            Dictionary containing list of AssignmentExtension objects
-
-        Raises:
-            ValueError: If user_id or extra_attempts are invalid
-            requests.exceptions.RequestException: For HTTP errors
-
-        Example:
-            result = api.set_single_assignment_extension(123, 456, 789, 2)
-        """
-        extension = {"user_id": user_id, "extra_attempts": extra_attempts}
-        return self.set_assignment_extensions(course_id, assignment_id, [extension])
+    response = _make_request(
+        base_url,
+        access_token,
+        "POST",
+        f"/api/v1/courses/{course_id}/assignments/{assignment_id}/extensions",
+        json_data=json_data,
+    )
+    return response.json()
 
 
-# Lazy-loaded convenience instance
-def get_assignment_extensions():
-    from ..base import access_token, url
-    return AssignmentExtensionsAPI(access_token, url)
+def set_single_student_assignment_extension(
+    base_url: str,
+    access_token: str,
+    course_id: Union[int, str],
+    assignment_id: Union[int, str],
+    user_id: int,
+    extra_attempts: int,
+) -> Dict:
+    """
+    Set extension for a single student assignment submission.
 
-class _LazyAssignmentExtensionsAPI:
-    def __getattr__(self, name):
-        return getattr(get_assignment_extensions(), name)
+    Args:
+        base_url: Canvas instance base URL
+        access_token: Canvas API access token
+        course_id: Course ID
+        assignment_id: Assignment ID
+        user_id: Student user ID
+        extra_attempts: Number of extra attempts to allow
 
-assignment_extensions = _LazyAssignmentExtensionsAPI()
+    Returns:
+        Dictionary containing list of AssignmentExtension objects
+
+    Raises:
+        ValueError: If user_id or extra_attempts are invalid
+        requests.exceptions.RequestException: For HTTP errors
+
+    Example:
+        result = set_single_student_assignment_extension(base_url, access_token, 123, 456, 789, 2)
+    """
+    extension = {"user_id": user_id, "extra_attempts": extra_attempts}
+    return set_assignment_extensions(base_url, access_token, course_id, assignment_id, [extension])
