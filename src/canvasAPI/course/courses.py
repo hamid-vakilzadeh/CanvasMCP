@@ -3,6 +3,8 @@ from ..base import _make_request, _get_all_pages
 
 
 def list_courses(
+    base_url: str,
+    access_token: str,
     enrollment_type: Optional[
         Literal["teacher", "student", "ta", "observer", "designer"]
     ] = None,
@@ -150,13 +152,19 @@ def list_courses(
         params["state[]"] = state
 
     if all_pages:
-        return _get_all_pages("GET", "/api/v1/courses", params=params)
+        return _get_all_pages(
+            base_url, access_token, "GET", "/api/v1/courses", params=params
+        )
     else:
-        response = _make_request("GET", "/api/v1/courses", params=params)
+        response = _make_request(
+            base_url, access_token, "GET", "/api/v1/courses", params=params
+        )
         return response.json()
 
 
 def list_courses_for_user(
+    base_url: str,
+    access_token: str,
     user_id: Union[int, str],
     include: Optional[
         List[
