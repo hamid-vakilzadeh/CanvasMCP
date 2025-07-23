@@ -78,7 +78,7 @@ def _get_all_pages(
 
     all_items = []
     response = _make_request(
-        method, endpoint, params, data, json_data, base_url, access_token
+        base_url, access_token, method, endpoint, params, data, json_data
     )
 
     while True:
