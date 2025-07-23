@@ -1,119 +1,99 @@
-from dotenv import load_dotenv
-import os
 import requests
 import json
 from typing import Dict, List
 
-# Load environment variables as fallback
-load_dotenv()
 
-# Global variables that can be set by the server
-access_token = os.getenv("canvas_api_key")
-url = os.getenv("main_url")
+def _make_request(
+    base_url: str,
+    access_token: str,
+    method: str,
+    endpoint: str,
+    params: Dict = None,
+    data: Dict = None,
+    json_data: Dict = None,
+) -> requests.Response:
+    """
+    Make HTTP request to Canvas API.
 
+    Args:
+        method: HTTP method (GET, POST, PUT, DELETE)
+        endpoint: API endpoint
+        params: Query parameters
+        data: Form data
+        json_data: JSON data
+        base_url: Canvas base URL (extracted from JWT if not provided)
+        access_token: Canvas API token (extracted from JWT if not provided)
 
-class CanvasAPIBase:
-    """Base class for Canvas API clients with shared functionality."""
+    Returns:
+        requests.Response object
 
-    def __init__(self, access_token: str = None, base_url: str = None):
-        """
-        Initialize the Canvas API client.
+    Raises:
+        requests.exceptions.RequestException: For HTTP errors
+    """
 
-        Args:
-            access_token: Canvas API access token
-            base_url: Canvas base URL (e.g., https://yourdomain.instructure.com)
-        """
-        # Use provided arguments, then fall back to globals, then environment
-        self.access_token = (
-            access_token or globals().get("access_token") or os.getenv("canvas_api_key")
+    headers = {"Authorization": f"Bearer {access_token}"}
+    url = f"{base_url}{endpoint}"
+
+    if json_data:
+        headers["Content-Type"] = "application/json"
+        data = json.dumps(json_data)
+
+    try:
+        response = requests.request(
+            method=method, url=url, headers=headers, params=params, data=data
         )
-        self.base_url = base_url or globals().get("url") or os.getenv("main_url")
+        response.raise_for_status()
+        return response
+    except requests.exceptions.RequestException as e:
+        print(f"API request failed: {e}")
+        raise
 
-        if not self.access_token or not self.base_url:
-            raise ValueError(
-                "Canvas API credentials not provided. Please provide access_token and base_url."
-            )
 
-        self.headers = {"Authorization": f"Bearer {self.access_token}"}
+def _get_all_pages(
+    base_url: str,
+    access_token: str,
+    method: str,
+    endpoint: str,
+    params: Dict = None,
+    data: Dict = None,
+    json_data: Dict = None,
+) -> List[Dict]:
+    """
+    Fetch all pages from a paginated endpoint.
 
-    def _make_request(
-        self,
-        method: str,
-        endpoint: str,
-        params: Dict = None,
-        data: Dict = None,
-        json_data: Dict = None,
-    ) -> requests.Response:
-        """
-        Make HTTP request to Canvas API.
+    Args:
+        method: HTTP method (GET, POST, PUT, DELETE)
+        endpoint: API endpoint
+        params: Query parameters
+        data: Form data
+        json_data: JSON data
+        base_url: Canvas base URL (extracted from JWT if not provided)
+        access_token: Canvas API token (extracted from JWT if not provided)
 
-        Args:
-            method: HTTP method (GET, POST, PUT, DELETE)
-            endpoint: API endpoint
-            params: Query parameters
-            data: Form data
-            json_data: JSON data
+    Returns:
+        List of all items from all pages
+    """
 
-        Returns:
-            requests.Response object
+    headers = {"Authorization": f"Bearer {access_token}"}
 
-        Raises:
-            requests.exceptions.RequestException: For HTTP errors
-        """
-        url = f"{self.base_url}{endpoint}"
-        headers = self.headers.copy()
+    all_items = []
+    response = _make_request(
+        base_url, access_token, method, endpoint, params, data, json_data
+    )
 
-        if json_data:
-            headers["Content-Type"] = "application/json"
-            data = json.dumps(json_data)
+    while True:
+        items = response.json()
+        if isinstance(items, list):
+            all_items.extend(items)
+        else:
+            all_items.append(items)
 
-        try:
-            response = requests.request(
-                method=method, url=url, headers=headers, params=params, data=data
-            )
+        # Check if there's a next page using the links attribute
+        if "next" in response.links:
+            next_url = response.links["next"]["url"]
+            response = requests.get(next_url, headers=headers)
             response.raise_for_status()
-            return response
-        except requests.exceptions.RequestException as e:
-            print(f"API request failed: {e}")
-            raise
+        else:
+            break
 
-    def _get_all_pages(
-        self,
-        method: str,
-        endpoint: str,
-        params: Dict = None,
-        data: Dict = None,
-        json_data: Dict = None,
-    ) -> List[Dict]:
-        """
-        Fetch all pages from a paginated endpoint.
-
-        Args:
-            method: HTTP method (GET, POST, PUT, DELETE)
-            endpoint: API endpoint
-            params: Query parameters
-            data: Form data
-            json_data: JSON data
-
-        Returns:
-            List of all items from all pages
-        """
-        all_items = []
-        response = self._make_request(method, endpoint, params, data, json_data)
-
-        while True:
-            items = response.json()
-            if isinstance(items, list):
-                all_items.extend(items)
-            else:
-                all_items.append(items)
-
-            # Check if there's a next page using the links attribute
-            if "next" in response.links:
-                next_url = response.links["next"]["url"]
-                response = requests.get(next_url, headers=self.headers)
-                response.raise_for_status()
-            else:
-                break
-
-        return all_items
+    return all_items

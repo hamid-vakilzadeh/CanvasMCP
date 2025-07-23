@@ -3,9 +3,8 @@
 Provides APIs for managing wiki pages.
 """
 
-from .pages import PagesAPI, pages
+from . import pages
 
 __all__ = [
-    "PagesAPI",
     "pages",
 ]
