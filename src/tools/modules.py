@@ -6,6 +6,7 @@ from pydantic import Field
 
 from .base import ToolProvider
 from canvasAPI.module import modules
+from tools.getToken import get_user_token
 
 
 class ModuleTools(ToolProvider):
@@ -68,6 +69,9 @@ class ModuleTools(ToolProvider):
             prerequisite_module_ids=prerequisite_module_ids,
             publish_final_grade=publish_final_grade,
         )
+
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.create_module(**params)
 
     async def list_modules(
@@ -95,6 +99,8 @@ class ModuleTools(ToolProvider):
             student_id=student_id,
             all_pages=True,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.list_modules(**params)
 
     async def show_module(
@@ -117,6 +123,8 @@ class ModuleTools(ToolProvider):
             include=include,
             student_id=student_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.show_module(**params)
 
     async def update_module(
@@ -160,6 +168,8 @@ class ModuleTools(ToolProvider):
             publish_final_grade=publish_final_grade,
             published=published,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.update_module(**params)
 
     async def delete_module(
@@ -172,6 +182,8 @@ class ModuleTools(ToolProvider):
             course_id=course_id,
             module_id=module_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.delete_module(**params)
 
     async def relock_module(
@@ -184,6 +196,8 @@ class ModuleTools(ToolProvider):
             course_id=course_id,
             module_id=module_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.relock_module(**params)
 
     async def list_module_items(
@@ -213,6 +227,8 @@ class ModuleTools(ToolProvider):
             student_id=student_id,
             all_pages=True,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.list_module_items(**params)
 
     async def show_module_item(
@@ -237,6 +253,8 @@ class ModuleTools(ToolProvider):
             include=include,
             student_id=student_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.show_module_item(**params)
 
     async def create_module_item(
@@ -330,6 +348,8 @@ class ModuleTools(ToolProvider):
             iframe_width=iframe_width,
             iframe_height=iframe_height,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.create_module_item(**params)
 
     async def update_module_item(
@@ -394,6 +414,8 @@ class ModuleTools(ToolProvider):
             published=published,
             target_module_id=target_module_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.update_module_item(**params)
 
     async def delete_module_item(
@@ -410,4 +432,6 @@ class ModuleTools(ToolProvider):
             module_id=module_id,
             item_id=item_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return modules.delete_module_item(**params)
