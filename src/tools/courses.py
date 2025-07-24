@@ -2,6 +2,7 @@
 
 from .base import ToolProvider
 from canvasAPI.course import courses
+from tools.getToken import get_user_token
 
 
 class CourseTools(ToolProvider):
@@ -15,8 +16,15 @@ class CourseTools(ToolProvider):
         """Get a list of all the courses the user has taught as a teacher.
         Use this function to get course information such as course name, course ID and term information.
         """
+
+        base_url, access_token = get_user_token()
+
         result = courses.list_courses(
-            enrollment_type="teacher", include=["term"], all_pages=True
+            base_url=base_url,
+            access_token=access_token,
+            enrollment_type="teacher",
+            include=["term"],
+            all_pages=True,
         )
 
         courses_list = [

@@ -18,6 +18,7 @@ temp
 __pycache__
 docs
 examples
+.vscode
 
 # temp files
 src/tools/README.md
