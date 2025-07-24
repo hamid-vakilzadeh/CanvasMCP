@@ -105,3 +105,43 @@ def verify_key(
     except (KeyError, ValueError, json.JSONDecodeError) as e:
         print(f"Failed to parse Unkey API response: {e}")
         raise
+
+
+def get_user_token():
+    # Extract API key from HTTP request
+    try:
+        from fastmcp.server.dependencies import get_http_request
+
+        request = get_http_request()
+
+        if request and hasattr(request, "query_params"):
+            apikey = request.query_params.get("apikey")
+        else:
+            # Fallback: try to get from URL if available
+            apikey = None
+            if request and hasattr(request, "url"):
+                import urllib.parse
+
+                parsed = urllib.parse.urlparse(str(request.url))
+                params = urllib.parse.parse_qs(parsed.query)
+                apikey = params.get("apikey", [None])[0]
+
+        if not apikey:
+            raise ValueError("API key required in query parameters (?apikey=your_key)")
+
+    except Exception as e:
+        raise ValueError(f"Error extracting API key from request: {str(e)}")
+
+    verification_result = verify_key(apikey)
+    if not verification_result.get("valid", False):
+        raise ValueError("Invalid API key")
+
+    # Extract Canvas credentials from meta object
+    meta = verification_result.get("meta", {})
+    base_url = meta.get("profileUrl")
+    access_token = meta.get("profileAccessToken")
+
+    if not base_url or not access_token:
+        raise ValueError("Canvas credentials not found in API key metadata")
+
+    return base_url, access_token
