@@ -26,6 +26,11 @@ spec:
               value: "3000"
             - name: MCP_PATH
               value: "/mcp"
+            - name: ENCRYPTION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ENCRYPTION_SECRET
+                  key: latest
           resources:
             limits:
               cpu: "1"
