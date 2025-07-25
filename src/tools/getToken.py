@@ -1,6 +1,68 @@
 import requests
 import json
+import os
+import base64
+import hashlib
 from typing import Dict, List, Optional, Any
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+ALGORITHM = "aes-256-gcm"
+IV_LENGTH = 16
+TAG_LENGTH = 16
+
+
+def get_private_key():
+    """Get the private key from environment variable."""
+    secret = os.getenv("ENCRYPTION_SECRET")
+    if not secret:
+        raise ValueError("ENCRYPTION_SECRET environment variable is required")
+
+    # Derive a consistent 32-byte key from the secret
+    return hashlib.sha256(secret.encode()).digest()
+
+
+def derive_key_from_api_key(api_key: str, private_key: bytes) -> bytes:
+    """Combine API key (public) with private key to create unique encryption key."""
+    combined = api_key.encode() + private_key
+
+    # Derive final encryption key using PBKDF2 for additional security
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=b"unkey-encryption-salt",
+        iterations=10000,
+        backend=default_backend(),
+    )
+    return kdf.derive(combined)
+
+
+def decrypt_token_with_api_key(encrypted_token: str, api_key: str) -> str:
+    """Decrypt an encrypted token using the API key."""
+    private_key = get_private_key()
+    encryption_key = derive_key_from_api_key(api_key, private_key)
+    combined = base64.b64decode(encrypted_token)
+
+    # Extract IV, tag, and encrypted data
+    iv = combined[:IV_LENGTH]
+    tag = combined[IV_LENGTH : IV_LENGTH + TAG_LENGTH]
+    encrypted = combined[IV_LENGTH + TAG_LENGTH :]
+
+    # Create cipher and decrypt
+    cipher = Cipher(
+        algorithms.AES(encryption_key), modes.GCM(iv, tag), backend=default_backend()
+    )
+    decryptor = cipher.decryptor()
+    decryptor.authenticate_additional_data(b"access_token")
+
+    decrypted = decryptor.update(encrypted) + decryptor.finalize()
+    return decrypted.decode("utf-8")
 
 
 def verify_key(
@@ -139,7 +201,13 @@ def get_user_token():
     # Extract Canvas credentials from meta object
     meta = verification_result.get("meta", {})
     base_url = meta.get("profileUrl")
-    access_token = meta.get("profileAccessToken")
+    encrypted_access_token = meta.get("encryptedAccessToken")
+
+    # decrypt access token
+    if not encrypted_access_token:
+        raise ValueError("Encrypted access token not found in API key metadata")
+
+    access_token = decrypt_token_with_api_key(encrypted_access_token, apikey)
 
     if not base_url or not access_token:
         raise ValueError("Canvas credentials not found in API key metadata")
