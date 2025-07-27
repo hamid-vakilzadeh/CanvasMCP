@@ -72,6 +72,94 @@ Each tool provider is a class that inherits from `ToolProvider` and automaticall
   - `show_revision()` - Retrieve metadata and content of a page revision
   - `revert_to_revision()` - Revert a page to a prior revision
 
+#### 6. ConversationTools (`conversations.py`)
+
+- **Purpose**: Manages Canvas messaging/conversations system
+- **Tools**:
+  - `list_conversations()` - List conversations for the current user
+  - `create_conversation()` - Create a new conversation with recipients
+  - `get_conversation()` - Get a single conversation with messages
+  - `update_conversation()` - Update conversation state (read/unread/starred)
+  - `delete_conversation()` - Delete a conversation
+  - `add_recipients()` - Add recipients to an existing conversation
+  - `add_message()` - Add a message to an existing conversation
+  - `remove_messages()` - Delete messages from a conversation
+  - `mark_all_as_read()` - Mark all conversations as read
+  - `batch_update_conversations()` - Perform bulk operations on conversations
+  - `unread_count()` - Get the number of unread conversations
+
+#### 7. DiscussionTopicTools (`discussionTopics.py`)
+
+- **Purpose**: Manages Canvas discussion topics and entries
+- **Tools**:
+  - `list_discussion_topics()` - List discussion topics in a course/group
+  - `create_discussion_topic()` - Create a new discussion topic
+  - `get_discussion_topic()` - Get a single discussion topic
+  - `update_discussion_topic()` - Update an existing discussion topic
+  - `delete_discussion_topic()` - Delete a discussion topic
+  - `duplicate_discussion_topic()` - Duplicate a discussion topic
+  - `get_full_topic()` - Get full topic with all entries in threaded view
+  - `list_topic_entries()` - List top-level entries in a discussion
+  - `post_entry()` - Post a new entry to a discussion
+  - `post_reply()` - Post a reply to a discussion entry
+  - `update_entry()` - Update a discussion entry
+  - `delete_entry()` - Delete a discussion entry
+  - `mark_topic_read()` - Mark discussion topic as read
+  - `mark_entry_read()` - Mark discussion entry as read
+  - `subscribe_to_topic()` - Subscribe to topic notifications
+  - `rate_entry()` - Rate a discussion entry
+
+#### 8. CalendarTools (`account_calendars.py`)
+
+- **Purpose**: Manages Canvas account calendars
+- **Tools**:
+  - `list_account_calendars()` - List available account calendars
+  - `get_account_calendar()` - Get details about a specific calendar
+  - `update_account_calendar()` - Update calendar visibility and settings
+  - `bulk_update_account_calendars()` - Update multiple calendars simultaneously
+  - `list_all_account_calendars()` - List all calendars for an account and sub-accounts
+  - `get_visible_calendars_count()` - Get count of visible calendars
+
+#### 9. AssignmentTools (`assignments.py`, `assignment_groups.py`, `assignment_extensions.py`)
+
+- **Purpose**: Manages Canvas assignments, assignment groups, and extensions
+- **Tools**:
+  - `list_assignments()` - List assignments in a course
+  - `get_assignment()` - Get a single assignment
+  - `create_assignment()` - Create a new assignment
+  - `update_assignment()` - Update an existing assignment
+  - `delete_assignment()` - Delete an assignment
+  - `duplicate_assignment()` - Duplicate an assignment
+  - `bulk_update_assignment_dates()` - Update dates for multiple assignments
+  - `list_assignment_overrides()` - List assignment overrides
+  - `create_assignment_override()` - Create assignment overrides for specific students/groups
+  - `list_assignment_groups()` - List assignment groups in a course
+  - `create_assignment_group()` - Create a new assignment group
+  - `update_assignment_group()` - Update assignment group settings and grading rules
+  - `delete_assignment_group()` - Delete an assignment group
+  - `set_assignment_extensions()` - Set submission extensions for students
+
+#### 10. QuizTools (`quizzes.py` and related quiz modules)
+
+- **Purpose**: Manages Canvas quizzes and quiz components
+- **Tools**:
+  - `list_quizzes()` - List quizzes in a course
+  - `get_quiz()` - Get a single quiz
+  - `create_quiz()` - Create a new quiz
+  - `update_quiz()` - Update an existing quiz
+  - `delete_quiz()` - Delete a quiz
+  - `list_quiz_questions()` - List questions in a quiz
+  - `create_quiz_question()` - Create quiz questions with various types
+  - `update_quiz_question()` - Update quiz questions
+  - `delete_quiz_question()` - Delete quiz questions
+  - `list_quiz_submissions()` - List quiz submissions
+  - `get_quiz_submission()` - Get quiz submission details
+  - `create_quiz_submission()` - Start a quiz attempt
+  - `update_quiz_submission()` - Update quiz submission answers
+  - `complete_quiz_submission()` - Complete and submit a quiz
+  - `get_quiz_statistics()` - Get quiz statistics and analytics
+  - `set_quiz_extensions()` - Set quiz submission extensions
+
 ## Usage
 
 ### Main Entry Point
@@ -82,6 +170,10 @@ from tools.courses import CourseTools
 from tools.modules import ModuleTools
 from tools.quizzes import QuizTools, QuizQuestionTools
 from tools.pages import PageTools
+from tools.conversations import ConversationTools
+from tools.discussionTopics import DiscussionTopicTools
+from tools.calendars import CalendarTools
+from tools.assignments import AssignmentTools, AssignmentGroupTools, AssignmentExtensionTools
 
 # Create MCP instance
 mcp = FastMCP(name="Canvas Assistant")
@@ -92,6 +184,12 @@ ModuleTools(mcp)
 QuizTools(mcp)
 QuizQuestionTools(mcp)
 PageTools(mcp)
+ConversationTools(mcp)
+DiscussionTopicTools(mcp)
+CalendarTools(mcp)
+AssignmentTools(mcp)
+AssignmentGroupTools(mcp)
+AssignmentExtensionTools(mcp)
 
 # Run the server
 mcp.run()
