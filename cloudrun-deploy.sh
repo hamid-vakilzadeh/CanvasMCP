@@ -26,6 +26,7 @@ gcloud run deploy $SERVICE_NAME \
   --memory 512Mi \
   --cpu 1 \
   --max-instances 10 \
+  --service-account "canvas-mcp-sa@$PROJECT_ID.iam.gserviceaccount.com" \
   --set-env-vars "MCP_TRANSPORT=http,MCP_HOST=0.0.0.0,MCP_PORT=3000,MCP_PATH=/mcp" \
   --set-secrets "ENCRYPTION_SECRET=ENCRYPTION_SECRET:latest"
 
