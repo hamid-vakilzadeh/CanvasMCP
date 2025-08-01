@@ -4,18 +4,15 @@ import os
 import base64
 import hashlib
 from typing import Dict, List, Optional, Any
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
+from nacl.secret import SecretBox
+from nacl.utils import random
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
-
-ALGORITHM = "aes-256-gcm"
-IV_LENGTH = 16
-TAG_LENGTH = 16
 
 
 def get_private_key():
@@ -32,37 +29,35 @@ def derive_key_from_api_key(api_key: str, private_key: bytes) -> bytes:
     """Combine API key (public) with private key to create unique encryption key."""
     combined = api_key.encode() + private_key
 
-    # Derive final encryption key using PBKDF2 for additional security
+    # Derive final encryption key using PBKDF2 - reduced iterations for better performance
+    # 5000 iterations is still cryptographically secure while being ~2x faster
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
-        length=32,
+        length=32,  # NaCl SecretBox requires 32-byte keys
         salt=b"unkey-encryption-salt",
-        iterations=10000,
+        iterations=5000,  # Reduced from 10000 for better performance
         backend=default_backend(),
     )
     return kdf.derive(combined)
 
 
 def decrypt_token_with_api_key(encrypted_token: str, api_key: str) -> str:
-    """Decrypt an encrypted token using the API key."""
+    """Decrypt an encrypted token using the API key with NaCl SecretBox."""
     private_key = get_private_key()
     encryption_key = derive_key_from_api_key(api_key, private_key)
-    combined = base64.b64decode(encrypted_token)
 
-    # Extract IV, tag, and encrypted data
-    iv = combined[:IV_LENGTH]
-    tag = combined[IV_LENGTH : IV_LENGTH + TAG_LENGTH]
-    encrypted = combined[IV_LENGTH + TAG_LENGTH :]
+    # Decode the base64 encrypted token
+    encrypted_data = base64.b64decode(encrypted_token)
 
-    # Create cipher and decrypt
-    cipher = Cipher(
-        algorithms.AES(encryption_key), modes.GCM(iv, tag), backend=default_backend()
-    )
-    decryptor = cipher.decryptor()
-    decryptor.authenticate_additional_data(b"access_token")
+    # Create SecretBox with the derived key
+    box = SecretBox(encryption_key)
 
-    decrypted = decryptor.update(encrypted) + decryptor.finalize()
-    return decrypted.decode("utf-8")
+    try:
+        # NaCl SecretBox handles nonce and authentication automatically
+        decrypted_bytes = box.decrypt(encrypted_data)
+        return decrypted_bytes.decode("utf-8")
+    except Exception as e:
+        raise ValueError(f"Token decryption failed: {str(e)}")
 
 
 def verify_key(
@@ -170,6 +165,45 @@ def verify_key(
 
 
 def get_user_token():
+    """
+    Get user token from session context.
+
+    This function now retrieves credentials from the session context state
+    that was set by the SessionAuthMiddleware, eliminating the need for
+    authentication and decryption on every request.
+
+    Returns:
+        Tuple of (base_url, access_token)
+
+    Raises:
+        ValueError: If credentials are not available in session context
+    """
+    try:
+        from session_manager import get_current_session_credentials
+
+        # Get credentials from thread-local storage (set by SessionAuthMiddleware)
+        credentials = get_current_session_credentials()
+
+        if not credentials:
+            raise ValueError("Canvas credentials not found in session context")
+
+        base_url, access_token = credentials
+        print(f"🎯 [TOKEN] Using cached credentials for Canvas: {base_url}")
+        return base_url, access_token
+
+    except Exception:
+        # Fallback to legacy authentication if session is not available
+        # This provides backward compatibility during transition
+        return _legacy_get_user_token()
+
+
+def _legacy_get_user_token():
+    """
+    Legacy token retrieval method (kept for backward compatibility).
+
+    This method performs the original authentication and decryption process.
+    It's used as a fallback when session context is not available.
+    """
     # Extract API key from HTTP request
     try:
         from fastmcp.server.dependencies import get_http_request
@@ -213,3 +247,7 @@ def get_user_token():
         raise ValueError("Canvas credentials not found in API key metadata")
 
     return base_url, access_token
+
+
+# Session monitoring functions removed for security -
+# LLM should never have access to session data
