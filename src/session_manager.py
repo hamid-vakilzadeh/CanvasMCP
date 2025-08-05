@@ -187,30 +187,3 @@ class SessionManager:
 
 # Global session manager instance
 session_manager = SessionManager()
-
-# Thread-local storage for current request context
-import threading
-_context_local = threading.local()
-
-
-def set_current_session_credentials(base_url: str, access_token: str, session_id: str) -> None:
-    """Set the current request's session credentials in thread-local storage."""
-    _context_local.base_url = base_url
-    _context_local.access_token = access_token  
-    _context_local.session_id = session_id
-
-
-def get_current_session_credentials() -> tuple[str, str] | None:
-    """Get the current request's session credentials from thread-local storage."""
-    try:
-        return (_context_local.base_url, _context_local.access_token)
-    except AttributeError:
-        return None
-
-
-def get_current_session_id() -> str | None:
-    """Get the current request's session ID from thread-local storage."""
-    try:
-        return _context_local.session_id
-    except AttributeError:
-        return None
