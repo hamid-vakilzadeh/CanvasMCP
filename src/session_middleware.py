@@ -67,10 +67,26 @@ class SessionAuthMiddleware(Middleware):
             credentials = session_manager.get_session(session_id)
 
             if credentials:
-                # Session exists and is valid - store in context
+                # Session exists and is valid - but we still need to validate API key for rate limiting
                 base_url, access_token = credentials
-                print(f"🔄 [SESSION] Reusing existing session: {session_id[:8]}...")
-                logger.debug(f"Using existing session: {session_id}")
+                print(f"🔄 [SESSION] Found existing session: {session_id[:8]}...")
+                
+                # Get API key for validation (required for rate limiting)
+                api_key = await self._extract_api_key_from_request(context)
+                if not api_key:
+                    raise ValueError("API key required for rate limit validation")
+                
+                print(f"🔑 [RATE-LIMIT] Validating API key: {api_key[:10]}...")
+                
+                # Verify API key is still valid (for rate limiting)
+                verification_result = verify_key(api_key)
+                if not verification_result.get("valid", False):
+                    # API key is invalid, remove session and force re-auth
+                    session_manager.remove_session(session_id)
+                    raise ValueError("API key validation failed - session invalidated")
+                
+                print("✅ [RATE-LIMIT] API key validated, using cached token")
+                logger.debug(f"Using existing session with validated API key: {session_id}")
             else:
                 # No valid session - authenticate and create new session
                 print(f"🔐 [AUTH] Creating new session: {session_id[:8]}...")
