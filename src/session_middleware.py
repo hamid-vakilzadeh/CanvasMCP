@@ -6,7 +6,7 @@ from fastmcp.server.middleware import Middleware, MiddlewareContext
 from mcp import McpError
 from mcp.types import ErrorData
 
-from session_manager import session_manager, set_current_session_credentials
+from session_manager import session_manager
 from tools.getToken import verify_key, decrypt_token_with_api_key
 
 logger = logging.getLogger(__name__)
@@ -81,8 +81,12 @@ class SessionAuthMiddleware(Middleware):
                 )
                 print(f"✅ [SESSION] New session created for Canvas instance: {base_url}")
 
-            # Store credentials in thread-local storage for tools to access
-            set_current_session_credentials(base_url, access_token, session_id)
+            # Store credentials in FastMCP context state for tools to access
+            if context.fastmcp_context:
+                context.fastmcp_context.set_state("canvas_base_url", base_url)
+                context.fastmcp_context.set_state("canvas_access_token", access_token)
+                context.fastmcp_context.set_state("session_id", session_id)
+                print("📝 [STATE] Credentials stored in FastMCP context")
 
             # Continue with the request
             return await call_next(context)

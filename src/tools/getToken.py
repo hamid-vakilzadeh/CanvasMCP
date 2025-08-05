@@ -178,15 +178,17 @@ def get_user_token():
         ValueError: If credentials are not available in session context
     """
     try:
-        from session_manager import get_current_session_credentials
+        from fastmcp.server.dependencies import get_context
 
-        # Get credentials from thread-local storage (set by SessionAuthMiddleware)
-        credentials = get_current_session_credentials()
+        # Get the current FastMCP context
+        ctx = get_context()
 
-        if not credentials:
+        # Retrieve credentials from context state (set by SessionAuthMiddleware)
+        base_url = ctx.get_state("canvas_base_url")
+        access_token = ctx.get_state("canvas_access_token")
+
+        if not base_url or not access_token:
             raise ValueError("Canvas credentials not found in session context")
-
-        base_url, access_token = credentials
         print(f"🎯 [TOKEN] Using cached credentials for Canvas: {base_url}")
         return base_url, access_token
 
