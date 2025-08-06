@@ -156,26 +156,23 @@ def verify_key(
         return data
 
     except requests.exceptions.RequestException as e:
-        print(f"Unkey API request failed: {e}")
         raise
     except (KeyError, ValueError, json.JSONDecodeError) as e:
-        print(f"Failed to parse Unkey API response: {e}")
         raise
 
 
 def get_user_token():
     """
-    Get user token from session context.
+    Get user token with lazy authentication.
 
-    This function now retrieves credentials from the session context state
-    that was set by the SessionAuthMiddleware, eliminating the need for
-    authentication and decryption on every request.
+    This function first tries to get cached credentials from session context.
+    If not available, it performs authentication and creates a session for future use.
 
     Returns:
         Tuple of (base_url, access_token)
 
     Raises:
-        ValueError: If credentials are not available in session context
+        ValueError: If authentication fails or credentials are not available
     """
     try:
         from fastmcp.server.dependencies import get_context
@@ -183,19 +180,90 @@ def get_user_token():
         # Get the current FastMCP context
         ctx = get_context()
 
-        # Retrieve credentials from context state (set by SessionAuthMiddleware)
+        # Always verify API key for rate limiting on every tool call
+        api_key = _extract_api_key_from_current_request()
+        if not api_key:
+            raise ValueError("API key required in query parameters (?apikey=your_key)")
+        
+        verification_result = verify_key(api_key)
+        if not verification_result.get("valid", False):
+            raise ValueError("Invalid API key")
+
+        # Try to get cached credentials after API verification
         base_url = ctx.get_state("canvas_base_url")
         access_token = ctx.get_state("canvas_access_token")
 
+        if base_url and access_token:
+            return base_url, access_token
+
+        # No cached credentials - perform authentication on first tool execution
+        session_id = ctx.get_state("session_id")
+        if not session_id:
+            raise ValueError("No session context available")
+
+        # Extract Canvas credentials from meta object
+        meta = verification_result.get("meta", {})
+        base_url = meta.get("profileUrl")
+        encrypted_access_token = meta.get("encryptedAccessToken")
+
+        if not encrypted_access_token:
+            raise ValueError("Encrypted access token not found in API key metadata")
+        
+        # Decrypt access token
+        access_token = decrypt_token_with_api_key(encrypted_access_token, api_key)
+
         if not base_url or not access_token:
-            raise ValueError("Canvas credentials not found in session context")
-        print(f"🎯 [TOKEN] Using cached credentials for Canvas: {base_url}")
+            raise ValueError("Canvas credentials not found in API key metadata")
+
+        # Update/create session for future use
+        from session_manager import session_manager
+        session_manager.create_session(session_id, base_url, access_token)
+        
+        # Store credentials in context for this request
+        ctx.set_state("canvas_base_url", base_url)
+        ctx.set_state("canvas_access_token", access_token)
+        
         return base_url, access_token
 
-    except Exception:
-        # Fallback to legacy authentication if session is not available
-        # This provides backward compatibility during transition
+    except Exception as e:
+        # Fallback to legacy authentication if context is not available
         return _legacy_get_user_token()
+
+
+def _extract_api_key_from_current_request() -> Optional[str]:
+    """
+    Extract API key from the current HTTP request context.
+    
+    Returns:
+        API key if found, None otherwise
+    """
+    try:
+        from fastmcp.server.dependencies import get_http_request
+        
+        request = get_http_request()
+        if not request:
+            return None
+        
+        # Try query parameters first
+        if hasattr(request, "query_params"):
+            api_key = request.query_params.get("apikey")
+            if api_key:
+                return api_key
+        
+        # Try to extract from URL if available
+        if hasattr(request, "url"):
+            import urllib.parse
+            
+            parsed = urllib.parse.urlparse(str(request.url))
+            params = urllib.parse.parse_qs(parsed.query)
+            api_key = params.get("apikey", [None])[0]
+            if api_key:
+                return api_key
+        
+        return None
+        
+    except Exception:
+        return None
 
 
 def _legacy_get_user_token():
