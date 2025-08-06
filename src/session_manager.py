@@ -16,7 +16,7 @@ class SessionData:
     
     base_url: str
     access_token: str
-    api_key: str
+    # Removed api_key - not cached for security reasons
     created_at: float = field(default_factory=time.time)
     last_accessed: float = field(default_factory=time.time)
     
@@ -86,12 +86,12 @@ class SessionManager:
                 logger.debug(f"Cleaned up expired session: {session_id}")
             
             if expired_sessions:
-                print(f"🧹 [SESSION] Cleaned up {len(expired_sessions)} expired sessions")
+                logger.info(f"Cleaned up {len(expired_sessions)} expired sessions")
                 logger.info(f"Cleaned up {len(expired_sessions)} expired sessions")
             
             return len(expired_sessions)
     
-    def create_session(self, session_id: str, base_url: str, access_token: str, api_key: str) -> None:
+    def create_session(self, session_id: str, base_url: str, access_token: str) -> None:
         """
         Create or update a session with user credentials.
         
@@ -99,13 +99,11 @@ class SessionManager:
             session_id: Unique session identifier
             base_url: Canvas base URL
             access_token: Decrypted Canvas access token
-            api_key: Original API key for reference
         """
         with self._lock:
             session_data = SessionData(
                 base_url=base_url,
-                access_token=access_token,
-                api_key=api_key
+                access_token=access_token
             )
             self._sessions[session_id] = session_data
             logger.debug(f"Created session: {session_id}")
@@ -181,7 +179,7 @@ class SessionManager:
                 "idle_time_seconds": time.time() - session_data.last_accessed,
                 "is_expired": session_data.is_expired(self.session_timeout),
                 "base_url": session_data.base_url,
-                "api_key": session_data.api_key[:10] + "..." if session_data.api_key else None,
+                # Removed api_key from monitoring for security
             }
 
 
