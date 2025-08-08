@@ -2,7 +2,7 @@ from fastmcp import FastMCP
 from tools.courses import CourseTools
 from tools.modules import ModuleTools
 from tools.pages import PageTools
-from tools.quizzes import QuizTools
+from tools.quizzes import QuizTools, QuizQuestionTools, QuizQuestionGroupTools
 
 from session_middleware import SessionAuthMiddleware, SessionManagementMiddleware
 
@@ -16,6 +16,8 @@ CourseTools(mcp)
 ModuleTools(mcp)
 PageTools(mcp)
 QuizTools(mcp)
+QuizQuestionTools(mcp)
+QuizQuestionGroupTools(mcp)
 
 if __name__ == "__main__":
     mcp.run(
