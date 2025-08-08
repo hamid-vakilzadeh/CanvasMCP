@@ -184,7 +184,7 @@ def get_user_token():
         api_key = _extract_api_key_from_current_request()
         if not api_key:
             raise ValueError("API key required in query parameters (?apikey=your_key)")
-        
+
         verification_result = verify_key(api_key)
         if not verification_result.get("valid", False):
             raise ValueError("Invalid API key")
@@ -208,7 +208,7 @@ def get_user_token():
 
         if not encrypted_access_token:
             raise ValueError("Encrypted access token not found in API key metadata")
-        
+
         # Decrypt access token
         access_token = decrypt_token_with_api_key(encrypted_access_token, api_key)
 
@@ -217,12 +217,13 @@ def get_user_token():
 
         # Update/create session for future use
         from session_manager import session_manager
+
         session_manager.create_session(session_id, base_url, access_token)
-        
+
         # Store credentials in context for this request
         ctx.set_state("canvas_base_url", base_url)
         ctx.set_state("canvas_access_token", access_token)
-        
+
         return base_url, access_token
 
     except Exception as e:
@@ -233,35 +234,35 @@ def get_user_token():
 def _extract_api_key_from_current_request() -> Optional[str]:
     """
     Extract API key from the current HTTP request context.
-    
+
     Returns:
         API key if found, None otherwise
     """
     try:
         from fastmcp.server.dependencies import get_http_request
-        
+
         request = get_http_request()
         if not request:
             return None
-        
+
         # Try query parameters first
         if hasattr(request, "query_params"):
             api_key = request.query_params.get("apikey")
             if api_key:
                 return api_key
-        
+
         # Try to extract from URL if available
         if hasattr(request, "url"):
             import urllib.parse
-            
+
             parsed = urllib.parse.urlparse(str(request.url))
             params = urllib.parse.parse_qs(parsed.query)
             api_key = params.get("apikey", [None])[0]
             if api_key:
                 return api_key
-        
+
         return None
-        
+
     except Exception:
         return None
 

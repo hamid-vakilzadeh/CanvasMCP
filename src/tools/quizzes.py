@@ -5,6 +5,7 @@ from pydantic import Field
 
 from .base import ToolProvider
 from canvasAPI.quiz import quizzes, quiz_questions, quiz_question_groups
+from tools.getToken import get_user_token
 
 
 class QuizTools(ToolProvider):
@@ -35,6 +36,8 @@ class QuizTools(ToolProvider):
             search_term=search_term,
             all_pages=True,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quizzes.list_quizzes(**params)
 
     async def get_quiz(
@@ -47,6 +50,8 @@ class QuizTools(ToolProvider):
             course_id=course_id,
             quiz_id=quiz_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quizzes.get_quiz(**params)
 
     async def create_quiz(
@@ -149,6 +154,8 @@ class QuizTools(ToolProvider):
             one_time_results=one_time_results,
             only_visible_to_overrides=only_visible_to_overrides,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quizzes.create_quiz(**params)
 
     async def update_quiz(
@@ -258,6 +265,8 @@ class QuizTools(ToolProvider):
             only_visible_to_overrides=only_visible_to_overrides,
             notify_of_update=notify_of_update,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quizzes.update_quiz(**params)
 
     async def delete_quiz(
@@ -270,6 +279,8 @@ class QuizTools(ToolProvider):
             course_id=course_id,
             quiz_id=quiz_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quizzes.delete_quiz(**params)
 
     async def validate_quiz_access_code(
@@ -286,6 +297,8 @@ class QuizTools(ToolProvider):
             quiz_id=quiz_id,
             access_code=access_code,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quizzes.validate_access_code(**params)
 
 
@@ -321,6 +334,8 @@ class QuizQuestionTools(ToolProvider):
             quiz_submission_attempt=quiz_submission_attempt,
             all_pages=True,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quiz_questions.list_quiz_questions(**params)
 
     async def get_quiz_question(
@@ -335,6 +350,8 @@ class QuizQuestionTools(ToolProvider):
             quiz_id=quiz_id,
             question_id=question_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quiz_questions.get_quiz_question(**params)
 
     async def create_quiz_question(
@@ -424,6 +441,8 @@ class QuizQuestionTools(ToolProvider):
             quiz_group_id=quiz_group_id,
             answers=answers,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quiz_questions.create_quiz_question(**params)
 
     async def update_quiz_question(
@@ -515,6 +534,8 @@ class QuizQuestionTools(ToolProvider):
             quiz_group_id=quiz_group_id,
             answers=answers,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quiz_questions.update_quiz_question(**params)
 
     async def delete_quiz_question(
@@ -529,6 +550,7 @@ class QuizQuestionTools(ToolProvider):
             quiz_id=quiz_id,
             question_id=question_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
         quiz_questions.delete_quiz_question(**params)
         return {"success": True, "message": "Question deleted successfully"}
 
@@ -542,7 +564,9 @@ class QuizQuestionGroupTools(ToolProvider):
         self.mcp.tool(self.create_quiz_question_group, tags={"quiz", "question_group"})
         self.mcp.tool(self.update_quiz_question_group, tags={"quiz", "question_group"})
         self.mcp.tool(self.delete_quiz_question_group, tags={"quiz", "question_group"})
-        self.mcp.tool(self.reorder_quiz_question_group_questions, tags={"quiz", "question_group"})
+        self.mcp.tool(
+            self.reorder_quiz_question_group_questions, tags={"quiz", "question_group"}
+        )
 
     async def get_quiz_question_group(
         self,
@@ -556,6 +580,8 @@ class QuizQuestionGroupTools(ToolProvider):
             quiz_id=quiz_id,
             group_id=group_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quiz_question_groups.get_quiz_group(**params)
 
     async def create_quiz_question_group(
@@ -563,11 +589,23 @@ class QuizQuestionGroupTools(ToolProvider):
         course_id: Annotated[str | int, Field(description="The course ID")],
         quiz_id: Annotated[str | int, Field(description="The quiz ID")],
         name: Annotated[str, Field(description="The name of the question group")],
-        pick_count: Annotated[int, Field(description="The number of questions to randomly select for this group")],
-        question_points: Annotated[int, Field(description="The number of points to assign to each question in the group")],
+        pick_count: Annotated[
+            int,
+            Field(
+                description="The number of questions to randomly select for this group"
+            ),
+        ],
+        question_points: Annotated[
+            int,
+            Field(
+                description="The number of points to assign to each question in the group"
+            ),
+        ],
         assessment_question_bank_id: Annotated[
             int | None,
-            Field(description="The id of the assessment question bank to pull questions from"),
+            Field(
+                description="The id of the assessment question bank to pull questions from"
+            ),
         ] = None,
     ) -> dict:
         """Create a new question group for a quiz."""
@@ -579,6 +617,8 @@ class QuizQuestionGroupTools(ToolProvider):
             question_points=question_points,
             assessment_question_bank_id=assessment_question_bank_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quiz_question_groups.create_quiz_group(**params)
 
     async def update_quiz_question_group(
@@ -586,9 +626,21 @@ class QuizQuestionGroupTools(ToolProvider):
         course_id: Annotated[str | int, Field(description="The course ID")],
         quiz_id: Annotated[str | int, Field(description="The quiz ID")],
         group_id: Annotated[str | int, Field(description="The quiz question group ID")],
-        name: Annotated[str | None, Field(description="The name of the question group")] = None,
-        pick_count: Annotated[int | None, Field(description="The number of questions to randomly select for this group")] = None,
-        question_points: Annotated[int | None, Field(description="The number of points to assign to each question in the group")] = None,
+        name: Annotated[
+            str | None, Field(description="The name of the question group")
+        ] = None,
+        pick_count: Annotated[
+            int | None,
+            Field(
+                description="The number of questions to randomly select for this group"
+            ),
+        ] = None,
+        question_points: Annotated[
+            int | None,
+            Field(
+                description="The number of points to assign to each question in the group"
+            ),
+        ] = None,
     ) -> dict:
         """Update a question group."""
         params = self._validate_params(
@@ -599,6 +651,8 @@ class QuizQuestionGroupTools(ToolProvider):
             pick_count=pick_count,
             question_points=question_points,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         return quiz_question_groups.update_quiz_group(**params)
 
     async def delete_quiz_question_group(
@@ -613,6 +667,8 @@ class QuizQuestionGroupTools(ToolProvider):
             quiz_id=quiz_id,
             group_id=group_id,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         quiz_question_groups.delete_quiz_group(**params)
         return {"success": True, "message": "Question group deleted successfully"}
 
@@ -623,7 +679,9 @@ class QuizQuestionGroupTools(ToolProvider):
         group_id: Annotated[str | int, Field(description="The quiz question group ID")],
         order: Annotated[
             list[dict],
-            Field(description="List of order items with 'id' and 'type' (always 'question')"),
+            Field(
+                description="List of order items with 'id' and 'type' (always 'question')"
+            ),
         ],
     ) -> dict:
         """Change the order of quiz questions within the group."""
@@ -633,5 +691,7 @@ class QuizQuestionGroupTools(ToolProvider):
             group_id=group_id,
             order=order,
         )
+        params["base_url"], params["access_token"] = get_user_token()
+
         quiz_question_groups.reorder_quiz_group_questions(**params)
         return {"success": True, "message": "Questions reordered successfully"}

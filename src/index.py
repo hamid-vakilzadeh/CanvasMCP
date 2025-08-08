@@ -2,17 +2,20 @@ from fastmcp import FastMCP
 from tools.courses import CourseTools
 from tools.modules import ModuleTools
 from tools.pages import PageTools
+from tools.quizzes import QuizTools
+
 from session_middleware import SessionAuthMiddleware, SessionManagementMiddleware
 
 mcp = FastMCP("Canvas-MCP")
 
 # Add session management middleware
 mcp.add_middleware(SessionManagementMiddleware())  # Handles session lifecycle
-mcp.add_middleware(SessionAuthMiddleware())        # Handles authentication
+mcp.add_middleware(SessionAuthMiddleware())  # Handles authentication
 
 CourseTools(mcp)
 ModuleTools(mcp)
 PageTools(mcp)
+QuizTools(mcp)
 
 if __name__ == "__main__":
     mcp.run(
