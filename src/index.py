@@ -3,6 +3,8 @@ from tools.courses import CourseTools
 from tools.modules import ModuleTools
 from tools.pages import PageTools
 from tools.quizzes import QuizTools, QuizQuestionTools, QuizQuestionGroupTools
+from tools.discussionTopics import DiscussionTools, DiscussionEntryTools, AnnouncementTools
+from tools.assignments import AssignmentTools, AssignmentOverrideTools, AssignmentGroupTools, AssignmentExtensionTools
 
 from session_middleware import SessionAuthMiddleware, SessionManagementMiddleware
 
@@ -18,6 +20,13 @@ PageTools(mcp)
 QuizTools(mcp)
 QuizQuestionTools(mcp)
 QuizQuestionGroupTools(mcp)
+DiscussionTools(mcp)
+DiscussionEntryTools(mcp)
+AnnouncementTools(mcp)
+AssignmentTools(mcp)
+AssignmentOverrideTools(mcp)
+AssignmentGroupTools(mcp)
+AssignmentExtensionTools(mcp)
 
 if __name__ == "__main__":
     mcp.run(
