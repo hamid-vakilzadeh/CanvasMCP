@@ -168,12 +168,22 @@ def get_user_token():
     This function first tries to get cached credentials from session context.
     If not available, it performs authentication and creates a session for future use.
 
+    During testing, credentials can be bypassed using environment variables.
+
     Returns:
         Tuple of (base_url, access_token)
 
     Raises:
         ValueError: If authentication fails or credentials are not available
     """
+    # Check for testing bypass using environment variables
+    test_base_url = os.getenv("CANVAS_URL")
+    test_access_token = os.getenv("CANVAS_ACCESS_TOKEN")
+
+    if test_base_url and test_access_token:
+        print("🧪 Using test credentials from environment variables")
+        return test_base_url, test_access_token
+
     try:
         from fastmcp.server.dependencies import get_context
 
@@ -274,6 +284,14 @@ def _legacy_get_user_token():
     This method performs the original authentication and decryption process.
     It's used as a fallback when session context is not available.
     """
+    # Check for testing bypass using environment variables first
+    test_base_url = os.getenv("CANVAS_URL")
+    test_access_token = os.getenv("CANVAS_ACCESS_TOKEN")
+
+    if test_base_url and test_access_token:
+        print("🧪 Using test credentials from environment variables (legacy)")
+        return test_base_url, test_access_token
+
     # Extract API key from HTTP request
     try:
         from fastmcp.server.dependencies import get_http_request
