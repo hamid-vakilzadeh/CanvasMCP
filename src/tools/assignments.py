@@ -20,8 +20,6 @@ class AssignmentTools(ToolProvider):
         self.mcp.tool(self.update_assignment, tags={"assignment"})
         self.mcp.tool(self.delete_assignment, tags={"assignment"})
         self.mcp.tool(self.duplicate_assignment, tags={"assignment"})
-        self.mcp.tool(self.list_assignments_for_user, tags={"assignment", "user"})
-        self.mcp.tool(self.list_group_members, tags={"assignment", "group"})
         self.mcp.tool(self.bulk_update_assignment_dates, tags={"assignment", "bulk"})
 
     async def list_assignments(
