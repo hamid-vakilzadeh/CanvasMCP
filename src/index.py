@@ -3,8 +3,21 @@ from tools.courses import CourseTools
 from tools.modules import ModuleTools
 from tools.pages import PageTools
 from tools.quizzes import QuizTools, QuizQuestionTools, QuizQuestionGroupTools
-from tools.discussionTopics import DiscussionTools, DiscussionEntryTools, AnnouncementTools
-from tools.assignments import AssignmentTools, AssignmentOverrideTools, AssignmentGroupTools, AssignmentExtensionTools
+from tools.discussionTopics import (
+    DiscussionTools,
+    DiscussionEntryTools,
+    AnnouncementTools,
+)
+from tools.assignments import (
+    AssignmentTools,
+    AssignmentOverrideTools,
+    AssignmentGroupTools,
+    AssignmentExtensionTools,
+)
+from tools.canvasGuides import CanvasReferenceTools
+from tools.contentMigration import ContentMigrationTools
+
+from resources.content_creation_rules import register_content_creation_resource
 
 from session_middleware import SessionAuthMiddleware, SessionManagementMiddleware
 
@@ -27,6 +40,11 @@ AssignmentTools(mcp)
 AssignmentOverrideTools(mcp)
 AssignmentGroupTools(mcp)
 AssignmentExtensionTools(mcp)
+CanvasReferenceTools(mcp)
+ContentMigrationTools(mcp)
+
+# Register resources
+register_content_creation_resource(mcp)
 
 if __name__ == "__main__":
     mcp.run(
