@@ -110,7 +110,17 @@ class AssignmentTools(ToolProvider):
         )
         params["base_url"], params["access_token"] = get_user_token()
 
-        return assignments.list_assignments(**params)
+        response: list[assignments.Assignment] = assignments.list_assignments(**params)
+
+        decorated_response = [
+            {
+                "id": i.get("id"),
+                "name": i.get("name"),
+            }
+            for i in response
+        ]
+
+        return decorated_response
 
     async def get_assignment(
         self,
@@ -483,15 +493,21 @@ class AssignmentTools(ToolProvider):
         ] = None,
         due_at: Annotated[
             str | None,
-            Field(description="Due date/time (ISO format)"),
+            Field(
+                description="Due date/time (ISO format). Cannot be grater than than 'lock_at'"
+            ),
         ] = None,
         lock_at: Annotated[
             str | None,
-            Field(description="Lock date/time (ISO format)"),
+            Field(
+                description="Lock date/time (ISO format). Cannot be smaller than 'unlock_at' or 'due_at'"
+            ),
         ] = None,
         unlock_at: Annotated[
             str | None,
-            Field(description="Unlock date/time (ISO format)"),
+            Field(
+                description="Unlock date/time (ISO format). Cannot be grater than 'lock_at'."
+            ),
         ] = None,
         description: Annotated[
             str | None,
