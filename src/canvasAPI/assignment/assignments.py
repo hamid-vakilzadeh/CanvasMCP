@@ -612,9 +612,9 @@ def create_assignment(
     grading_type: Literal[
         "pass_fail", "percent", "letter_grade", "gpa_scale", "points", "not_graded"
     ] = "points",
-    due_at: Optional[datetime] = None,
-    lock_at: Optional[datetime] = None,
-    unlock_at: Optional[datetime] = None,
+    due_at: Optional[str] = None,
+    lock_at: Optional[str] = None,
+    unlock_at: Optional[str] = None,
     description: Optional[str] = None,
     assignment_group_id: Optional[int] = None,
     assignment_overrides: Optional[List[Dict]] = None,
@@ -773,11 +773,11 @@ def create_assignment(
     if points_possible is not None:
         data["assignment[points_possible]"] = points_possible
     if due_at is not None:
-        data["assignment[due_at]"] = due_at.isoformat()
+        data["assignment[due_at]"] = due_at
     if lock_at is not None:
-        data["assignment[lock_at]"] = lock_at.isoformat()
+        data["assignment[lock_at]"] = lock_at
     if unlock_at is not None:
-        data["assignment[unlock_at]"] = unlock_at.isoformat()
+        data["assignment[unlock_at]"] = unlock_at
     if description:
         data["assignment[description]"] = description
     if assignment_group_id is not None:
@@ -876,9 +876,9 @@ def update_assignment(
             "not_graded",
         ]
     ] = None,
-    due_at: Optional[datetime] = None,
-    lock_at: Optional[datetime] = None,
-    unlock_at: Optional[datetime] = None,
+    due_at: Optional[str] = None,
+    lock_at: Optional[str] = None,
+    unlock_at: Optional[str] = None,
     description: Optional[str] = None,
     assignment_group_id: Optional[int] = None,
     assignment_overrides: Optional[List[Dict]] = None,
@@ -1036,11 +1036,11 @@ def update_assignment(
     if points_possible is not None:
         data["assignment[points_possible]"] = points_possible
     if due_at is not None:
-        data["assignment[due_at]"] = due_at.isoformat()
+        data["assignment[due_at]"] = due_at
     if lock_at is not None:
-        data["assignment[lock_at]"] = lock_at.isoformat()
+        data["assignment[lock_at]"] = lock_at
     if unlock_at is not None:
-        data["assignment[unlock_at]"] = unlock_at.isoformat()
+        data["assignment[unlock_at]"] = unlock_at
     if description is not None:
         data["assignment[description]"] = description
     if assignment_group_id is not None:
@@ -1279,9 +1279,9 @@ def create_assignment_override(
     title: Optional[str] = None,
     group_id: Optional[int] = None,
     course_section_id: Optional[int] = None,
-    due_at: Optional[datetime] = None,
-    unlock_at: Optional[datetime] = None,
-    lock_at: Optional[datetime] = None,
+    due_at: Optional[str] = None,
+    unlock_at: Optional[str] = None,
+    lock_at: Optional[str] = None,
 ) -> AssignmentOverride:
     """
     Create an assignment override.
@@ -1340,11 +1340,11 @@ def create_assignment_override(
 
     # Add date overrides
     if due_at is not None:
-        data["assignment_override[due_at]"] = due_at.isoformat()
+        data["assignment_override[due_at]"] = due_at
     if unlock_at is not None:
-        data["assignment_override[unlock_at]"] = unlock_at.isoformat()
+        data["assignment_override[unlock_at]"] = unlock_at
     if lock_at is not None:
-        data["assignment_override[lock_at]"] = lock_at.isoformat()
+        data["assignment_override[lock_at]"] = lock_at
 
     response = _make_request(
         base_url,
@@ -1364,9 +1364,9 @@ def update_assignment_override(
     override_id: Union[int, str],
     student_ids: Optional[List[int]] = None,
     title: Optional[str] = None,
-    due_at: Optional[datetime] = None,
-    unlock_at: Optional[datetime] = None,
-    lock_at: Optional[datetime] = None,
+    due_at: Optional[str] = None,
+    unlock_at: Optional[str] = None,
+    lock_at: Optional[str] = None,
 ) -> AssignmentOverride:
     """
     Update an assignment override.
@@ -1410,11 +1410,11 @@ def update_assignment_override(
 
     # Add date overrides (explicit None handling for clearing dates)
     if due_at is not None:
-        data["assignment_override[due_at]"] = due_at.isoformat()
+        data["assignment_override[due_at]"] = due_at
     if unlock_at is not None:
-        data["assignment_override[unlock_at]"] = unlock_at.isoformat()
+        data["assignment_override[unlock_at]"] = unlock_at
     if lock_at is not None:
-        data["assignment_override[lock_at]"] = lock_at.isoformat()
+        data["assignment_override[lock_at]"] = lock_at
 
     response = _make_request(
         base_url,
