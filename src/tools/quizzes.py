@@ -91,6 +91,14 @@ class QuizTools(ToolProvider):
             bool | str | None,
             Field(description="Hides correct answers until last attempt"),
         ] = False,
+        show_correct_answers_at: Annotated[
+            str | None,
+            Field(description="When correct answers become visible (ISO format)"),
+        ] = None,
+        hide_correct_answers_at: Annotated[
+            str | None,
+            Field(description="When correct answers stop being visible (ISO format)"),
+        ] = None,
         allowed_attempts: Annotated[
             int | str | None,
             Field(description="Number of times a student is allowed to take a quiz"),
@@ -116,6 +124,18 @@ class QuizTools(ToolProvider):
             Field(
                 description="Restricts access to the quiz to computers in a specified IP range"
             ),
+        ] = None,
+        due_at: Annotated[
+            str | None,
+            Field(description="The day/time the quiz is due (ISO format)"),
+        ] = None,
+        lock_at: Annotated[
+            str | None,
+            Field(description="The day/time the quiz is locked for students (ISO format)"),
+        ] = None,
+        unlock_at: Annotated[
+            str | None,
+            Field(description="The day/time the quiz is unlocked for students (ISO format)"),
         ] = None,
         published: Annotated[
             bool | str | None,
@@ -144,12 +164,17 @@ class QuizTools(ToolProvider):
             hide_results=hide_results,
             show_correct_answers=show_correct_answers,
             show_correct_answers_last_attempt=show_correct_answers_last_attempt,
+            show_correct_answers_at=show_correct_answers_at,
+            hide_correct_answers_at=hide_correct_answers_at,
             allowed_attempts=allowed_attempts,
             scoring_policy=scoring_policy,
             one_question_at_a_time=one_question_at_a_time,
             cant_go_back=cant_go_back,
             access_code=access_code,
             ip_filter=ip_filter,
+            due_at=due_at,
+            lock_at=lock_at,
+            unlock_at=unlock_at,
             published=published,
             one_time_results=one_time_results,
             only_visible_to_overrides=only_visible_to_overrides,
@@ -196,6 +221,14 @@ class QuizTools(ToolProvider):
             bool | str | None,
             Field(description="Hides correct answers until last attempt"),
         ] = None,
+        show_correct_answers_at: Annotated[
+            str | None,
+            Field(description="When correct answers become visible (ISO format)"),
+        ] = None,
+        hide_correct_answers_at: Annotated[
+            str | None,
+            Field(description="When correct answers stop being visible (ISO format)"),
+        ] = None,
         allowed_attempts: Annotated[
             int | str | None,
             Field(description="Number of times a student is allowed to take a quiz"),
@@ -221,6 +254,18 @@ class QuizTools(ToolProvider):
             Field(
                 description="Restricts access to the quiz to computers in a specified IP range"
             ),
+        ] = None,
+        due_at: Annotated[
+            str | None,
+            Field(description="The day/time the quiz is due (ISO format)"),
+        ] = None,
+        lock_at: Annotated[
+            str | None,
+            Field(description="The day/time the quiz is locked for students (ISO format)"),
+        ] = None,
+        unlock_at: Annotated[
+            str | None,
+            Field(description="The day/time the quiz is unlocked for students (ISO format)"),
         ] = None,
         published: Annotated[
             bool | str | None,
@@ -254,12 +299,17 @@ class QuizTools(ToolProvider):
             hide_results=hide_results,
             show_correct_answers=show_correct_answers,
             show_correct_answers_last_attempt=show_correct_answers_last_attempt,
+            show_correct_answers_at=show_correct_answers_at,
+            hide_correct_answers_at=hide_correct_answers_at,
             allowed_attempts=allowed_attempts,
             scoring_policy=scoring_policy,
             one_question_at_a_time=one_question_at_a_time,
             cant_go_back=cant_go_back,
             access_code=access_code,
             ip_filter=ip_filter,
+            due_at=due_at,
+            lock_at=lock_at,
+            unlock_at=unlock_at,
             published=published,
             one_time_results=one_time_results,
             only_visible_to_overrides=only_visible_to_overrides,
