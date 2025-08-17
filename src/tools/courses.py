@@ -13,8 +13,13 @@ class CourseTools(ToolProvider):
 
     def _register_tools(self):
         """Register all course-related tools."""
-        self.mcp.tool(self.list_courses, tags={"course"})
-        self.mcp.tool(self.reset_course_content, tags={"course", "reset"})
+        # Wrap tools with analytics if enabled
+        list_courses_tool = self._wrap_tool_with_analytics(self.list_courses)
+        reset_course_tool = self._wrap_tool_with_analytics(self.reset_course_content)
+        
+        # Register wrapped tools
+        self.mcp.tool(list_courses_tool, tags={"course"})
+        self.mcp.tool(reset_course_tool, tags={"course", "reset"})
 
     async def list_courses(self) -> str:
         """Get a list of all the courses the user has taught as a teacher.

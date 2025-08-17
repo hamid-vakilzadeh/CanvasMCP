@@ -14,17 +14,24 @@ class PageTools(ToolProvider):
 
     def _register_tools(self):
         """Register all page-related tools."""
-        self.mcp.tool(self.show_front_page, tags={"page"})
-        self.mcp.tool(self.duplicate_page, tags={"page"})
-        self.mcp.tool(self.update_front_page, tags={"page"})
-        self.mcp.tool(self.list_pages, tags={"page"})
-        self.mcp.tool(self.create_page, tags={"page"})
-        self.mcp.tool(self.show_page, tags={"page"})
-        self.mcp.tool(self.update_page, tags={"page"})
-        self.mcp.tool(self.delete_page, tags={"page"})
-        self.mcp.tool(self.list_revisions, tags={"page", "revision"})
-        self.mcp.tool(self.show_revision, tags={"page", "revision"})
-        self.mcp.tool(self.revert_to_revision, tags={"page", "revision"})
+        # Wrap all tools with analytics if enabled
+        tools_to_register = [
+            (self.show_front_page, {"page"}),
+            (self.duplicate_page, {"page"}),
+            (self.update_front_page, {"page"}),
+            (self.list_pages, {"page"}),
+            (self.create_page, {"page"}),
+            (self.show_page, {"page"}),
+            (self.update_page, {"page"}),
+            (self.delete_page, {"page"}),
+            (self.list_revisions, {"page", "revision"}),
+            (self.show_revision, {"page", "revision"}),
+            (self.revert_to_revision, {"page", "revision"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def show_front_page(
         self,

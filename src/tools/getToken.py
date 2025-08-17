@@ -199,6 +199,11 @@ def get_user_token():
         if not verification_result.get("valid", False):
             raise ValueError("Invalid API key")
 
+        # Store owner_id in context for analytics
+        owner_id = verification_result.get("ownerId")
+        if owner_id:
+            ctx.set_state("owner_id", owner_id)
+
         # Try to get cached credentials after API verification
         base_url = ctx.get_state("canvas_base_url")
         access_token = ctx.get_state("canvas_access_token")
