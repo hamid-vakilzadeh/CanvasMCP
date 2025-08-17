@@ -13,12 +13,18 @@ class QuizTools(ToolProvider):
 
     def _register_tools(self):
         """Register all quiz-related tools."""
-        self.mcp.tool(self.list_quizzes, tags={"quiz"})
-        self.mcp.tool(self.get_quiz, tags={"quiz"})
-        self.mcp.tool(self.create_quiz, tags={"quiz"})
-        self.mcp.tool(self.update_quiz, tags={"quiz"})
-        self.mcp.tool(self.delete_quiz, tags={"quiz"})
-        self.mcp.tool(self.validate_quiz_access_code, tags={"quiz"})
+        tools_to_register = [
+            (self.list_quizzes, {"quiz"}),
+            (self.get_quiz, {"quiz"}),
+            (self.create_quiz, {"quiz"}),
+            (self.update_quiz, {"quiz"}),
+            (self.delete_quiz, {"quiz"}),
+            (self.validate_quiz_access_code, {"quiz"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def list_quizzes(
         self,
@@ -357,11 +363,17 @@ class QuizQuestionTools(ToolProvider):
 
     def _register_tools(self):
         """Register all quiz question-related tools."""
-        self.mcp.tool(self.list_quiz_questions, tags={"quiz", "question"})
-        self.mcp.tool(self.get_quiz_question, tags={"quiz", "question"})
-        self.mcp.tool(self.create_quiz_question, tags={"quiz", "question"})
-        self.mcp.tool(self.update_quiz_question, tags={"quiz", "question"})
-        self.mcp.tool(self.delete_quiz_question, tags={"quiz", "question"})
+        tools_to_register = [
+            (self.list_quiz_questions, {"quiz", "question"}),
+            (self.get_quiz_question, {"quiz", "question"}),
+            (self.create_quiz_question, {"quiz", "question"}),
+            (self.update_quiz_question, {"quiz", "question"}),
+            (self.delete_quiz_question, {"quiz", "question"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def list_quiz_questions(
         self,
@@ -610,13 +622,17 @@ class QuizQuestionGroupTools(ToolProvider):
 
     def _register_tools(self):
         """Register all quiz question group-related tools."""
-        self.mcp.tool(self.get_quiz_question_group, tags={"quiz", "question_group"})
-        self.mcp.tool(self.create_quiz_question_group, tags={"quiz", "question_group"})
-        self.mcp.tool(self.update_quiz_question_group, tags={"quiz", "question_group"})
-        self.mcp.tool(self.delete_quiz_question_group, tags={"quiz", "question_group"})
-        self.mcp.tool(
-            self.reorder_quiz_question_group_questions, tags={"quiz", "question_group"}
-        )
+        tools_to_register = [
+            (self.get_quiz_question_group, {"quiz", "question_group"}),
+            (self.create_quiz_question_group, {"quiz", "question_group"}),
+            (self.update_quiz_question_group, {"quiz", "question_group"}),
+            (self.delete_quiz_question_group, {"quiz", "question_group"}),
+            (self.reorder_quiz_question_group_questions, {"quiz", "question_group"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def get_quiz_question_group(
         self,

@@ -14,13 +14,19 @@ class AssignmentTools(ToolProvider):
 
     def _register_tools(self):
         """Register all assignment-related tools."""
-        self.mcp.tool(self.list_assignments, tags={"assignment"})
-        self.mcp.tool(self.get_assignment, tags={"assignment"})
-        self.mcp.tool(self.create_assignment, tags={"assignment"})
-        self.mcp.tool(self.update_assignment, tags={"assignment"})
-        self.mcp.tool(self.delete_assignment, tags={"assignment"})
-        self.mcp.tool(self.duplicate_assignment, tags={"assignment"})
-        self.mcp.tool(self.bulk_update_assignment_dates, tags={"assignment", "bulk"})
+        tools_to_register = [
+            (self.list_assignments, {"assignment"}),
+            (self.get_assignment, {"assignment"}),
+            (self.create_assignment, {"assignment"}),
+            (self.update_assignment, {"assignment"}),
+            (self.delete_assignment, {"assignment"}),
+            (self.duplicate_assignment, {"assignment"}),
+            (self.bulk_update_assignment_dates, {"assignment", "bulk"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def list_assignments(
         self,
@@ -696,27 +702,22 @@ class AssignmentOverrideTools(ToolProvider):
 
     def _register_tools(self):
         """Register all assignment override-related tools."""
-        self.mcp.tool(self.list_assignment_overrides, tags={"assignment", "override"})
-        self.mcp.tool(self.get_assignment_override, tags={"assignment", "override"})
-        self.mcp.tool(self.create_assignment_override, tags={"assignment", "override"})
-        self.mcp.tool(self.update_assignment_override, tags={"assignment", "override"})
-        self.mcp.tool(self.delete_assignment_override, tags={"assignment", "override"})
-        self.mcp.tool(
-            self.get_group_override_redirect, tags={"assignment", "override", "group"}
-        )
-        self.mcp.tool(
-            self.get_section_override_redirect,
-            tags={"assignment", "override", "section"},
-        )
-        self.mcp.tool(
-            self.batch_retrieve_overrides, tags={"assignment", "override", "batch"}
-        )
-        self.mcp.tool(
-            self.batch_create_overrides, tags={"assignment", "override", "batch"}
-        )
-        self.mcp.tool(
-            self.batch_update_overrides, tags={"assignment", "override", "batch"}
-        )
+        tools_to_register = [
+            (self.list_assignment_overrides, {"assignment", "override"}),
+            (self.get_assignment_override, {"assignment", "override"}),
+            (self.create_assignment_override, {"assignment", "override"}),
+            (self.update_assignment_override, {"assignment", "override"}),
+            (self.delete_assignment_override, {"assignment", "override"}),
+            (self.get_group_override_redirect, {"assignment", "override", "group"}),
+            (self.get_section_override_redirect, {"assignment", "override", "section"}),
+            (self.batch_retrieve_overrides, {"assignment", "override", "batch"}),
+            (self.batch_create_overrides, {"assignment", "override", "batch"}),
+            (self.batch_update_overrides, {"assignment", "override", "batch"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def list_assignment_overrides(
         self,
@@ -954,11 +955,17 @@ class AssignmentGroupTools(ToolProvider):
 
     def _register_tools(self):
         """Register all assignment group-related tools."""
-        self.mcp.tool(self.list_assignment_groups, tags={"assignment", "group"})
-        self.mcp.tool(self.get_assignment_group, tags={"assignment", "group"})
-        self.mcp.tool(self.create_assignment_group, tags={"assignment", "group"})
-        self.mcp.tool(self.update_assignment_group, tags={"assignment", "group"})
-        self.mcp.tool(self.delete_assignment_group, tags={"assignment", "group"})
+        tools_to_register = [
+            (self.list_assignment_groups, {"assignment", "group"}),
+            (self.get_assignment_group, {"assignment", "group"}),
+            (self.create_assignment_group, {"assignment", "group"}),
+            (self.update_assignment_group, {"assignment", "group"}),
+            (self.delete_assignment_group, {"assignment", "group"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def list_assignment_groups(
         self,
@@ -1172,11 +1179,14 @@ class AssignmentExtensionTools(ToolProvider):
 
     def _register_tools(self):
         """Register all assignment extension-related tools."""
-        self.mcp.tool(self.set_assignment_extensions, tags={"assignment", "extension"})
-        self.mcp.tool(
-            self.set_single_student_assignment_extension,
-            tags={"assignment", "extension"},
-        )
+        tools_to_register = [
+            (self.set_assignment_extensions, {"assignment", "extension"}),
+            (self.set_single_student_assignment_extension, {"assignment", "extension"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def set_assignment_extensions(
         self,
