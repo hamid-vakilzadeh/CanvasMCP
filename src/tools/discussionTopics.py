@@ -14,13 +14,19 @@ class DiscussionTools(ToolProvider):
 
     def _register_tools(self):
         """Register all discussion topic-related tools."""
-        self.mcp.tool(self.list_discussion_topics, tags={"discussion"})
-        self.mcp.tool(self.get_discussion_topic, tags={"discussion"})
-        self.mcp.tool(self.create_discussion_topic, tags={"discussion"})
-        self.mcp.tool(self.update_discussion_topic, tags={"discussion"})
-        self.mcp.tool(self.delete_discussion_topic, tags={"discussion"})
-        self.mcp.tool(self.duplicate_discussion_topic, tags={"discussion"})
-        self.mcp.tool(self.reorder_pinned_topics, tags={"discussion"})
+        tools_to_register = [
+            (self.list_discussion_topics, {"discussion"}),
+            (self.get_discussion_topic, {"discussion"}),
+            (self.create_discussion_topic, {"discussion"}),
+            (self.update_discussion_topic, {"discussion"}),
+            (self.delete_discussion_topic, {"discussion"}),
+            (self.duplicate_discussion_topic, {"discussion"}),
+            (self.reorder_pinned_topics, {"discussion"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def list_discussion_topics(
         self,
@@ -409,15 +415,21 @@ class DiscussionEntryTools(ToolProvider):
 
     def _register_tools(self):
         """Register all discussion entry-related tools."""
-        self.mcp.tool(self.list_topic_entries, tags={"discussion", "entry"})
-        self.mcp.tool(self.post_entry, tags={"discussion", "entry"})
-        self.mcp.tool(self.list_entry_replies, tags={"discussion", "entry"})
-        self.mcp.tool(self.post_reply, tags={"discussion", "entry"})
-        self.mcp.tool(self.update_entry, tags={"discussion", "entry"})
-        self.mcp.tool(self.delete_entry, tags={"discussion", "entry"})
-        self.mcp.tool(self.mark_entry_read, tags={"discussion", "entry"})
-        self.mcp.tool(self.mark_entry_unread, tags={"discussion", "entry"})
-        self.mcp.tool(self.rate_entry, tags={"discussion", "entry"})
+        tools_to_register = [
+            (self.list_topic_entries, {"discussion", "entry"}),
+            (self.post_entry, {"discussion", "entry"}),
+            (self.list_entry_replies, {"discussion", "entry"}),
+            (self.post_reply, {"discussion", "entry"}),
+            (self.update_entry, {"discussion", "entry"}),
+            (self.delete_entry, {"discussion", "entry"}),
+            (self.mark_entry_read, {"discussion", "entry"}),
+            (self.mark_entry_unread, {"discussion", "entry"}),
+            (self.rate_entry, {"discussion", "entry"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def list_topic_entries(
         self,
@@ -657,8 +669,14 @@ class AnnouncementTools(ToolProvider):
 
     def _register_tools(self):
         """Register all announcement-related tools."""
-        self.mcp.tool(self.create_announcement, tags={"announcement"})
-        self.mcp.tool(self.list_announcements, tags={"announcement"})
+        tools_to_register = [
+            (self.create_announcement, {"announcement"}),
+            (self.list_announcements, {"announcement"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def create_announcement(
         self,
