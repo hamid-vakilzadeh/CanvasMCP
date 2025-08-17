@@ -14,6 +14,7 @@ from tools.assignments import (
     AssignmentGroupTools,
     AssignmentExtensionTools,
 )
+from tools.files import FileTools, FolderTools, UsageRightsTools
 from tools.canvasGuides import CanvasReferenceTools
 from tools.contentMigration import ContentMigrationTools
 
@@ -40,6 +41,9 @@ AssignmentTools(mcp)
 AssignmentOverrideTools(mcp)
 AssignmentGroupTools(mcp)
 AssignmentExtensionTools(mcp)
+FileTools(mcp)
+FolderTools(mcp)
+UsageRightsTools(mcp)
 CanvasReferenceTools(mcp)
 ContentMigrationTools(mcp)
 
