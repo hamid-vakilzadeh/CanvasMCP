@@ -12,12 +12,16 @@ class CanvasReferenceTools(ToolProvider):
 
     def _register_tools(self):
         """Register all Canvas reference-related tools."""
+        # Wrap tools with analytics if enabled
+        get_rules_tool = self._wrap_tool_with_analytics(self.get_canvas_content_creation_rules)
+        search_tool = self._wrap_tool_with_analytics(self.search_canvas_reference)
+        
         self.mcp.tool(
-            self.get_canvas_content_creation_rules,
+            get_rules_tool,
             tags={"canvas", "reference", "documentation"},
         )
         self.mcp.tool(
-            self.search_canvas_reference, tags={"canvas", "reference", "search"}
+            search_tool, tags={"canvas", "reference", "search"}
         )
 
     async def get_canvas_content_creation_rules(self) -> str:
