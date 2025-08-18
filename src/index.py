@@ -1,6 +1,8 @@
 import logging
 from fastmcp import FastMCP
 from fastmcp.utilities.logging import configure_logging
+from fastapi import Response
+import httpx
 
 from tools.courses import CourseTools
 from tools.modules import ModuleTools
@@ -41,6 +43,22 @@ mcp = FastMCP("Canvas-MCP")
 mcp.add_middleware(SessionManagementMiddleware())  # Handles session lifecycle
 mcp.add_middleware(SessionAuthMiddleware())  # Handles authentication
 mcp.add_middleware(AnalyticsMiddleware())  # Handles analytics tracking
+
+
+@mcp.custom_route("/favicon.ico", methods=["GET"])
+async def favicon(request):
+    """Proxy favicon from victorai.bot"""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get("https://victorai.bot/favicon.ico")
+            return Response(
+                content=response.content,
+                media_type="image/x-icon",
+                headers={"Cache-Control": "public, max-age=86400"},
+            )
+    except Exception:
+        return Response(status_code=404)
+
 
 CourseTools(mcp)
 ModuleTools(mcp)
