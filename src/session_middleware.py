@@ -3,7 +3,6 @@
 import logging
 from typing import Optional
 from fastmcp.server.middleware import Middleware, MiddlewareContext
-# Removed unused imports - McpError, ErrorData
 
 from session_manager import session_manager
 from tools.getToken import verify_key, decrypt_token_with_api_key
@@ -71,15 +70,21 @@ class SessionAuthMiddleware(Middleware):
             if credentials:
                 # Session exists - use cached credentials
                 base_url, access_token = credentials
-                logger.debug(f"Found cached credentials for session: {session_id[:8]}...")
+                logger.debug(
+                    f"Found cached credentials for session: {session_id[:8]}..."
+                )
 
                 # Store credentials in FastMCP context state for tools to access
                 if context.fastmcp_context:
                     context.fastmcp_context.set_state("canvas_base_url", base_url)
-                    context.fastmcp_context.set_state("canvas_access_token", access_token)
+                    context.fastmcp_context.set_state(
+                        "canvas_access_token", access_token
+                    )
                     logger.debug("Cached credentials stored in FastMCP context")
             else:
-                logger.debug("No cached credentials found - authentication will happen on first tool call")
+                logger.debug(
+                    "No cached credentials found - authentication will happen on first tool call"
+                )
 
             # Continue with the request
             return await call_next(context)
@@ -189,6 +194,9 @@ class SessionAuthMiddleware(Middleware):
         if not verification_result.get("valid", False):
             raise ValueError("Invalid API key")
 
+        # Extract owner_id for analytics (if available)
+        owner_id = verification_result.get("ownerId")
+        
         # Extract Canvas credentials from meta object
         meta = verification_result.get("meta", {})
         base_url = meta.get("profileUrl")
@@ -203,7 +211,7 @@ class SessionAuthMiddleware(Middleware):
         if not base_url or not access_token:
             raise ValueError("Canvas credentials not found in API key metadata")
         logger.info(f"Successfully authenticated user for Canvas instance: {base_url}")
-        return base_url, access_token, api_key
+        return base_url, access_token, api_key, owner_id
 
 
 class SessionManagementMiddleware(Middleware):
@@ -231,6 +239,8 @@ class SessionManagementMiddleware(Middleware):
         if not self._cleanup_started:
             session_manager.start_cleanup_task()
             self._cleanup_started = True
-            logger.info("Session cleanup task started (removes expired sessions every 5 minutes)")
+            logger.info(
+                "Session cleanup task started (removes expired sessions every 5 minutes)"
+            )
 
         return await call_next(context)

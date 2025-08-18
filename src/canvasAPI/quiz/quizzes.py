@@ -1,5 +1,4 @@
 from typing import List, Dict, Union, Literal, Optional
-from datetime import datetime
 from ..base import _make_request, _get_all_pages
 
 
@@ -88,17 +87,17 @@ def create_quiz(
     hide_results: Optional[Literal["always", "until_after_last_attempt"]] = None,
     show_correct_answers: bool = True,
     show_correct_answers_last_attempt: bool = False,
-    show_correct_answers_at: datetime = None,
-    hide_correct_answers_at: datetime = None,
+    show_correct_answers_at: str = None,
+    hide_correct_answers_at: str = None,
     allowed_attempts: int = 1,
     scoring_policy: Literal["keep_highest", "keep_latest"] = "keep_highest",
     one_question_at_a_time: bool = False,
     cant_go_back: bool = False,
     access_code: str = None,
     ip_filter: str = None,
-    due_at: datetime = None,
-    lock_at: datetime = None,
-    unlock_at: datetime = None,
+    due_at: str = None,
+    lock_at: str = None,
+    unlock_at: str = None,
     published: bool = True,
     one_time_results: bool = False,
     only_visible_to_overrides: bool = False,
@@ -189,9 +188,9 @@ def create_quiz(
     if hide_results:
         data["quiz[hide_results]"] = hide_results
     if show_correct_answers_at:
-        data["quiz[show_correct_answers_at]"] = show_correct_answers_at.isoformat()
+        data["quiz[show_correct_answers_at]"] = show_correct_answers_at
     if hide_correct_answers_at:
-        data["quiz[hide_correct_answers_at]"] = hide_correct_answers_at.isoformat()
+        data["quiz[hide_correct_answers_at]"] = hide_correct_answers_at
     if allowed_attempts > 1:
         data["quiz[scoring_policy]"] = scoring_policy
     if access_code:
@@ -199,11 +198,11 @@ def create_quiz(
     if ip_filter:
         data["quiz[ip_filter]"] = ip_filter
     if due_at:
-        data["quiz[due_at]"] = due_at.isoformat()
+        data["quiz[due_at]"] = due_at
     if lock_at:
-        data["quiz[lock_at]"] = lock_at.isoformat()
+        data["quiz[lock_at]"] = lock_at
     if unlock_at:
-        data["quiz[unlock_at]"] = unlock_at.isoformat()
+        data["quiz[unlock_at]"] = unlock_at
 
     response = _make_request(
         base_url,
@@ -229,17 +228,17 @@ def update_quiz(
     hide_results: Optional[Literal["always", "until_after_last_attempt"]] = None,
     show_correct_answers: bool = None,
     show_correct_answers_last_attempt: bool = None,
-    show_correct_answers_at: datetime = None,
-    hide_correct_answers_at: datetime = None,
+    show_correct_answers_at: str = None,
+    hide_correct_answers_at: str = None,
     allowed_attempts: int = None,
     scoring_policy: Literal["keep_highest", "keep_latest"] = None,
     one_question_at_a_time: bool = None,
     cant_go_back: bool = None,
     access_code: str = None,
     ip_filter: str = None,
-    due_at: datetime = None,
-    lock_at: datetime = None,
-    unlock_at: datetime = None,
+    due_at: str = None,
+    lock_at: str = None,
+    unlock_at: str = None,
     published: bool = None,
     one_time_results: bool = None,
     only_visible_to_overrides: bool = None,
@@ -334,9 +333,9 @@ def update_quiz(
             show_correct_answers_last_attempt
         )
     if show_correct_answers_at is not None:
-        data["quiz[show_correct_answers_at]"] = show_correct_answers_at.isoformat()
+        data["quiz[show_correct_answers_at]"] = show_correct_answers_at
     if hide_correct_answers_at is not None:
-        data["quiz[hide_correct_answers_at]"] = hide_correct_answers_at.isoformat()
+        data["quiz[hide_correct_answers_at]"] = hide_correct_answers_at
     if allowed_attempts is not None:
         data["quiz[allowed_attempts]"] = allowed_attempts
     if scoring_policy is not None:
@@ -350,11 +349,11 @@ def update_quiz(
     if ip_filter is not None:
         data["quiz[ip_filter]"] = ip_filter
     if due_at is not None:
-        data["quiz[due_at]"] = due_at.isoformat()
+        data["quiz[due_at]"] = due_at
     if lock_at is not None:
-        data["quiz[lock_at]"] = lock_at.isoformat()
+        data["quiz[lock_at]"] = lock_at
     if unlock_at is not None:
-        data["quiz[unlock_at]"] = unlock_at.isoformat()
+        data["quiz[unlock_at]"] = unlock_at
     if published is not None:
         data["quiz[published]"] = published
     if one_time_results is not None:

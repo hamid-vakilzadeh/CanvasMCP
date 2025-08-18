@@ -3,8 +3,8 @@
 Provides APIs for managing discussions and discussion Topic-related operations.
 """
 
-from . import discussion_topics
+from . import discussionTopics
 
 __all__ = [
-    "discussion_topics",
+    "discussionTopics",
 ]
