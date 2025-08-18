@@ -14,17 +14,24 @@ class ModuleTools(ToolProvider):
 
     def _register_tools(self):
         """Register all module-related tools."""
-        self.mcp.tool(self.create_module, tags={"module"})
-        self.mcp.tool(self.list_modules, tags={"module"})
-        self.mcp.tool(self.show_module, tags={"module"})
-        self.mcp.tool(self.update_module, tags={"module"})
-        self.mcp.tool(self.delete_module, tags={"module"})
-        self.mcp.tool(self.relock_module, tags={"module"})
-        self.mcp.tool(self.list_module_items, tags={"module"})
-        self.mcp.tool(self.show_module_item, tags={"module"})
-        self.mcp.tool(self.create_module_item, tags={"module"})
-        self.mcp.tool(self.update_module_item, tags={"module"})
-        self.mcp.tool(self.delete_module_item, tags={"module"})
+        # Wrap all tools with analytics if enabled
+        tools_to_register = [
+            (self.create_module, {"module"}),
+            (self.list_modules, {"module"}),
+            (self.show_module, {"module"}),
+            (self.update_module, {"module"}),
+            (self.delete_module, {"module"}),
+            (self.relock_module, {"module"}),
+            (self.list_module_items, {"module"}),
+            (self.show_module_item, {"module"}),
+            (self.create_module_item, {"module"}),
+            (self.update_module_item, {"module"}),
+            (self.delete_module_item, {"module"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def create_module(
         self,

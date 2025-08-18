@@ -11,6 +11,7 @@ from . import conversation
 from . import course
 from . import module
 from . import quiz
+from . import discussionTopic
 
 # Import main API classes and instances
 from .assignment import (
@@ -34,6 +35,10 @@ from .quiz import (
     course_quiz_extensions,
 )
 
+from .discussionTopic import (
+    discussionTopics,
+)
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -44,18 +49,14 @@ __all__ = [
     "course",
     "module",
     "quiz",
-    # Assignment APIs
     "assignment_extensions",
     "assignment_groups",
     "assignments",
-    # Calendar APIs
     "account_calendars",
-    # Conversation APIs
     "conversations",
-    # Course APIs
     "courses",
-    # Module APIs
     "modules",
-    # Quiz APIs
     "course_quiz_extensions",
+    "discussionTopic",
+    "discussionTopics",
 ]

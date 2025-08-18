@@ -287,12 +287,16 @@ def list_courses_for_user(
 
     if all_pages:
         return _get_all_pages(
+            base_url,
+            access_token,
             "GET",
             f"/api/v1/users/{user_id}/courses",
             params=params,
         )
     else:
         response = _make_request(
+            base_url,
+            access_token,
             "GET",
             f"/api/v1/users/{user_id}/courses",
             params=params,
@@ -301,6 +305,8 @@ def list_courses_for_user(
 
 
 def get_course(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     include: List[str] = None,
     teacher_limit: int = None,
@@ -325,7 +331,9 @@ def get_course(
     if teacher_limit:
         params["teacher_limit"] = teacher_limit
 
-    response = _make_request("GET", f"/api/v1/courses/{course_id}", params=params)
+    response = _make_request(
+        base_url, access_token, "GET", f"/api/v1/courses/{course_id}", params=params
+    )
     return response.json()
 
 
@@ -333,6 +341,8 @@ def get_course(
 
 
 def create_course(
+    base_url: str,
+    access_token: str,
     account_id: Union[int, str],
     course_data: Dict,
     offer: bool = False,
@@ -364,6 +374,8 @@ def create_course(
         data["enroll_me"] = enroll_me
 
     response = _make_request(
+        base_url,
+        access_token,
         "POST",
         f"/api/v1/accounts/{account_id}/courses",
         data=data,
@@ -372,6 +384,8 @@ def create_course(
 
 
 def update_course(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     course_data: Dict,
     offer: bool = None,
@@ -402,11 +416,15 @@ def update_course(
     if override_sis_stickiness is not None:
         data["override_sis_stickiness"] = override_sis_stickiness
 
-    response = _make_request("PUT", f"/api/v1/courses/{course_id}", data=data)
+    response = _make_request(
+        base_url, access_token, "PUT", f"/api/v1/courses/{course_id}", data=data
+    )
     return response.json()
 
 
-def delete_conclude_course(course_id: Union[int, str], event: str) -> Dict:
+def delete_conclude_course(
+    base_url: str, access_token: str, course_id: Union[int, str], event: str
+) -> Dict:
     """
     Delete or conclude a course.
 
@@ -420,11 +438,15 @@ def delete_conclude_course(course_id: Union[int, str], event: str) -> Dict:
         Result dictionary
     """
     data = {"event": event}
-    response = _make_request("DELETE", f"/api/v1/courses/{course_id}", data=data)
+    response = _make_request(
+        base_url, access_token, "DELETE", f"/api/v1/courses/{course_id}", data=data
+    )
     return response.json()
 
 
 def batch_update_courses(
+    base_url: str,
+    access_token: str,
     account_id: Union[int, str],
     course_ids: List[str],
     event: str,
@@ -444,6 +466,8 @@ def batch_update_courses(
     """
     data = {"course_ids[]": course_ids, "event": event}
     response = _make_request(
+        base_url,
+        access_token,
         "PUT",
         f"/api/v1/accounts/{account_id}/courses",
         data=data,
@@ -451,7 +475,9 @@ def batch_update_courses(
     return response.json()
 
 
-def reset_course_content(course_id: Union[int, str]) -> Dict:
+def reset_course_content(
+    base_url: str, access_token: str, course_id: Union[int, str]
+) -> Dict:
     """
     Reset course content (deletes current course and creates new equivalent).
 
@@ -463,7 +489,9 @@ def reset_course_content(course_id: Union[int, str]) -> Dict:
     Returns:
         New course dictionary
     """
-    response = _make_request("POST", f"/api/v1/courses/{course_id}/reset_content")
+    response = _make_request(
+        base_url, access_token, "POST", f"/api/v1/courses/{course_id}/reset_content"
+    )
     return response.json()
 
 
@@ -471,6 +499,8 @@ def reset_course_content(course_id: Union[int, str]) -> Dict:
 
 
 def list_course_users(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     search_term: str = None,
     sort: Literal["username", "last_login", "email", "sis_id"] = None,
@@ -593,12 +623,16 @@ def list_course_users(
 
     if all_pages:
         return _get_all_pages(
+            base_url,
+            access_token,
             "GET",
             f"/api/v1/courses/{course_id}/users",
             params=params,
         )
     else:
         response = _make_request(
+            base_url,
+            access_token,
             "GET",
             f"/api/v1/courses/{course_id}/users",
             params=params,
@@ -607,6 +641,8 @@ def list_course_users(
 
 
 def get_course_user(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     user_id: Union[int, str],
     include: List[str] = None,
@@ -629,6 +665,8 @@ def get_course_user(
         params["include[]"] = include
 
     response = _make_request(
+        base_url,
+        access_token,
         "GET",
         f"/api/v1/courses/{course_id}/users/{user_id}",
         params=params,
@@ -637,6 +675,8 @@ def get_course_user(
 
 
 def list_students(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     all_pages: bool = False,
 ) -> List[Dict]:
@@ -653,13 +693,19 @@ def list_students(
         List of student dictionaries
     """
     if all_pages:
-        return _get_all_pages("GET", f"/api/v1/courses/{course_id}/students")
+        return _get_all_pages(
+            base_url, access_token, "GET", f"/api/v1/courses/{course_id}/students"
+        )
     else:
-        response = _make_request("GET", f"/api/v1/courses/{course_id}/students")
+        response = _make_request(
+            base_url, access_token, "GET", f"/api/v1/courses/{course_id}/students"
+        )
         return response.json()
 
 
 def list_recent_students(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     all_pages: bool = False,
 ) -> List[Dict]:
@@ -677,11 +723,15 @@ def list_recent_students(
     """
     if all_pages:
         return _get_all_pages(
+            base_url,
+            access_token,
             "GET",
             f"/api/v1/courses/{course_id}/recent_students",
         )
     else:
         response = _make_request(
+            base_url,
+            access_token,
             "GET",
             f"/api/v1/courses/{course_id}/recent_students",
         )
@@ -689,6 +739,8 @@ def list_recent_students(
 
 
 def search_content_share_users(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     search_term: str,
     all_pages: bool = False,
@@ -709,12 +761,16 @@ def search_content_share_users(
     data = {"search_term": search_term}
     if all_pages:
         return _get_all_pages(
+            base_url,
+            access_token,
             "GET",
             f"/api/v1/courses/{course_id}/content_share_users",
             data=data,
         )
     else:
         response = _make_request(
+            base_url,
+            access_token,
             "GET",
             f"/api/v1/courses/{course_id}/content_share_users",
             data=data,
@@ -726,6 +782,8 @@ def search_content_share_users(
 
 
 def get_user_progress(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     user_id: Union[int, str],
 ) -> Dict:
@@ -742,13 +800,17 @@ def get_user_progress(
         CourseProgress dictionary
     """
     response = _make_request(
+        base_url,
+        access_token,
         "GET",
         f"/api/v1/courses/{course_id}/users/{user_id}/progress",
     )
     return response.json()
 
 
-def get_bulk_user_progress(course_id: Union[int, str]) -> List[Dict]:
+def get_bulk_user_progress(
+    base_url: str, access_token: str, course_id: Union[int, str]
+) -> List[Dict]:
     """
     Get progress for all users in course.
 
@@ -760,14 +822,18 @@ def get_bulk_user_progress(course_id: Union[int, str]) -> List[Dict]:
     Returns:
         List of user progress dictionaries
     """
-    response = _make_request("GET", f"/api/v1/courses/{course_id}/bulk_user_progress")
+    response = _make_request(
+        base_url, access_token, "GET", f"/api/v1/courses/{course_id}/bulk_user_progress"
+    )
     return response.json()
 
 
 # Course Settings Methods
 
 
-def get_course_settings(course_id: Union[int, str]) -> Dict:
+def get_course_settings(
+    base_url: str, access_token: str, course_id: Union[int, str]
+) -> Dict:
     """
     Get course settings.
 
@@ -779,11 +845,15 @@ def get_course_settings(course_id: Union[int, str]) -> Dict:
     Returns:
         Course settings dictionary
     """
-    response = _make_request("GET", f"/api/v1/courses/{course_id}/settings")
+    response = _make_request(
+        base_url, access_token, "GET", f"/api/v1/courses/{course_id}/settings"
+    )
     return response.json()
 
 
-def update_course_settings(course_id: Union[int, str], settings: Dict) -> Dict:
+def update_course_settings(
+    base_url: str, access_token: str, course_id: Union[int, str], settings: Dict
+) -> Dict:
     """
     Update course settings.
 
@@ -797,6 +867,8 @@ def update_course_settings(course_id: Union[int, str], settings: Dict) -> Dict:
         Updated settings dictionary
     """
     response = _make_request(
+        base_url,
+        access_token,
         "PUT",
         f"/api/v1/courses/{course_id}/settings",
         data=settings,
@@ -808,6 +880,8 @@ def update_course_settings(course_id: Union[int, str], settings: Dict) -> Dict:
 
 
 def get_activity_stream(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     all_pages: bool = False,
 ) -> List[Dict]:
@@ -825,18 +899,24 @@ def get_activity_stream(
     """
     if all_pages:
         return _get_all_pages(
+            base_url,
+            access_token,
             "GET",
             f"/api/v1/courses/{course_id}/activity_stream",
         )
     else:
         response = _make_request(
+            base_url,
+            access_token,
             "GET",
             f"/api/v1/courses/{course_id}/activity_stream",
         )
         return response.json()
 
 
-def get_activity_stream_summary(course_id: Union[int, str]) -> Dict:
+def get_activity_stream_summary(
+    base_url: str, access_token: str, course_id: Union[int, str]
+) -> Dict:
     """
     Get course activity stream summary.
 
@@ -849,13 +929,17 @@ def get_activity_stream_summary(course_id: Union[int, str]) -> Dict:
         Activity summary dictionary
     """
     response = _make_request(
+        base_url,
+        access_token,
         "GET",
         f"/api/v1/courses/{course_id}/activity_stream/summary",
     )
     return response.json()
 
 
-def get_todo_items(course_id: Union[int, str]) -> List[Dict]:
+def get_todo_items(
+    base_url: str, access_token: str, course_id: Union[int, str]
+) -> List[Dict]:
     """
     Get course TODO items for current user.
 
@@ -867,14 +951,18 @@ def get_todo_items(course_id: Union[int, str]) -> List[Dict]:
     Returns:
         List of TODO items
     """
-    response = _make_request("GET", f"/api/v1/courses/{course_id}/todo")
+    response = _make_request(
+        base_url, access_token, "GET", f"/api/v1/courses/{course_id}/todo"
+    )
     return response.json()
 
 
 # Utility Methods
 
 
-def preview_html(course_id: Union[int, str], html: str) -> Dict:
+def preview_html(
+    base_url: str, access_token: str, course_id: Union[int, str], html: str
+) -> Dict:
     """
     Preview HTML content processed for course.
 
@@ -889,6 +977,8 @@ def preview_html(course_id: Union[int, str], html: str) -> Dict:
     """
     data = {"html": html}
     response = _make_request(
+        base_url,
+        access_token,
         "POST",
         f"/api/v1/courses/{course_id}/preview_html",
         data=data,
@@ -896,7 +986,9 @@ def preview_html(course_id: Union[int, str], html: str) -> Dict:
     return response.json()
 
 
-def upload_file(course_id: Union[int, str], **kwargs) -> Dict:
+def upload_file(
+    base_url: str, access_token: str, course_id: Union[int, str], **kwargs
+) -> Dict:
     """
     Start file upload process for course.
 
@@ -910,6 +1002,8 @@ def upload_file(course_id: Union[int, str], **kwargs) -> Dict:
         Upload response dictionary
     """
     response = _make_request(
+        base_url,
+        access_token,
         "POST",
         f"/api/v1/courses/{course_id}/files",
         data=kwargs,
@@ -917,7 +1011,9 @@ def upload_file(course_id: Union[int, str], **kwargs) -> Dict:
     return response.json()
 
 
-def get_student_view_student(course_id: Union[int, str]) -> Dict:
+def get_student_view_student(
+    base_url: str, access_token: str, course_id: Union[int, str]
+) -> Dict:
     """
     Get or create test student for course.
 
@@ -930,6 +1026,8 @@ def get_student_view_student(course_id: Union[int, str]) -> Dict:
         Test student user dictionary
     """
     response = _make_request(
+        base_url,
+        access_token,
         "GET",
         f"/api/v1/courses/{course_id}/student_view_student",
     )
@@ -937,6 +1035,8 @@ def get_student_view_student(course_id: Union[int, str]) -> Dict:
 
 
 def get_effective_due_dates(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     assignment_ids: List[str] = None,
 ) -> Dict:
@@ -957,6 +1057,8 @@ def get_effective_due_dates(
         params["assignment_ids[]"] = assignment_ids
 
     response = _make_request(
+        base_url,
+        access_token,
         "GET",
         f"/api/v1/courses/{course_id}/effective_due_dates",
         params=params,
@@ -964,7 +1066,9 @@ def get_effective_due_dates(
     return response.json()
 
 
-def get_permissions(course_id: Union[int, str], permissions: List[str]) -> Dict:
+def get_permissions(
+    base_url: str, access_token: str, course_id: Union[int, str], permissions: List[str]
+) -> Dict:
     """
     Check permissions for current user in course.
 
@@ -979,6 +1083,8 @@ def get_permissions(course_id: Union[int, str], permissions: List[str]) -> Dict:
     """
     data = {"permissions[]": permissions}
     response = _make_request(
+        base_url,
+        access_token,
         "GET",
         f"/api/v1/courses/{course_id}/permissions",
         data=data,
@@ -986,7 +1092,9 @@ def get_permissions(course_id: Union[int, str], permissions: List[str]) -> Dict:
     return response.json()
 
 
-def dismiss_migration_alert(course_id: Union[int, str]) -> Dict:
+def dismiss_migration_alert(
+    base_url: str, access_token: str, course_id: Union[int, str]
+) -> Dict:
     """
     Dismiss quiz migration limitation alert.
 
@@ -999,6 +1107,8 @@ def dismiss_migration_alert(course_id: Union[int, str]) -> Dict:
         Success dictionary
     """
     response = _make_request(
+        base_url,
+        access_token,
         "POST",
         f"/api/v1/courses/{course_id}/dismiss_migration_limitation_message",
     )
@@ -1009,6 +1119,8 @@ def dismiss_migration_alert(course_id: Union[int, str]) -> Dict:
 
 
 def get_course_copy_status(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     copy_id: Union[int, str],
 ) -> Dict:
@@ -1025,6 +1137,8 @@ def get_course_copy_status(
         Copy status dictionary
     """
     response = _make_request(
+        base_url,
+        access_token,
         "GET",
         f"/api/v1/courses/{course_id}/course_copy/{copy_id}",
     )
@@ -1032,6 +1146,8 @@ def get_course_copy_status(
 
 
 def copy_course_content(
+    base_url: str,
+    access_token: str,
     course_id: Union[int, str],
     source_course: str,
     except_types: List[str] = None,
@@ -1059,6 +1175,8 @@ def copy_course_content(
         data["only[]"] = only_types
 
     response = _make_request(
+        base_url,
+        access_token,
         "POST",
         f"/api/v1/courses/{course_id}/course_copy",
         data=data,
