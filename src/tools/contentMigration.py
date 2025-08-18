@@ -26,14 +26,20 @@ class ContentMigrationTools(ToolProvider):
 
     def _register_tools(self):
         """Register all content migration-related tools."""
-        self.mcp.tool(self.list_content_migrations, tags={"migration"})
-        self.mcp.tool(self.get_content_migration, tags={"migration"})
-        self.mcp.tool(self.create_content_migration, tags={"migration"})
-        self.mcp.tool(self.list_migration_systems, tags={"migration"})
-        self.mcp.tool(self.copy_course_content, tags={"migration", "course"})
-        self.mcp.tool(self.selective_course_copy, tags={"migration", "course"})
-        self.mcp.tool(self.execute_selective_migration, tags={"migration", "course"})
-        self.mcp.tool(self.get_migration_progress, tags={"migration"})
+        tools_to_register = [
+            (self.list_content_migrations, {"migration"}),
+            (self.get_content_migration, {"migration"}),
+            (self.create_content_migration, {"migration"}),
+            (self.list_migration_systems, {"migration"}),
+            (self.copy_course_content, {"migration", "course"}),
+            (self.selective_course_copy, {"migration", "course"}),
+            (self.execute_selective_migration, {"migration", "course"}),
+            (self.get_migration_progress, {"migration"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def list_content_migrations(
         self,
@@ -754,9 +760,15 @@ class MigrationIssueTools(ToolProvider):
 
     def _register_tools(self):
         """Register all migration issue-related tools."""
-        self.mcp.tool(self.list_migration_issues, tags={"migration", "issues"})
-        self.mcp.tool(self.get_migration_issue, tags={"migration", "issues"})
-        self.mcp.tool(self.update_migration_issue, tags={"migration", "issues"})
+        tools_to_register = [
+            (self.list_migration_issues, {"migration", "issues"}),
+            (self.get_migration_issue, {"migration", "issues"}),
+            (self.update_migration_issue, {"migration", "issues"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def list_migration_issues(
         self,
