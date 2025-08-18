@@ -26,10 +26,19 @@ spec:
               value: "3000"
             - name: MCP_PATH
               value: "/mcp"
+            - name: ANALYTICS_ENABLED
+              value: "true"
+            - name: POSTHOG_HOST
+              value: "https://us.i.posthog.com"
             - name: ENCRYPTION_SECRET
               valueFrom:
                 secretKeyRef:
                   name: ENCRYPTION_SECRET
+                  key: latest
+            - name: POSTHOG_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: POSTHOG_API_KEY
                   key: latest
           resources:
             limits:
