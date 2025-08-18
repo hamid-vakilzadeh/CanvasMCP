@@ -13,19 +13,25 @@ class FileTools(ToolProvider):
 
     def _register_tools(self):
         """Register all file-related tools."""
-        self.mcp.tool(self.get_quota, tags={"file", "quota"})
-        self.mcp.tool(self.list_files, tags={"file", "list"})
-        self.mcp.tool(self.get_file, tags={"file"})
-        self.mcp.tool(self.get_public_url, tags={"file", "url"})
-        self.mcp.tool(self.update_file, tags={"file", "update"})
-        self.mcp.tool(self.delete_file, tags={"file", "delete"})
-        self.mcp.tool(self.reset_verifier, tags={"file", "security"})
-        self.mcp.tool(self.get_icon_metadata, tags={"file", "metadata"})
-        self.mcp.tool(self.upload_file_via_url, tags={"file", "upload"})
-        self.mcp.tool(self.complete_upload_from_url, tags={"file", "upload", "complete"})
-        self.mcp.tool(self.monitor_upload_progress, tags={"file", "upload", "progress"})
-        self.mcp.tool(self.translate_file_reference, tags={"file", "migration"})
-        self.mcp.tool(self.copy_file, tags={"file", "copy"})
+        tools_to_register = [
+            (self.get_quota, {"file", "quota"}),
+            (self.list_files, {"file", "list"}),
+            (self.get_file, {"file"}),
+            (self.get_public_url, {"file", "url"}),
+            (self.update_file, {"file", "update"}),
+            (self.delete_file, {"file", "delete"}),
+            (self.reset_verifier, {"file", "security"}),
+            (self.get_icon_metadata, {"file", "metadata"}),
+            (self.upload_file_via_url, {"file", "upload"}),
+            (self.complete_upload_from_url, {"file", "upload", "complete"}),
+            (self.monitor_upload_progress, {"file", "upload", "progress"}),
+            (self.translate_file_reference, {"file", "migration"}),
+            (self.copy_file, {"file", "copy"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def get_quota(
         self,
@@ -487,14 +493,20 @@ class FolderTools(ToolProvider):
 
     def _register_tools(self):
         """Register all folder-related tools."""
-        self.mcp.tool(self.list_folders, tags={"folder", "list"})
-        self.mcp.tool(self.resolve_path, tags={"folder", "path"})
-        self.mcp.tool(self.get_folder, tags={"folder"})
-        self.mcp.tool(self.create_folder, tags={"folder", "create"})
-        self.mcp.tool(self.update_folder, tags={"folder", "update"})
-        self.mcp.tool(self.delete_folder, tags={"folder", "delete"})
-        self.mcp.tool(self.copy_folder, tags={"folder", "copy"})
-        self.mcp.tool(self.get_media_folder, tags={"folder", "media"})
+        tools_to_register = [
+            (self.list_folders, {"folder", "list"}),
+            (self.resolve_path, {"folder", "path"}),
+            (self.get_folder, {"folder"}),
+            (self.create_folder, {"folder", "create"}),
+            (self.update_folder, {"folder", "update"}),
+            (self.delete_folder, {"folder", "delete"}),
+            (self.copy_folder, {"folder", "copy"}),
+            (self.get_media_folder, {"folder", "media"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def list_folders(
         self,
@@ -752,9 +764,15 @@ class UsageRightsTools(ToolProvider):
 
     def _register_tools(self):
         """Register all usage rights-related tools."""
-        self.mcp.tool(self.set_usage_rights, tags={"file", "usage_rights", "copyright"})
-        self.mcp.tool(self.remove_usage_rights, tags={"file", "usage_rights", "copyright"})
-        self.mcp.tool(self.list_licenses, tags={"file", "license"})
+        tools_to_register = [
+            (self.set_usage_rights, {"file", "usage_rights", "copyright"}),
+            (self.remove_usage_rights, {"file", "usage_rights", "copyright"}),
+            (self.list_licenses, {"file", "license"}),
+        ]
+        
+        for tool_func, tags in tools_to_register:
+            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
+            self.mcp.tool(wrapped_tool, tags=tags)
 
     async def set_usage_rights(
         self,

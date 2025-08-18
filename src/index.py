@@ -21,12 +21,14 @@ from tools.contentMigration import ContentMigrationTools
 from resources.content_creation_rules import register_content_creation_resource
 
 from session_middleware import SessionAuthMiddleware, SessionManagementMiddleware
+from analytics_middleware import AnalyticsMiddleware
 
 mcp = FastMCP("Canvas-MCP")
 
 # Add session management middleware
 mcp.add_middleware(SessionManagementMiddleware())  # Handles session lifecycle
 mcp.add_middleware(SessionAuthMiddleware())  # Handles authentication
+mcp.add_middleware(AnalyticsMiddleware())  # Handles analytics tracking
 
 CourseTools(mcp)
 ModuleTools(mcp)

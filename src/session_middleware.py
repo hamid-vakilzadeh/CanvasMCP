@@ -194,6 +194,9 @@ class SessionAuthMiddleware(Middleware):
         if not verification_result.get("valid", False):
             raise ValueError("Invalid API key")
 
+        # Extract owner_id for analytics (if available)
+        owner_id = verification_result.get("ownerId")
+        
         # Extract Canvas credentials from meta object
         meta = verification_result.get("meta", {})
         base_url = meta.get("profileUrl")
@@ -208,7 +211,7 @@ class SessionAuthMiddleware(Middleware):
         if not base_url or not access_token:
             raise ValueError("Canvas credentials not found in API key metadata")
         logger.info(f"Successfully authenticated user for Canvas instance: {base_url}")
-        return base_url, access_token, api_key
+        return base_url, access_token, api_key, owner_id
 
 
 class SessionManagementMiddleware(Middleware):
