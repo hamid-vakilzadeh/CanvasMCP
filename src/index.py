@@ -1,4 +1,7 @@
+import logging
 from fastmcp import FastMCP
+from fastmcp.utilities.logging import configure_logging
+
 from tools.courses import CourseTools
 from tools.modules import ModuleTools
 from tools.pages import PageTools
@@ -22,6 +25,15 @@ from resources.content_creation_rules import register_content_creation_resource
 
 from session_middleware import SessionAuthMiddleware, SessionManagementMiddleware
 from analytics_middleware import AnalyticsMiddleware
+
+
+# Configure FastMCP logging - reduce verbosity
+configure_logging(level="WARNING", enable_rich_tracebacks=False)
+
+# Reduce noise from other loggers
+logging.getLogger("uvicorn").setLevel(logging.WARNING)
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+logging.getLogger("fastapi").setLevel(logging.WARNING)
 
 mcp = FastMCP("Canvas-MCP")
 
@@ -54,5 +66,10 @@ register_content_creation_resource(mcp)
 
 if __name__ == "__main__":
     mcp.run(
-        transport="http", host="0.0.0.0", port=3000, path="/mcp", stateless_http=False
+        transport="http",
+        host="0.0.0.0",
+        port=3000,
+        path="/mcp",
+        stateless_http=False,
+        log_level="WARNING",  # Reduce server verbosity
     )

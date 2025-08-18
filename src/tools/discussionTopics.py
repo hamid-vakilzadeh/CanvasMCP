@@ -1,6 +1,6 @@
 """Discussion topic-related tools for Canvas MCP."""
 
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 from pydantic import Field
 from datetime import datetime
 
@@ -23,7 +23,7 @@ class DiscussionTools(ToolProvider):
             (self.duplicate_discussion_topic, {"discussion"}),
             (self.reorder_pinned_topics, {"discussion"}),
         ]
-        
+
         for tool_func, tags in tools_to_register:
             wrapped_tool = self._wrap_tool_with_analytics(tool_func)
             self.mcp.tool(wrapped_tool, tags=tags)
@@ -39,7 +39,8 @@ class DiscussionTools(ToolProvider):
             Field(description="The group ID to list discussion topics from"),
         ] = None,
         include: Annotated[
-            list[Literal["all_dates", "sections", "sections_user_count", "overrides"]] | None,
+            list[Literal["all_dates", "sections", "sections_user_count", "overrides"]]
+            | None,
             Field(description="Additional data to include"),
         ] = None,
         order_by: Annotated[
@@ -86,7 +87,9 @@ class DiscussionTools(ToolProvider):
 
     async def get_discussion_topic(
         self,
-        topic_id: Annotated[str | int, Field(description="The discussion topic ID to get")],
+        topic_id: Annotated[
+            str | int, Field(description="The discussion topic ID to get")
+        ],
         course_id: Annotated[
             str | int | None,
             Field(description="The course ID"),
@@ -96,7 +99,8 @@ class DiscussionTools(ToolProvider):
             Field(description="The group ID"),
         ] = None,
         include: Annotated[
-            list[Literal["all_dates", "sections", "sections_user_count", "overrides"]] | None,
+            list[Literal["all_dates", "sections", "sections_user_count", "overrides"]]
+            | None,
             Field(description="Additional data to include"),
         ] = None,
     ) -> dict:
@@ -156,7 +160,9 @@ class DiscussionTools(ToolProvider):
         ] = None,
         require_initial_post: Annotated[
             bool | None,
-            Field(description="Whether initial post is required before viewing replies"),
+            Field(
+                description="Whether initial post is required before viewing replies"
+            ),
         ] = None,
         pinned: Annotated[
             bool | None,
@@ -203,7 +209,9 @@ class DiscussionTools(ToolProvider):
             message=message,
             discussion_type=discussion_type,
             published=published,
-            delayed_post_at=datetime.fromisoformat(delayed_post_at) if delayed_post_at else None,
+            delayed_post_at=datetime.fromisoformat(delayed_post_at)
+            if delayed_post_at
+            else None,
             allow_rating=allow_rating,
             lock_at=datetime.fromisoformat(lock_at) if lock_at else None,
             podcast_enabled=podcast_enabled,
@@ -225,7 +233,9 @@ class DiscussionTools(ToolProvider):
 
     async def update_discussion_topic(
         self,
-        topic_id: Annotated[str | int, Field(description="The discussion topic ID to update")],
+        topic_id: Annotated[
+            str | int, Field(description="The discussion topic ID to update")
+        ],
         course_id: Annotated[
             str | int | None,
             Field(description="The course ID"),
@@ -268,7 +278,9 @@ class DiscussionTools(ToolProvider):
         ] = None,
         require_initial_post: Annotated[
             bool | None,
-            Field(description="Whether initial post is required before viewing replies"),
+            Field(
+                description="Whether initial post is required before viewing replies"
+            ),
         ] = None,
         pinned: Annotated[
             bool | None,
@@ -320,7 +332,9 @@ class DiscussionTools(ToolProvider):
             message=message,
             discussion_type=discussion_type,
             published=published,
-            delayed_post_at=datetime.fromisoformat(delayed_post_at) if delayed_post_at else None,
+            delayed_post_at=datetime.fromisoformat(delayed_post_at)
+            if delayed_post_at
+            else None,
             lock_at=datetime.fromisoformat(lock_at) if lock_at else None,
             podcast_enabled=podcast_enabled,
             podcast_has_student_posts=podcast_has_student_posts,
@@ -342,7 +356,9 @@ class DiscussionTools(ToolProvider):
 
     async def delete_discussion_topic(
         self,
-        topic_id: Annotated[str | int, Field(description="The discussion topic ID to delete")],
+        topic_id: Annotated[
+            str | int, Field(description="The discussion topic ID to delete")
+        ],
         course_id: Annotated[
             str | int | None,
             Field(description="The course ID"),
@@ -364,7 +380,9 @@ class DiscussionTools(ToolProvider):
 
     async def duplicate_discussion_topic(
         self,
-        topic_id: Annotated[str | int, Field(description="The discussion topic ID to duplicate")],
+        topic_id: Annotated[
+            str | int, Field(description="The discussion topic ID to duplicate")
+        ],
         course_id: Annotated[
             str | int | None,
             Field(description="The course ID"),
@@ -426,7 +444,7 @@ class DiscussionEntryTools(ToolProvider):
             (self.mark_entry_unread, {"discussion", "entry"}),
             (self.rate_entry, {"discussion", "entry"}),
         ]
-        
+
         for tool_func, tags in tools_to_register:
             wrapped_tool = self._wrap_tool_with_analytics(tool_func)
             self.mcp.tool(wrapped_tool, tags=tags)
@@ -673,7 +691,7 @@ class AnnouncementTools(ToolProvider):
             (self.create_announcement, {"announcement"}),
             (self.list_announcements, {"announcement"}),
         ]
-        
+
         for tool_func, tags in tools_to_register:
             wrapped_tool = self._wrap_tool_with_analytics(tool_func)
             self.mcp.tool(wrapped_tool, tags=tags)
@@ -721,7 +739,9 @@ class AnnouncementTools(ToolProvider):
             message=message,
             is_announcement=True,
             published=published,
-            delayed_post_at=datetime.fromisoformat(delayed_post_at) if delayed_post_at else None,
+            delayed_post_at=datetime.fromisoformat(delayed_post_at)
+            if delayed_post_at
+            else None,
             lock_at=datetime.fromisoformat(lock_at) if lock_at else None,
             pinned=pinned,
             specific_sections=specific_sections,
@@ -738,7 +758,8 @@ class AnnouncementTools(ToolProvider):
             Field(description="The course ID to list announcements from"),
         ],
         include: Annotated[
-            list[Literal["all_dates", "sections", "sections_user_count", "overrides"]] | None,
+            list[Literal["all_dates", "sections", "sections_user_count", "overrides"]]
+            | None,
             Field(description="Additional data to include"),
         ] = None,
         order_by: Annotated[
