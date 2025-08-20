@@ -27,7 +27,7 @@ gcloud run deploy $SERVICE_NAME \
   --cpu 1 \
   --max-instances 10 \
   --service-account "canvas-mcp-sa@$PROJECT_ID.iam.gserviceaccount.com" \
-  --set-env-vars "MCP_TRANSPORT=http,MCP_HOST=0.0.0.0,MCP_PORT=3000,MCP_PATH=/mcp,ANALYTICS_ENABLED=true,POSTHOG_HOST=https://us.i.posthog.com" \
+  --set-env-vars "MCP_TRANSPORT=http,MCP_HOST=0.0.0.0,MCP_PORT=3000,MCP_PATH=/mcp,ANALYTICS_ENABLED=true,POSTHOG_HOST=https://us.i.posthog.com,FASTMCP_LOG_LEVEL=WARNING,FASTMCP_MASK_ERROR_DETAILS=true,FASTMCP_RESOURCE_PREFIX_FORMAT=protocol,FASTMCP_INCLUDE_FASTMCP_META=false" \
   --set-secrets "ENCRYPTION_SECRET=ENCRYPTION_SECRET:latest,POSTHOG_API_KEY=POSTHOG_API_KEY:latest"
 
 echo "Deployment complete!"
