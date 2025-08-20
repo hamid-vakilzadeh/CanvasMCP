@@ -30,6 +30,14 @@ spec:
               value: "true"
             - name: POSTHOG_HOST
               value: "https://us.i.posthog.com"
+            - name: FASTMCP_LOG_LEVEL
+              value: "WARNING"
+            - name: FASTMCP_MASK_ERROR_DETAILS
+              value: "true"
+            - name: FASTMCP_RESOURCE_PREFIX_FORMAT
+              value: "protocol"
+            - name: FASTMCP_INCLUDE_FASTMCP_META
+              value: "false"
             - name: ENCRYPTION_SECRET
               valueFrom:
                 secretKeyRef:
