@@ -250,3 +250,13 @@ mcp = FastMCP(name="Test")
 course_tools = CourseTools(mcp)
 # Tools are now registered with mcp
 ```
+
+
+## Development Setup
+
+Store required secrets in macOS Keychain:
+```bash
+security add-generic-password -a "myapp" -s "UNKEY_API" -w "your-unkey-api-key"
+security add-generic-password -a "myapp" -s "POSTHOG_API_KEY" -w "your-posthog-key"
+security add-generic-password -a "myapp" -s "ENCRYPTION_SECRET" -w "your-encryption-secret"
+```

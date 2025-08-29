@@ -12,6 +12,7 @@ wheels/
 
 # secret
 .env
+.notes
 
 # folders
 temp
