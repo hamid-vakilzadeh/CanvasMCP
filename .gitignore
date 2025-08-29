@@ -24,3 +24,6 @@ examples
 # temp files
 src/tools/README.md
 src/MIGRATION_GUIDE.md
+
+# Development scripts
+run-dev.sh
