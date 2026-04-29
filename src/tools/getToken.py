@@ -114,9 +114,9 @@ def verify_key(
                     "Each tag must be a string between 1 and 128 characters long"
                 )
 
-    unkey_api_key = os.getenv("UNKEY_API")
+    unkey_api_key = os.getenv("UNKEY_ROOT_KEY")
     if not unkey_api_key:
-        raise ValueError("UNKEY_API environment variable is required")
+        raise ValueError("UNKEY_ROOT_KEY environment variable is required")
 
     endpoint = "/v2/keys.verifyKey"
     url = f"{base_url}{endpoint}"
