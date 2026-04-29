@@ -43,6 +43,11 @@ spec:
                 secretKeyRef:
                   name: ENCRYPTION_SECRET
                   key: latest
+            - name: UNKEY_ROOT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: UNKEY_ROOT_KEY
+                  key: latest
             - name: POSTHOG_API_KEY
               valueFrom:
                 secretKeyRef:
