@@ -65,7 +65,6 @@ def verify_key(
     tags: Optional[List[str]] = None,
     authorization_permissions: Optional[str] = None,
     remaining_cost: Optional[int] = None,
-    ratelimit_cost: Optional[int] = None,
     ratelimits: Optional[List[Dict[str, Any]]] = None,
     base_url: str = "https://api.unkey.dev",
 ) -> Dict[str, Any]:
@@ -76,9 +75,8 @@ def verify_key(
         key: The key to verify (minimum length: 1)
         api_id: The id of the api where the key belongs to (optional)
         tags: Tags for filtering/aggregating verification data (max 10 items)
-        authorization_permissions: RBAC permissions check
-        remaining_cost: Cost for remaining uses deduction
-        ratelimit_cost: Deprecated, use ratelimits instead
+        authorization_permissions: RBAC permissions check (AND/OR string)
+        remaining_cost: Cost to deduct from key credits
         ratelimits: Multiple ratelimit configurations with name, limit, duration
         base_url: Base URL for the Unkey API
 
@@ -89,15 +87,13 @@ def verify_key(
         - requestId (str): Unique request identifier
         - keyId (str, optional): The key identifier
         - name (str, optional): Key name
-        - ownerId (str, optional): Owner identifier
         - meta (dict, optional): Additional metadata
         - expires (int, optional): Unix timestamp when key expires
-        - ratelimit (dict, optional): Ratelimit info with limit, remaining, reset
-        - remaining (int, optional): Remaining request count
+        - credits (int, optional): Remaining credit count
         - enabled (bool, optional): Whether key is enabled
         - permissions (list, optional): List of permissions
         - roles (list, optional): List of roles
-        - environment (str, optional): Key environment
+        - ratelimits (list, optional): Ratelimit state per named limit
         - identity (dict, optional): Associated identity info
 
     Raises:
@@ -118,7 +114,11 @@ def verify_key(
                     "Each tag must be a string between 1 and 128 characters long"
                 )
 
-    endpoint = "/v1/keys.verifyKey"
+    unkey_api_key = os.getenv("UNKEY_API")
+    if not unkey_api_key:
+        raise ValueError("UNKEY_API environment variable is required")
+
+    endpoint = "/v2/keys.verifyKey"
     url = f"{base_url}{endpoint}"
 
     payload: Dict[str, Any] = {"key": key}
@@ -130,27 +130,34 @@ def verify_key(
         payload["tags"] = tags
 
     if authorization_permissions:
-        payload["authorization"] = {"permissions": authorization_permissions}
+        payload["permissions"] = authorization_permissions
 
     if remaining_cost is not None:
-        payload["remaining"] = {"cost": remaining_cost}
-
-    if ratelimit_cost is not None:
-        payload["ratelimit"] = {"cost": ratelimit_cost}
+        payload["credits"] = {"cost": remaining_cost}
 
     if ratelimits:
         payload["ratelimits"] = ratelimits
 
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {unkey_api_key}",
+    }
 
     try:
         response = requests.post(url, headers=headers, data=json.dumps(payload))
         response.raise_for_status()
 
-        data = response.json()
+        body = response.json()
 
-        # Validate required fields
-        if "valid" not in data or "code" not in data or "requestId" not in data:
+        if "data" not in body:
+            raise ValueError("Invalid response format: missing 'data' field")
+
+        data = body["data"]
+
+        if "meta" in body and "requestId" in body["meta"]:
+            data["requestId"] = body["meta"]["requestId"]
+
+        if "valid" not in data or "code" not in data:
             raise ValueError("Invalid response format: missing required fields")
 
         return data
