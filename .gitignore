@@ -27,3 +27,6 @@ src/MIGRATION_GUIDE.md
 
 # Development scripts
 run-dev.sh
+
+# other
+.DS_Store
