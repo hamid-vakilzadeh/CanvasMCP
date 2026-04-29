@@ -86,13 +86,13 @@ class SessionAuthMiddleware(Middleware):
                     "No cached credentials found - authentication will happen on first tool call"
                 )
 
-            # Continue with the request
-            return await call_next(context)
-
         except Exception as e:
             logger.error(f"Session context setup failed: {e}")
-            # Don't fail the request - let tools handle authentication
-            return await call_next(context)
+            # Don't fail the request - let tools handle authentication.
+
+        # Continue exactly once. Tool failures must propagate instead of causing
+        # the middleware to rerun the same tool call.
+        return await call_next(context)
 
     async def _extract_session_id_from_request(
         self, context: MiddlewareContext

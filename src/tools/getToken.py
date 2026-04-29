@@ -1,9 +1,8 @@
-import requests
-import json
 import os
 import base64
 import hashlib
 from typing import Dict, List, Optional, Any
+from unkey.py import Unkey
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
@@ -12,6 +11,25 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+
+def _get_env_canvas_credentials() -> Optional[tuple[str, str]]:
+    """Return local Canvas credentials when configured for direct/dev access."""
+    base_url = os.getenv("CANVAS_URL")
+    access_token = os.getenv("CANVAS_ACCESS_TOKEN")
+
+    if base_url and access_token:
+        return base_url, access_token
+
+    return None
+
+
+def _env_flag_enabled(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _should_use_env_credentials(request_api_key: Optional[str]) -> bool:
+    return not request_api_key or _env_flag_enabled("CANVAS_BYPASS_UNKEY")
 
 
 def get_private_key():
@@ -61,47 +79,19 @@ def decrypt_token_with_api_key(encrypted_token: str, api_key: str) -> str:
 
 def verify_key(
     key: str,
-    api_id: Optional[str] = None,
     tags: Optional[List[str]] = None,
     authorization_permissions: Optional[str] = None,
     remaining_cost: Optional[int] = None,
     ratelimits: Optional[List[Dict[str, Any]]] = None,
-    base_url: str = "https://api.unkey.dev",
 ) -> Dict[str, Any]:
     """
-    Verify a key using the Unkey API.
-
-    Args:
-        key: The key to verify (minimum length: 1)
-        api_id: The id of the api where the key belongs to (optional)
-        tags: Tags for filtering/aggregating verification data (max 10 items)
-        authorization_permissions: RBAC permissions check (AND/OR string)
-        remaining_cost: Cost to deduct from key credits
-        ratelimits: Multiple ratelimit configurations with name, limit, duration
-        base_url: Base URL for the Unkey API
+    Verify a key using the Unkey SDK.
 
     Returns:
-        Dict containing verification result with keys:
-        - valid (bool): Whether the key is valid
-        - code (str): Verification code (VALID, NOT_FOUND, etc.)
-        - requestId (str): Unique request identifier
-        - keyId (str, optional): The key identifier
-        - name (str, optional): Key name
-        - meta (dict, optional): Additional metadata
-        - expires (int, optional): Unix timestamp when key expires
-        - credits (int, optional): Remaining credit count
-        - enabled (bool, optional): Whether key is enabled
-        - permissions (list, optional): List of permissions
-        - roles (list, optional): List of roles
-        - ratelimits (list, optional): Ratelimit state per named limit
-        - identity (dict, optional): Associated identity info
-
-    Raises:
-        requests.exceptions.RequestException: For HTTP errors
-        ValueError: For invalid input parameters
+        Dict with: valid, code, requestId, keyId, name, meta, expires,
+        credits, enabled, permissions, roles, ratelimits, identity
     """
-
-    if not key or len(key) < 1:
+    if not key:
         raise ValueError("Key must have minimum length of 1")
 
     if tags and len(tags) > 10:
@@ -114,58 +104,74 @@ def verify_key(
                     "Each tag must be a string between 1 and 128 characters long"
                 )
 
-    unkey_api_key = os.getenv("UNKEY_API")
-    if not unkey_api_key:
-        raise ValueError("UNKEY_API environment variable is required")
+    root_key = os.getenv("UNKEY_ROOT_KEY")
+    if not root_key:
+        raise ValueError("UNKEY_ROOT_KEY environment variable is required")
 
-    endpoint = "/v2/keys.verifyKey"
-    url = f"{base_url}{endpoint}"
-
-    payload: Dict[str, Any] = {"key": key}
-
-    if api_id:
-        payload["apiId"] = api_id
-
-    if tags:
-        payload["tags"] = tags
-
-    if authorization_permissions:
-        payload["permissions"] = authorization_permissions
-
-    if remaining_cost is not None:
-        payload["credits"] = {"cost": remaining_cost}
-
-    if ratelimits:
-        payload["ratelimits"] = ratelimits
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {unkey_api_key}",
-    }
+    credits_param = {"cost": remaining_cost} if remaining_cost is not None else None
 
     try:
-        response = requests.post(url, headers=headers, data=json.dumps(payload))
-        response.raise_for_status()
-
-        body = response.json()
-
-        if "data" not in body:
-            raise ValueError("Invalid response format: missing 'data' field")
-
-        data = body["data"]
-
-        if "meta" in body and "requestId" in body["meta"]:
-            data["requestId"] = body["meta"]["requestId"]
-
-        if "valid" not in data or "code" not in data:
-            raise ValueError("Invalid response format: missing required fields")
-
-        return data
-
-    except requests.exceptions.RequestException as e:
+        with Unkey(root_key=root_key) as unkey_client:
+            res = unkey_client.keys.verify_key(
+                key=key,
+                tags=tags,
+                permissions=authorization_permissions,
+                credits=credits_param,
+                ratelimits=ratelimits,
+            )
+    except Exception as e:
+        error_message = str(e)
+        if "Insufficient Permissions" in error_message or "verify_key" in error_message:
+            raise ValueError(
+                "UNKEY_ROOT_KEY is missing the api.*.verify_key permission required "
+                "to verify request API keys."
+            ) from e
         raise
-    except (KeyError, ValueError, json.JSONDecodeError) as e:
-        raise
+
+    data = res.data.model_dump(by_alias=True)
+    data["requestId"] = res.meta.request_id
+    return data
+
+
+def _credentials_from_api_key(
+    api_key: str,
+    *,
+    verification_result: Optional[Dict[str, Any]] = None,
+    ctx=None,
+    session_id: Optional[str] = None,
+) -> tuple[str, str]:
+    if verification_result is None:
+        verification_result = verify_key(api_key)
+
+    if not verification_result.get("valid", False):
+        raise ValueError("Invalid API key")
+
+    owner_id = verification_result.get("ownerId")
+    if owner_id and ctx:
+        ctx.set_state("owner_id", owner_id)
+
+    meta = verification_result.get("meta", {})
+    base_url = meta.get("profileUrl")
+    encrypted_access_token = meta.get("encryptedAccessToken")
+
+    if not encrypted_access_token:
+        raise ValueError("Encrypted access token not found in API key metadata")
+
+    access_token = decrypt_token_with_api_key(encrypted_access_token, api_key)
+
+    if not base_url or not access_token:
+        raise ValueError("Canvas credentials not found in API key metadata")
+
+    if session_id:
+        from session_manager import session_manager
+
+        session_manager.create_session(session_id, base_url, access_token)
+
+    if ctx:
+        ctx.set_state("canvas_base_url", base_url)
+        ctx.set_state("canvas_access_token", access_token)
+
+    return base_url, access_token
 
 
 def get_user_token():
@@ -175,7 +181,8 @@ def get_user_token():
     This function first tries to get cached credentials from session context.
     If not available, it performs authentication and creates a session for future use.
 
-    During testing, credentials can be bypassed using environment variables.
+    During local testing without a request API key, credentials can be loaded
+    from environment variables.
 
     Returns:
         Tuple of (base_url, access_token)
@@ -183,74 +190,54 @@ def get_user_token():
     Raises:
         ValueError: If authentication fails or credentials are not available
     """
-    # Check for testing bypass using environment variables
-    test_base_url = os.getenv("CANVAS_URL")
-    test_access_token = os.getenv("CANVAS_ACCESS_TOKEN")
+    request_api_key = _extract_api_key_from_current_request()
+    env_credentials = _get_env_canvas_credentials()
 
-    if test_base_url and test_access_token:
-        print("🧪 Using test credentials from environment variables")
-        return test_base_url, test_access_token
+    # Environment credentials are a local/dev fallback. If a request API key is
+    # present, they are only used when local dev explicitly bypasses Unkey.
+    if env_credentials and _should_use_env_credentials(request_api_key):
+        print("Using Canvas credentials from environment variables")
+        return env_credentials
 
     try:
         from fastmcp.server.dependencies import get_context
 
         # Get the current FastMCP context
         ctx = get_context()
+    except Exception:
+        ctx = None
 
-        # Always verify API key for rate limiting on every tool call
-        api_key = _extract_api_key_from_current_request()
-        if not api_key:
-            raise ValueError("API key required in query parameters (?apikey=your_key)")
+    api_key = request_api_key or _extract_api_key_from_current_request()
+    if not api_key:
+        raise ValueError("API key required in query parameters (?apikey=your_key)")
 
+    session_id = None
+    if ctx:
+        # Try to get cached credentials after API verification.
         verification_result = verify_key(api_key)
         if not verification_result.get("valid", False):
             raise ValueError("Invalid API key")
 
-        # Store owner_id in context for analytics
         owner_id = verification_result.get("ownerId")
         if owner_id:
             ctx.set_state("owner_id", owner_id)
 
-        # Try to get cached credentials after API verification
         base_url = ctx.get_state("canvas_base_url")
         access_token = ctx.get_state("canvas_access_token")
 
         if base_url and access_token:
             return base_url, access_token
 
-        # No cached credentials - perform authentication on first tool execution
         session_id = ctx.get_state("session_id")
-        if not session_id:
-            raise ValueError("No session context available")
 
-        # Extract Canvas credentials from meta object
-        meta = verification_result.get("meta", {})
-        base_url = meta.get("profileUrl")
-        encrypted_access_token = meta.get("encryptedAccessToken")
+        return _credentials_from_api_key(
+            api_key,
+            verification_result=verification_result,
+            ctx=ctx,
+            session_id=session_id,
+        )
 
-        if not encrypted_access_token:
-            raise ValueError("Encrypted access token not found in API key metadata")
-
-        # Decrypt access token
-        access_token = decrypt_token_with_api_key(encrypted_access_token, api_key)
-
-        if not base_url or not access_token:
-            raise ValueError("Canvas credentials not found in API key metadata")
-
-        # Update/create session for future use
-        from session_manager import session_manager
-
-        session_manager.create_session(session_id, base_url, access_token)
-
-        # Store credentials in context for this request
-        ctx.set_state("canvas_base_url", base_url)
-        ctx.set_state("canvas_access_token", access_token)
-
-        return base_url, access_token
-
-    except Exception as e:
-        # Fallback to legacy authentication if context is not available
-        return _legacy_get_user_token()
+    return _credentials_from_api_key(api_key)
 
 
 def _extract_api_key_from_current_request() -> Optional[str]:
@@ -296,14 +283,6 @@ def _legacy_get_user_token():
     This method performs the original authentication and decryption process.
     It's used as a fallback when session context is not available.
     """
-    # Check for testing bypass using environment variables first
-    test_base_url = os.getenv("CANVAS_URL")
-    test_access_token = os.getenv("CANVAS_ACCESS_TOKEN")
-
-    if test_base_url and test_access_token:
-        print("🧪 Using test credentials from environment variables (legacy)")
-        return test_base_url, test_access_token
-
     # Extract API key from HTTP request
     try:
         from fastmcp.server.dependencies import get_http_request
@@ -322,31 +301,26 @@ def _legacy_get_user_token():
                 params = urllib.parse.parse_qs(parsed.query)
                 apikey = params.get("apikey", [None])[0]
 
-        if not apikey:
-            raise ValueError("API key required in query parameters (?apikey=your_key)")
-
     except Exception as e:
+        env_credentials = _get_env_canvas_credentials()
+        if env_credentials:
+            print("Using Canvas credentials from environment variables (legacy)")
+            return env_credentials
         raise ValueError(f"Error extracting API key from request: {str(e)}")
 
-    verification_result = verify_key(apikey)
-    if not verification_result.get("valid", False):
-        raise ValueError("Invalid API key")
+    if not apikey:
+        env_credentials = _get_env_canvas_credentials()
+        if env_credentials:
+            print("Using Canvas credentials from environment variables (legacy)")
+            return env_credentials
+        raise ValueError("API key required in query parameters (?apikey=your_key)")
 
-    # Extract Canvas credentials from meta object
-    meta = verification_result.get("meta", {})
-    base_url = meta.get("profileUrl")
-    encrypted_access_token = meta.get("encryptedAccessToken")
+    env_credentials = _get_env_canvas_credentials()
+    if env_credentials and _should_use_env_credentials(apikey):
+        print("Using Canvas credentials from environment variables (legacy)")
+        return env_credentials
 
-    # decrypt access token
-    if not encrypted_access_token:
-        raise ValueError("Encrypted access token not found in API key metadata")
-
-    access_token = decrypt_token_with_api_key(encrypted_access_token, apikey)
-
-    if not base_url or not access_token:
-        raise ValueError("Canvas credentials not found in API key metadata")
-
-    return base_url, access_token
+    return _credentials_from_api_key(apikey)
 
 
 # Session monitoring functions removed for security -
