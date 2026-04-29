@@ -83,11 +83,14 @@ ContentMigrationTools(mcp)
 register_content_creation_resource(mcp)
 
 if __name__ == "__main__":
-    mcp.run(
-        transport="http",
-        host="0.0.0.0",
-        port=3000,
-        path="/mcp",
-        stateless_http=False,
-        log_level="WARNING",  # Reduce server verbosity
-    )
+    try:
+        mcp.run(
+            transport="http",
+            host="0.0.0.0",
+            port=3000,
+            path="/mcp",
+            stateless_http=False,
+            log_level="WARNING",  # Reduce server verbosity
+        )
+    except KeyboardInterrupt:
+        pass

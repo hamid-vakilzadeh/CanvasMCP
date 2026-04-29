@@ -1,6 +1,43 @@
-import requests
 import json
+import logging
+from urllib.parse import urlparse
 from typing import Dict, List
+
+import requests
+
+logger = logging.getLogger(__name__)
+
+
+def _format_http_error(response: requests.Response) -> str:
+    """Create a concise Canvas API error without exposing the full request URL."""
+    parsed_url = urlparse(response.url)
+    endpoint = parsed_url.path or "unknown endpoint"
+    status = response.status_code
+    reason = response.reason or "HTTP error"
+
+    if status == 401:
+        return (
+            f"Canvas API authentication failed for {endpoint} "
+            "(401 Unauthorized). Check that the Canvas access token is valid, "
+            "has not been revoked, and belongs to the configured Canvas instance."
+        )
+
+    if status == 403:
+        return (
+            f"Canvas API authorization failed for {endpoint} "
+            "(403 Forbidden). Check that the token owner has permission for this Canvas resource."
+        )
+
+    return f"Canvas API request failed for {endpoint} ({status} {reason})"
+
+
+def _raise_for_status(response: requests.Response) -> None:
+    try:
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        raise requests.exceptions.HTTPError(
+            _format_http_error(response), response=response
+        ) from e
 
 
 def _make_request(
@@ -42,10 +79,10 @@ def _make_request(
         response = requests.request(
             method=method, url=url, headers=headers, params=params, data=data
         )
-        response.raise_for_status()
+        _raise_for_status(response)
         return response
     except requests.exceptions.RequestException as e:
-        print(f"API request failed: {e}")
+        logger.warning("API request failed: %s", e)
         raise
 
 
@@ -92,7 +129,7 @@ def _get_all_pages(
         if "next" in response.links:
             next_url = response.links["next"]["url"]
             response = requests.get(next_url, headers=headers)
-            response.raise_for_status()
+            _raise_for_status(response)
         else:
             break
 
