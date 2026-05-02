@@ -11,9 +11,9 @@ APP_NAME="canvas-mcp-app"
 REGISTRY_NAME="canvasmcpregistry"
 IMAGE_NAME="canvas-mcp"
 
-# Set Canvas credentials from azure-deploy.yml
-CANVAS_URL="<your-canvas-url>"
-CANVAS_ACCESS_TOKEN="<your-canvas-access-token>"
+# Required Canvas configuration.
+: "${CANVAS_URL:?Set CANVAS_URL before running this script}"
+: "${CANVAS_ACCESS_TOKEN:?Set CANVAS_ACCESS_TOKEN before running this script}"
 
 echo "Creating resource group..."
 az group create --name $RESOURCE_GROUP --location $LOCATION
