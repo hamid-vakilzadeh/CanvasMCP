@@ -6,7 +6,7 @@ from pydantic import Field
 
 from .base import ToolProvider
 from canvasAPI.module import modules
-from tools.getToken import get_user_token
+from canvas_credentials import get_canvas_credentials
 
 
 class ModuleTools(ToolProvider):
@@ -14,7 +14,7 @@ class ModuleTools(ToolProvider):
 
     def _register_tools(self):
         """Register all module-related tools."""
-        # Wrap all tools with analytics if enabled
+        # Prepare tools for registration
         tools_to_register = [
             (self.create_module, {"module"}),
             (self.list_modules, {"module"}),
@@ -30,8 +30,8 @@ class ModuleTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def create_module(
         self,
@@ -77,7 +77,7 @@ class ModuleTools(ToolProvider):
             publish_final_grade=publish_final_grade,
         )
 
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.create_module(**params)
 
@@ -106,7 +106,7 @@ class ModuleTools(ToolProvider):
             student_id=student_id,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.list_modules(**params)
 
@@ -130,7 +130,7 @@ class ModuleTools(ToolProvider):
             include=include,
             student_id=student_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.show_module(**params)
 
@@ -175,7 +175,7 @@ class ModuleTools(ToolProvider):
             publish_final_grade=publish_final_grade,
             published=published,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.update_module(**params)
 
@@ -189,7 +189,7 @@ class ModuleTools(ToolProvider):
             course_id=course_id,
             module_id=module_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.delete_module(**params)
 
@@ -203,7 +203,7 @@ class ModuleTools(ToolProvider):
             course_id=course_id,
             module_id=module_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.relock_module(**params)
 
@@ -234,7 +234,7 @@ class ModuleTools(ToolProvider):
             student_id=student_id,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.list_module_items(**params)
 
@@ -260,7 +260,7 @@ class ModuleTools(ToolProvider):
             include=include,
             student_id=student_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.show_module_item(**params)
 
@@ -355,7 +355,7 @@ class ModuleTools(ToolProvider):
             iframe_width=iframe_width,
             iframe_height=iframe_height,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.create_module_item(**params)
 
@@ -421,7 +421,7 @@ class ModuleTools(ToolProvider):
             published=published,
             target_module_id=target_module_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.update_module_item(**params)
 
@@ -439,6 +439,6 @@ class ModuleTools(ToolProvider):
             module_id=module_id,
             item_id=item_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return modules.delete_module_item(**params)

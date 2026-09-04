@@ -5,7 +5,7 @@ from pydantic import Field
 
 from .base import ToolProvider
 from canvasAPI.quiz import quizzes, quiz_questions, quiz_question_groups
-from tools.getToken import get_user_token
+from canvas_credentials import get_canvas_credentials
 
 
 class QuizTools(ToolProvider):
@@ -23,8 +23,8 @@ class QuizTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def list_quizzes(
         self,
@@ -42,7 +42,7 @@ class QuizTools(ToolProvider):
             search_term=search_term,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quizzes.list_quizzes(**params)
 
@@ -56,7 +56,7 @@ class QuizTools(ToolProvider):
             course_id=course_id,
             quiz_id=quiz_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quizzes.get_quiz(**params)
 
@@ -185,7 +185,7 @@ class QuizTools(ToolProvider):
             one_time_results=one_time_results,
             only_visible_to_overrides=only_visible_to_overrides,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quizzes.create_quiz(**params)
 
@@ -321,7 +321,7 @@ class QuizTools(ToolProvider):
             only_visible_to_overrides=only_visible_to_overrides,
             notify_of_update=notify_of_update,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quizzes.update_quiz(**params)
 
@@ -335,7 +335,7 @@ class QuizTools(ToolProvider):
             course_id=course_id,
             quiz_id=quiz_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quizzes.delete_quiz(**params)
 
@@ -353,7 +353,7 @@ class QuizTools(ToolProvider):
             quiz_id=quiz_id,
             access_code=access_code,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quizzes.validate_access_code(**params)
 
@@ -372,8 +372,8 @@ class QuizQuestionTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def list_quiz_questions(
         self,
@@ -396,7 +396,7 @@ class QuizQuestionTools(ToolProvider):
             quiz_submission_attempt=quiz_submission_attempt,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quiz_questions.list_quiz_questions(**params)
 
@@ -412,7 +412,7 @@ class QuizQuestionTools(ToolProvider):
             quiz_id=quiz_id,
             question_id=question_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quiz_questions.get_quiz_question(**params)
 
@@ -503,7 +503,7 @@ class QuizQuestionTools(ToolProvider):
             quiz_group_id=quiz_group_id,
             answers=answers,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quiz_questions.create_quiz_question(**params)
 
@@ -596,7 +596,7 @@ class QuizQuestionTools(ToolProvider):
             quiz_group_id=quiz_group_id,
             answers=answers,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quiz_questions.update_quiz_question(**params)
 
@@ -612,7 +612,7 @@ class QuizQuestionTools(ToolProvider):
             quiz_id=quiz_id,
             question_id=question_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
         quiz_questions.delete_quiz_question(**params)
         return {"success": True, "message": "Question deleted successfully"}
 
@@ -631,8 +631,8 @@ class QuizQuestionGroupTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def get_quiz_question_group(
         self,
@@ -646,7 +646,7 @@ class QuizQuestionGroupTools(ToolProvider):
             quiz_id=quiz_id,
             group_id=group_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quiz_question_groups.get_quiz_group(**params)
 
@@ -683,7 +683,7 @@ class QuizQuestionGroupTools(ToolProvider):
             question_points=question_points,
             assessment_question_bank_id=assessment_question_bank_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quiz_question_groups.create_quiz_group(**params)
 
@@ -717,7 +717,7 @@ class QuizQuestionGroupTools(ToolProvider):
             pick_count=pick_count,
             question_points=question_points,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return quiz_question_groups.update_quiz_group(**params)
 
@@ -733,7 +733,7 @@ class QuizQuestionGroupTools(ToolProvider):
             quiz_id=quiz_id,
             group_id=group_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         quiz_question_groups.delete_quiz_group(**params)
         return {"success": True, "message": "Question group deleted successfully"}
@@ -757,7 +757,7 @@ class QuizQuestionGroupTools(ToolProvider):
             group_id=group_id,
             order=order,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         quiz_question_groups.reorder_quiz_group_questions(**params)
         return {"success": True, "message": "Questions reordered successfully"}

@@ -1,4 +1,167 @@
-# Canvas MCP Tools Organization
+# Canvas MCP
+
+Run Canvas LMS tools on your computer through an MCP client's **stdio** connection.
+The client starts the process and communicates through stdin/stdout. The server
+opens no HTTP listener and has no separate authentication or analytics service.
+
+The server reads your Canvas URL and API token from the MCP client configuration's
+`env` object and uses them to connect directly to Canvas. Those are the only
+credentials accepted by this server.
+Canvas and any Canvas file-upload services still require network access; this does
+not make your institution's Canvas installation or your AI client offline.
+
+## Requirements
+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) on your PATH.
+  uv manages the Python environment and can download Python 3.13 when needed.
+- Your Canvas instance URL and personal Canvas API access token.
+- Node.js 20 or later for the npm/npx launcher only.
+
+The npm package bundles the Python server and its lockfile. It is a local launcher,
+so **uv is required for npm/npx too**. The first launch may download Python and
+locked Python dependencies; later launches reuse the local environment.
+
+## Option 1: Git clone
+
+```sh
+git clone https://github.com/hamid-vakilzadeh/CanvasMCP.git
+cd CanvasMCP
+uv sync --frozen --no-dev
+```
+
+Configure your MCP client to start the local server. For clients that use an
+`mcpServers` JSON configuration:
+
+```json
+{
+  "mcpServers": {
+    "canvas": {
+      "command": "uv",
+      "args": [
+        "--directory", "/absolute/path/to/CanvasMCP",
+        "run", "--frozen", "--no-dev", "python", "src/local.py"
+      ],
+      "env": {
+        "CANVAS_URL": "https://your-school.instructure.com",
+        "CANVAS_ACCESS_TOKEN": "your_canvas_api_token"
+      }
+    }
+  }
+}
+```
+
+The `env` object is required. Use the actual absolute checkout path. If the
+desktop client cannot find `uv`, use the absolute path returned by `command -v uv`
+(or `where uv` on Windows).
+
+## Option 2: npm or npx
+
+From a checkout, install the command locally on your machine:
+
+```sh
+npm install -g .
+```
+
+Or build an installable package for npx:
+
+```sh
+npm pack
+```
+
+Configure the installed command and its two environment variables in your MCP
+client. The package excludes credentials, virtual environments, tests, and
+development files. The Python environment is stored in your user cache, so the
+launcher also works when the npm installation directory is read-only.
+
+For an installed `canvas-mcp` command, an MCP client configuration can use:
+
+```json
+{
+  "mcpServers": {
+    "canvas": {
+      "command": "canvas-mcp",
+      "args": [],
+      "env": {
+        "CANVAS_URL": "https://your-school.instructure.com",
+        "CANVAS_ACCESS_TOKEN": "your_canvas_api_token"
+      }
+    }
+  }
+}
+```
+
+To run the tarball through npx, use the package path in the client configuration:
+
+```json
+{
+  "mcpServers": {
+    "canvas": {
+      "command": "npx",
+      "args": [
+        "--yes", "--package",
+        "/absolute/path/to/hamid-vakilzadeh-canvas-mcp-0.1.0.tgz",
+        "canvas-mcp"
+      ],
+      "env": {
+        "CANVAS_URL": "https://your-school.instructure.com",
+        "CANVAS_ACCESS_TOKEN": "your_canvas_api_token"
+      }
+    }
+  }
+}
+```
+
+Use `canvas-mcp.cmd` on Windows if your client requires the executable's extension.
+Alternatively use `node` as the command with the absolute path to
+`bin/canvas-mcp.js` as its first argument.
+
+The package is prepared with the name `@hamid-vakilzadeh/canvas-mcp`. **It must be
+published to npm before registry commands such as
+`npx --yes @hamid-vakilzadeh/canvas-mcp` or
+`npm install -g @hamid-vakilzadeh/canvas-mcp` will work.** The checkout and tarball
+configurations above do not require publishing. Once the changes are pushed to GitHub,
+`npm install -g git+https://github.com/hamid-vakilzadeh/CanvasMCP.git` also works.
+
+## Local configuration and behavior
+
+- `CANVAS_URL` and `CANVAS_ACCESS_TOKEN` are the only server settings.
+- Put both values in the MCP client's `env` object. The server does not read a
+  dotenv file, accept a token argument, or query another credential provider.
+- Missing or invalid credentials cause an immediate error on stderr. The server
+  explicitly sets FastMCP authentication to `None` and does not try another
+  credential source.
+- Local credentials stay in the local process and are sent to Canvas to authorize
+  API requests. Tool results are returned to the MCP client you use.
+- stdout is reserved for MCP messages. Diagnostics go to stderr. The server stops
+  when the client closes stdin. On macOS/Linux, the npm launcher forwards SIGINT
+  and SIGTERM to the entire uv/Python process group. If SIGINT shutdown is still
+  waiting after one second, the launcher sends SIGTERM to finish stopping it.
+- Both entry points register the same 118 Canvas tools and the bundled Canvas
+  content reference. Local mode does not need a remote documentation service.
+
+## Development and verification
+
+```sh
+uv run --frozen --no-dev python -m unittest discover -s tests -v
+npm test
+npm pack --dry-run
+```
+
+The Python integration test launches the real stdio server, discovers tools and
+resources, and calls a fake Canvas API on loopback. It blocks other outgoing
+connections and listener creation inside the MCP process.
+The Node tests cover argument/stdio forwarding, missing uv, exit status, and
+termination. No real Canvas account or token is needed for these tests.
+
+Documentation review used Context7 for FastMCP, uv, and npm, plus the installed
+FastMCP 2.11.1 implementation and these official references:
+[FastMCP stdio](https://gofastmcp.com/v2/deployment/running-server),
+[uv project configuration](https://docs.astral.sh/uv/concepts/projects/config/),
+[uv signal handling](https://docs.astral.sh/uv/concepts/projects/run/#signal-handling),
+[npm executable packages](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/),
+[npx](https://docs.npmjs.com/cli/v11/commands/npx/).
+
+## Tool organization
 
 This directory contains the organized tool providers for the Canvas MCP server. The tools are grouped by functionality and implemented using the recommended FastMCP patterns.
 
