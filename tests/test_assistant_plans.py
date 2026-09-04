@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from action_plans import Mutation, PlanStore, Precondition, fingerprint
 import tools.assistant as assistant_module
-from tools.assistant import AssistantTools
+from tools.assistant import AssistantTools, QuizQuestionGradeUpdate
 
 
 class FakeMCP:
@@ -773,6 +773,322 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
             "Clear analysis",
         )
         self.assertEqual(public["preview"]["identifier_type"], "anonymous_id")
+
+    async def test_discussion_entry_plan_posts_to_topic(self):
+        client = FakeCanvasClient(
+            get_values=[{"id": "55", "title": "Weekly reflection", "published": False}]
+        )
+        with patch.object(
+            assistant_module.AsyncCanvasClient,
+            "from_environment",
+            return_value=client,
+        ):
+            public = await self.tools.canvas_plan_discussion_entry(
+                course_id=7,
+                topic_id=55,
+                operation="post_entry",
+                message="  Instructor example  ",
+            )
+
+        pending = self.store._plans[public["plan_token"]]
+        self.assertEqual(
+            pending.mutations[0].endpoint,
+            "/api/v1/courses/7/discussion_topics/55/entries",
+        )
+        self.assertEqual(pending.mutations[0].data, {"message": "Instructor example"})
+        self.assertEqual(public["preview"]["topic"]["title"], "Weekly reflection")
+        self.assertIn("immediately", public["warnings"][0])
+
+    async def test_discussion_reply_validates_parent_and_applies(self):
+        topic = {"id": "55", "title": "Weekly reflection", "published": False}
+        entry_payload = [
+            {
+                "id": "91",
+                "user_name": "Student",
+                "message": "<p>Original contribution</p>",
+            }
+        ]
+        planning_client = FakeCanvasClient(get_values=[topic, entry_payload])
+        with patch.object(
+            assistant_module.AsyncCanvasClient,
+            "from_environment",
+            return_value=planning_client,
+        ):
+            public = await self.tools.canvas_plan_discussion_entry(
+                course_id=7,
+                topic_id=55,
+                operation="post_reply",
+                entry_id=91,
+                message="Thanks for connecting those ideas.",
+            )
+
+        pending = self.store._plans[public["plan_token"]]
+        self.assertEqual(public["preview"]["parent_entry"]["message"], "Original contribution")
+        self.assertEqual(pending.preconditions[0].params, {"ids[]": ["91"]})
+        self.assertEqual(
+            pending.mutations[0].endpoint,
+            "/api/v1/courses/7/discussion_topics/55/entries/91/replies",
+        )
+
+        applying_client = FakeCanvasClient(
+            get_values=[entry_payload], post_values=[{"id": "92"}]
+        )
+        with patch.object(
+            assistant_module.AsyncCanvasClient,
+            "from_environment",
+            return_value=applying_client,
+        ):
+            result = await self.tools.canvas_apply_change(
+                public["plan_token"], True, FakeProgress()
+            )
+
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(
+            applying_client.calls[-1],
+            (
+                "POST",
+                "/api/v1/courses/7/discussion_topics/55/entries/91/replies",
+                {"message": "Thanks for connecting those ideas."},
+                None,
+            ),
+        )
+
+    async def test_discussion_reply_requires_parent_and_rejects_blank_message(self):
+        with self.assertRaisesRegex(ValueError, "requires entry_id"):
+            await self.tools.canvas_plan_discussion_entry(
+                7, 55, "post_reply", "Reply without a parent"
+            )
+        with self.assertRaisesRegex(ValueError, "non-whitespace"):
+            await self.tools.canvas_plan_discussion_entry(
+                7, 55, "post_entry", "   "
+            )
+
+    async def test_comment_only_grade_plan_preserves_comment_snapshot_and_applies(self):
+        endpoint = "/api/v1/courses/7/assignments/9/submissions/11"
+        before = {
+            "grade": "8",
+            "workflow_state": "graded",
+            "submission_comments": [
+                {"id": "1", "author_name": "Instructor", "comment": "Earlier note"}
+            ],
+        }
+        planning_client = FakeCanvasClient(get_values=[before])
+        with patch.object(
+            assistant_module.AsyncCanvasClient,
+            "from_environment",
+            return_value=planning_client,
+        ):
+            public = await self.tools.canvas_plan_grade_change(
+                course_id=7,
+                assignment_id=9,
+                student_id=11,
+                comment="New feedback",
+                comment_attempt=2,
+            )
+
+        pending = self.store._plans[public["plan_token"]]
+        self.assertEqual(
+            pending.preconditions[0].params["include[]"],
+            ["submission_comments", "rubric_assessment", "submission_history", "visibility"],
+        )
+        self.assertEqual(public["preview"]["recent_comments"][0]["comment"], "Earlier note")
+        self.assertEqual(pending.mutations[0].data["comment[text_comment]"], "New feedback")
+        self.assertEqual(pending.mutations[0].data["comment[attempt]"], 2)
+        self.assertNotIn("submission[posted_grade]", pending.mutations[0].data)
+
+        applying_client = FakeCanvasClient(get_values=[before])
+        with patch.object(
+            assistant_module.AsyncCanvasClient,
+            "from_environment",
+            return_value=applying_client,
+        ):
+            result = await self.tools.canvas_apply_change(
+                public["plan_token"], True, FakeProgress()
+            )
+
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(applying_client.calls[-1][0], "PUT")
+        self.assertIn("notify", public["warnings"][0])
+
+    async def test_grade_comment_validation_and_group_warning(self):
+        with self.assertRaisesRegex(ValueError, "non-whitespace"):
+            client = FakeCanvasClient(get_values=[{"grade": None}])
+            with patch.object(
+                assistant_module.AsyncCanvasClient,
+                "from_environment",
+                return_value=client,
+            ):
+                await self.tools.canvas_plan_grade_change(
+                    7, 9, student_id=11, comment="   "
+                )
+
+        client = FakeCanvasClient(get_values=[{"grade": None}])
+        with patch.object(
+            assistant_module.AsyncCanvasClient,
+            "from_environment",
+            return_value=client,
+        ):
+            public = await self.tools.canvas_plan_grade_change(
+                7, 9, student_id=11, comment="Group feedback", group_comment=True
+            )
+        self.assertTrue(any("group member" in warning for warning in public["warnings"]))
+
+    async def test_quiz_submission_review_returns_manual_question_data(self):
+        submission_payload = {
+            "quiz_submissions": [
+                {
+                    "id": "40",
+                    "user_id": "11",
+                    "attempt": 2,
+                    "workflow_state": "complete",
+                    "score": 7.5,
+                }
+            ]
+        }
+        answer_payload = {
+            "quiz_submission_questions": [
+                {
+                    "id": "90",
+                    "answer": "<p>Student explanation</p>",
+                    "score": 3.5,
+                    "comment": "Good start",
+                }
+            ]
+        }
+        client = FakeCanvasClient(
+            get_values=[submission_payload, answer_payload],
+            page_values=[
+                {
+                    "items": [
+                        {
+                            "id": "90",
+                            "question_name": "Essay 1",
+                            "question_type": "essay_question",
+                            "question_text": "<p>Explain the control.</p>",
+                            "points_possible": 5,
+                        }
+                    ],
+                    "next_cursor": None,
+                    "count": 1,
+                }
+            ],
+        )
+        with patch.object(
+            assistant_module.AsyncCanvasClient,
+            "from_environment",
+            return_value=client,
+        ):
+            review = await self.tools.canvas_get_quiz_submission_review(
+                course_id=7, quiz_id=8, quiz_submission_id=40
+            )
+
+        self.assertEqual(review["question_count"], 1)
+        self.assertEqual(review["questions"][0]["answer"], "Student explanation")
+        self.assertEqual(review["questions"][0]["score"], 3.5)
+        self.assertEqual(review["answers_unavailable"], 0)
+
+    async def test_quiz_question_grade_plan_uses_documented_form_keys_and_applies(self):
+        submission_payload = {
+            "quiz_submissions": [
+                {
+                    "id": "40",
+                    "user_id": "11",
+                    "attempt": 2,
+                    "workflow_state": "complete",
+                    "score": 7.5,
+                }
+            ]
+        }
+        answer_payload = {
+            "quiz_submission_questions": [
+                {"id": "90", "answer": "Response", "score": 3.0, "comment": None}
+            ]
+        }
+        definition_page = {
+            "items": [
+                {
+                    "id": "90",
+                    "question_name": "Essay 1",
+                    "question_type": "essay_question",
+                    "question_text": "Explain.",
+                    "points_possible": 5,
+                }
+            ],
+            "next_cursor": None,
+            "count": 1,
+        }
+        planning_client = FakeCanvasClient(
+            get_values=[submission_payload, answer_payload],
+            page_values=[definition_page],
+        )
+        with patch.object(
+            assistant_module.AsyncCanvasClient,
+            "from_environment",
+            return_value=planning_client,
+        ):
+            public = await self.tools.canvas_plan_quiz_submission_grade(
+                course_id=7,
+                quiz_id=8,
+                quiz_submission_id=40,
+                question_updates=[
+                    QuizQuestionGradeUpdate(
+                        question_id=90, score=4.5, comment="Clear explanation"
+                    )
+                ],
+            )
+
+        pending = self.store._plans[public["plan_token"]]
+        data = pending.mutations[0].data
+        self.assertEqual(data["quiz_submissions[][attempt]"], 2)
+        self.assertEqual(data["quiz_submissions[][questions][90][score]"], 4.5)
+        self.assertEqual(
+            data["quiz_submissions[][questions][90][comment]"], "Clear explanation"
+        )
+        self.assertEqual(len(pending.preconditions), 2)
+        self.assertIn("plan is the draft", public["warnings"][0].lower())
+
+        applying_client = FakeCanvasClient(
+            get_values=[submission_payload, answer_payload], put_values=[{"updated": True}]
+        )
+        with patch.object(
+            assistant_module.AsyncCanvasClient,
+            "from_environment",
+            return_value=applying_client,
+        ):
+            result = await self.tools.canvas_apply_change(
+                public["plan_token"], True, FakeProgress()
+            )
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(applying_client.calls[-1][0], "PUT")
+
+    async def test_quiz_question_grade_plan_rejects_unknown_and_negative_scores(self):
+        submission_payload = {
+            "quiz_submissions": [
+                {"id": "40", "user_id": "11", "attempt": 1, "workflow_state": "complete"}
+            ]
+        }
+        answer_payload = {"quiz_submission_questions": [{"id": "90"}]}
+        page = {
+            "items": [{"id": "90", "question_type": "essay_question"}],
+            "next_cursor": None,
+            "count": 1,
+        }
+        for update, message in (
+            (QuizQuestionGradeUpdate(question_id=999, score=1), "does not belong"),
+            (QuizQuestionGradeUpdate(question_id=90, score=-1), "cannot be negative"),
+        ):
+            client = FakeCanvasClient(
+                get_values=[submission_payload, answer_payload], page_values=[page]
+            )
+            with patch.object(
+                assistant_module.AsyncCanvasClient,
+                "from_environment",
+                return_value=client,
+            ):
+                with self.assertRaisesRegex(ValueError, message):
+                    await self.tools.canvas_plan_quiz_submission_grade(
+                        7, 8, 40, [update]
+                    )
 
 
 if __name__ == "__main__":

@@ -17,11 +17,13 @@ available immediately:
 - inspect courses, modules, pages, assignments, and quizzes;
 - list students and review enrollment, progress, submissions, and activity;
 - find submissions awaiting review and inspect comments or rubric assessments;
+- inspect completed Classic Quiz attempts and plan question-level scores or feedback;
 - review Canvas Inbox conversations and plan private student outreach;
 - create and maintain pages, assignments, announcements, discussions, modules,
   module items, Classic Quizzes, New Quizzes, and assignment rubrics;
 - upload local files and start complete or selective course copies; and
-- plan grades, submission comments, publishing changes, and deletions before
+- post planned discussion entries or replies, and plan grades, submission
+  comments, publishing changes, and deletions before
   applying them.
 
 New Quizzes must be available at the institution. If Canvas rejects a New
@@ -30,20 +32,20 @@ tool returns that Canvas capability or permission error.
 
 ### Compact tool catalog
 
-Only 23 tools are visible initially. This keeps the tool schemas much smaller
+Only 26 tools are visible initially. This keeps the tool schemas much smaller
 than registering every Canvas endpoint at once.
 
-In a serialized `tools/list` measurement, the visible schemas are about 20.7 KB,
-down from 161.3 KB for the previous 118-tool catalog. That is an 87% reduction;
+In a serialized `tools/list` measurement, the visible schemas are about 24.7 KB,
+down from 161.3 KB for the previous 118-tool catalog. That is an 85% reduction;
 discovery adds at most five relevant schemas only when they are needed.
 
 | Area | Visible tools |
 | --- | --- |
 | Discovery | `canvas_capabilities`, `canvas_search_tools`, `canvas_call_tool` |
-| Courses and students | `canvas_list_courses`, `canvas_get_course_structure`, `canvas_list_course_people`, `canvas_get_student_snapshot`, `canvas_analyze_student_engagement`, `canvas_list_grading_queue`, `canvas_get_submission_review` |
+| Courses and students | `canvas_list_courses`, `canvas_get_course_structure`, `canvas_list_course_people`, `canvas_get_student_snapshot`, `canvas_analyze_student_engagement`, `canvas_list_grading_queue`, `canvas_get_submission_review`, `canvas_get_quiz_submission_review` |
 | Communication | `canvas_list_inbox`, `canvas_get_conversation`, `canvas_plan_communication`, `canvas_plan_announcement_change` |
-| Authoring | `canvas_plan_page_change`, `canvas_plan_assignment_change`, `canvas_plan_discussion_change`, `canvas_plan_module_change`, `canvas_plan_quiz_change`, `canvas_plan_file_upload`, `canvas_plan_course_copy` |
-| Grades and execution | `canvas_plan_grade_change`, `canvas_apply_change` |
+| Authoring | `canvas_plan_page_change`, `canvas_plan_assignment_change`, `canvas_plan_discussion_change`, `canvas_plan_discussion_entry`, `canvas_plan_module_change`, `canvas_plan_quiz_change`, `canvas_plan_file_upload`, `canvas_plan_course_copy` |
+| Grades and execution | `canvas_plan_grade_change`, `canvas_plan_quiz_submission_grade`, `canvas_apply_change` |
 
 There is one server mode and no legacy profile. The broader Canvas API catalog is
 available through FastMCP Tool Search:
@@ -75,9 +77,31 @@ separate conversation for each recipient so students are not exposed to one
 another.
 
 Grade plans support student IDs or Canvas anonymous-grading identifiers, rubric
-criterion assessments, posted grades, excuses, and private comments. Upload
-plans include a SHA-256 fingerprint and are rejected if the local file changes
-after review.
+criterion assessments, posted grades, excuses, and student-visible comments.
+Comments are posted immediately when a plan is applied and Canvas may notify the
+student. A plan is the draft; ordinary SpeedGrader comments do not have a Canvas
+draft state.
+
+`canvas_get_quiz_submission_review` returns the version of the Classic Quiz
+questions presented for a completed attempt. Canvas may omit student answers or
+current per-question scores even when the instructor can see the prompts; the
+tool reports those fields as unavailable. `canvas_plan_quiz_submission_grade`
+can prepare question scores, question comments, or a total-score adjustment.
+Canvas applies those edits immediately after `canvas_apply_change`; Classic Quiz
+grading has no provisional or draft API.
+
+Discussion entries and entry-specific replies use the same plan/apply boundary.
+The preview includes the topic and, for a reply, the parent entry. Applying a
+plan publishes the message immediately and may notify participants.
+
+These workflows follow the official Canvas API contracts for
+[discussion entries and replies](https://developerdocs.instructure.com/services/canvas/resources/discussion_topics),
+[assignment submissions and comments](https://developerdocs.instructure.com/services/canvas/resources/submissions),
+[Classic Quiz submissions](https://developerdocs.instructure.com/services/canvas/resources/quiz_submissions),
+and [quiz submission questions](https://developerdocs.instructure.com/services/canvas/resources/quiz_submission_questions).
+
+Upload plans include a SHA-256 fingerprint and are rejected if the local file
+changes after review.
 
 Use `canvas_plan_advanced_action` with `create_rubric` to create an analytic
 rubric and associate it with an assignment. The plan validates criteria and

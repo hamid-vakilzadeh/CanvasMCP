@@ -164,8 +164,10 @@ approval."""
         return f"""Review the Canvas grading queue for course {course_id}, scoped
 to {assignment_scope}. Use canvas_list_grading_queue, group submissions by
 assignment and urgency, and report counts for unreviewed, late, and missing work.
-Do not treat missing work as submitted work. Open individual records with
-canvas_get_submission_review when detailed evidence is needed. Preserve anonymous
-grading. Recommend a review order, but do not assign grades or post comments
-unless the faculty member explicitly requests a grade-change preview and then
-approves canvas_apply_change."""
+Do not treat missing work as submitted work. Open ordinary submissions with
+canvas_get_submission_review. For a completed Classic Quiz that needs manual
+question scoring, use canvas_get_quiz_submission_review and report explicitly
+when Canvas withholds answer or current-score fields. Preserve anonymous grading.
+Recommend a review order, but do not assign grades or post comments unless the
+faculty member explicitly requests a preview with canvas_plan_grade_change or
+canvas_plan_quiz_submission_grade and then approves canvas_apply_change."""

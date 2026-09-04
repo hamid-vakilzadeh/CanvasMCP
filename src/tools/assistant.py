@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import html
 import json
+import math
 import mimetypes
+import re
 from datetime import timedelta
 from functools import wraps
 from pathlib import Path
@@ -18,7 +21,7 @@ from fastmcp.dependencies import Progress
 from fastmcp.tools import ToolResult
 from fastmcp.utilities.tasks import TaskConfig
 from mcp.types import TextContent, ToolAnnotations
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from action_plans import Mutation, Precondition, fingerprint, plan_store
 from canvas_client import AsyncCanvasClient, CanvasAPIError
@@ -102,6 +105,25 @@ def _compact(items: list[dict[str, Any]], fields: tuple[str, ...]) -> list[dict[
     return [{key: item.get(key) for key in fields if key in item} for item in items]
 
 
+def _plain_text(value: Any, limit: int = 20_000) -> str | None:
+    """Make Canvas HTML readable in plans without silently dropping long answers."""
+    if value is None:
+        return None
+    cleaned = html.unescape(re.sub(r"<[^>]+>", " ", str(value)))
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[:limit] + "…"
+
+
+class QuizQuestionGradeUpdate(BaseModel):
+    """One Classic Quiz question score or feedback change."""
+
+    question_id: str | int
+    score: float | None = None
+    comment: str | None = None
+
+
 def _file_fingerprint(path: Path) -> tuple[int, int, str]:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -156,6 +178,7 @@ class AssistantTools:
         "canvas_analyze_student_engagement",
         "canvas_list_grading_queue",
         "canvas_get_submission_review",
+        "canvas_get_quiz_submission_review",
         "canvas_list_inbox",
         "canvas_get_conversation",
         "canvas_plan_communication",
@@ -163,11 +186,13 @@ class AssistantTools:
         "canvas_plan_page_change",
         "canvas_plan_assignment_change",
         "canvas_plan_discussion_change",
+        "canvas_plan_discussion_entry",
         "canvas_plan_module_change",
         "canvas_plan_quiz_change",
         "canvas_plan_file_upload",
         "canvas_plan_course_copy",
         "canvas_plan_grade_change",
+        "canvas_plan_quiz_submission_grade",
         "canvas_apply_change",
     ]
 
@@ -183,6 +208,7 @@ class AssistantTools:
             self.canvas_list_course_people,
             self.canvas_get_student_snapshot,
             self.canvas_get_submission_review,
+            self.canvas_get_quiz_submission_review,
             self.canvas_list_inbox,
             self.canvas_get_conversation,
         ]
@@ -206,11 +232,13 @@ class AssistantTools:
             self.canvas_plan_page_change,
             self.canvas_plan_assignment_change,
             self.canvas_plan_discussion_change,
+            self.canvas_plan_discussion_entry,
             self.canvas_plan_module_change,
             self.canvas_plan_quiz_change,
             self.canvas_plan_file_upload,
             self.canvas_plan_course_copy,
             self.canvas_plan_grade_change,
+            self.canvas_plan_quiz_submission_grade,
         ):
             self.mcp.tool(_assistant_tool(fn), annotations=PLAN_ONLY, tags={"curated", "plan"})
         self.mcp.tool(
@@ -242,7 +270,8 @@ class AssistantTools:
             ],
             "instructor_workflows": [
                 "rosters", "student snapshots", "engagement criteria", "grading queues",
-                "submission review", "grades and comments", "private Inbox outreach",
+                "submission review", "Classic Quiz essay review and scoring",
+                "grades and comments", "discussion posts and replies", "private Inbox outreach",
             ],
             "writes": "Create a plan, review it, then call canvas_apply_change with confirm=true.",
             "background_tasks": {
@@ -507,6 +536,197 @@ class AssistantTools:
         async with AsyncCanvasClient.from_environment() as client:
             return await client.get(endpoint, {"include[]": ["submission_comments", "rubric_assessment", "submission_history", "visibility"]})
 
+    @staticmethod
+    def _quiz_submissions(payload: Any) -> list[dict[str, Any]]:
+        if isinstance(payload, dict) and isinstance(payload.get("quiz_submissions"), list):
+            return payload["quiz_submissions"]
+        if isinstance(payload, list):
+            return [item for item in payload if isinstance(item, dict)]
+        if isinstance(payload, dict) and payload.get("id") is not None:
+            return [payload]
+        return []
+
+    async def _load_quiz_submission_review(
+        self,
+        client: AsyncCanvasClient,
+        *,
+        course_id: str,
+        quiz_id: str,
+        quiz_submission_id: str | None,
+        student_id: str | None,
+        include_all_questions: bool,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        include_params = {"include[]": ["submission", "quiz", "user"]}
+        if quiz_submission_id is not None:
+            submission_endpoint = (
+                f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/submissions/"
+                f"{quiz_submission_id}"
+            )
+            submission_payload = await client.get(submission_endpoint, include_params)
+            candidates = self._quiz_submissions(submission_payload)
+        else:
+            collection_endpoint = f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/submissions"
+            collection_params = {**include_params, "per_page": 100}
+            collection_payload = await client.get(collection_endpoint, collection_params)
+            candidates = [
+                item
+                for item in self._quiz_submissions(collection_payload)
+                if str(item.get("user_id")) == student_id
+            ]
+            if not candidates:
+                raise ValueError(f"No Classic Quiz submission found for student {student_id}")
+            candidates.sort(
+                key=lambda item: (int(item.get("attempt") or 0), int(item.get("id") or 0)),
+                reverse=True,
+            )
+            selected_id = _sid(candidates[0].get("id"))
+            submission_endpoint = (
+                f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/submissions/{selected_id}"
+            )
+            submission_payload = await client.get(submission_endpoint, include_params)
+            candidates = self._quiz_submissions(submission_payload)
+        if not candidates:
+            raise ValueError("Canvas did not return the requested Classic Quiz submission")
+        submission = candidates[0]
+        if submission.get("id") is None:
+            raise ValueError("Canvas returned a Classic Quiz submission without an ID")
+        actual_submission_id = _sid(submission.get("id"))
+        if quiz_submission_id is not None and actual_submission_id != quiz_submission_id:
+            raise ValueError("Canvas returned a different quiz submission than requested")
+        if student_id is not None and str(submission.get("user_id")) != student_id:
+            raise ValueError("The quiz submission does not belong to the requested student")
+        attempt = submission.get("attempt")
+        if not isinstance(attempt, int) or attempt < 1:
+            raise ValueError("Canvas returned an invalid Classic Quiz attempt number")
+
+        question_params = {
+            "quiz_submission_id": actual_submission_id,
+            "quiz_submission_attempt": attempt,
+        }
+        answer_endpoint = f"/api/v1/quiz_submissions/{actual_submission_id}/questions"
+        answer_params = {"include[]": ["quiz_question"]}
+        definitions, answer_payload = await asyncio.gather(
+            _bounded_pages(
+                client,
+                f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/questions",
+                params=question_params,
+            ),
+            client.get(answer_endpoint, answer_params),
+        )
+        question_definitions, next_cursor = definitions
+        answer_records = (
+            answer_payload.get("quiz_submission_questions", [])
+            if isinstance(answer_payload, dict)
+            else answer_payload if isinstance(answer_payload, list) else []
+        )
+        definitions_by_id = {
+            str(item.get("id")): item
+            for item in question_definitions
+            if isinstance(item, dict) and item.get("id") is not None
+        }
+        answers_by_id = {
+            str(item.get("id")): item
+            for item in answer_records
+            if isinstance(item, dict) and item.get("id") is not None
+        }
+        ordered_ids = list(definitions_by_id)
+        ordered_ids.extend(value for value in answers_by_id if value not in definitions_by_id)
+        manual_types = {"essay_question", "file_upload_question"}
+        questions: list[dict[str, Any]] = []
+        for question_id in ordered_ids:
+            record = answers_by_id.get(question_id, {})
+            nested_definition = record.get("quiz_question")
+            definition = definitions_by_id.get(question_id) or (
+                nested_definition if isinstance(nested_definition, dict) else record
+            )
+            question_type = definition.get("question_type") or record.get("question_type")
+            if not include_all_questions and question_type not in manual_types:
+                continue
+            questions.append(
+                {
+                    "question_id": question_id,
+                    "question_name": definition.get("question_name") or record.get("question_name"),
+                    "question_type": question_type,
+                    "question_text": _plain_text(
+                        definition.get("question_text", record.get("question_text"))
+                    ),
+                    "points_possible": definition.get(
+                        "points_possible", record.get("points_possible")
+                    ),
+                    "answer": _plain_text(record.get("answer")),
+                    "answer_available": "answer" in record,
+                    "score": record.get("score"),
+                    "score_available": "score" in record,
+                    "comment": _plain_text(record.get("comment")),
+                    "comment_available": "comment" in record,
+                }
+            )
+        review = {
+            "course_id": course_id,
+            "quiz_id": quiz_id,
+            "quiz_submission": {
+                key: submission.get(key)
+                for key in (
+                    "id", "user_id", "attempt", "workflow_state", "score", "kept_score",
+                    "fudge_points", "started_at", "finished_at", "end_at", "validation_token",
+                )
+                if key in submission and key != "validation_token"
+            },
+            "user": submission.get("user"),
+            "assignment_submission": submission.get("submission"),
+            "questions": questions,
+            "question_count": len(questions),
+            "answers_unavailable": sum(
+                item["question_type"] in manual_types and not item["answer_available"]
+                for item in questions
+            ),
+            "question_data_truncated": bool(next_cursor),
+        }
+        state = {
+            "submission_endpoint": submission_endpoint,
+            "submission_params": include_params,
+            "submission_payload": submission_payload,
+            "answer_endpoint": answer_endpoint,
+            "answer_params": answer_params,
+            "answer_payload": answer_payload,
+        }
+        return review, state
+
+    async def canvas_get_quiz_submission_review(
+        self,
+        course_id: Annotated[str | int, Field(description="Canvas course ID")],
+        quiz_id: Annotated[str | int, Field(description="Classic Quiz ID")],
+        quiz_submission_id: Annotated[
+            str | int | None,
+            Field(description="Classic Quiz submission ID; provide this or student_id"),
+        ] = None,
+        student_id: Annotated[
+            str | int | None,
+            Field(description="Student ID; selects the latest returned attempt"),
+        ] = None,
+        include_all_questions: Annotated[
+            bool,
+            Field(description="Include auto-graded questions as well as essay and file-upload questions"),
+        ] = False,
+    ) -> dict[str, Any]:
+        """Review a completed Classic Quiz attempt and its question-level grading data."""
+        if (quiz_submission_id is None) == (student_id is None):
+            raise ValueError("Provide exactly one of quiz_submission_id or student_id")
+        normalized_submission_id = (
+            _sid(quiz_submission_id) if quiz_submission_id is not None else None
+        )
+        normalized_student_id = _sid(student_id) if student_id is not None else None
+        async with AsyncCanvasClient.from_environment() as client:
+            review, _ = await self._load_quiz_submission_review(
+                client,
+                course_id=_sid(course_id),
+                quiz_id=_sid(quiz_id),
+                quiz_submission_id=normalized_submission_id,
+                student_id=normalized_student_id,
+                include_all_questions=include_all_questions,
+            )
+        return review
+
     async def canvas_list_inbox(
         self,
         course_id: Annotated[str | int | None, Field(description="Optional course filter")]=None,
@@ -549,10 +769,14 @@ class AssistantTools:
         async with AsyncCanvasClient.from_environment() as client:
             return await client.get(endpoint, params)
 
-    async def _snapshot(self, endpoint: str) -> tuple[dict[str, Any], Precondition]:
+    async def _snapshot(
+        self, endpoint: str, params: dict[str, Any] | None = None
+    ) -> tuple[dict[str, Any], Precondition]:
         async with AsyncCanvasClient.from_environment() as client:
-            current = await client.get(endpoint)
-        return current, Precondition(endpoint=endpoint, fingerprint=fingerprint(current))
+            current = await client.get(endpoint, params)
+        return current, Precondition(
+            endpoint=endpoint, fingerprint=fingerprint(current), params=params
+        )
 
     async def _simple_plan(
         self,
@@ -692,6 +916,102 @@ class AssistantTools:
             operation=operation, collection_endpoint=f"/api/v1/courses/{course_id}/discussion_topics",
             item_endpoint=f"/api/v1/courses/{course_id}/discussion_topics/{_sid(discussion_id)}" if discussion_id is not None else None,
             payload=changes or {}, prefix=None,
+        )
+
+    async def canvas_plan_discussion_entry(
+        self,
+        course_id: Annotated[str | int, Field(description="Canvas course ID")],
+        topic_id: Annotated[str | int, Field(description="Canvas discussion topic ID")],
+        operation: Annotated[
+            Literal["post_entry", "post_reply"],
+            Field(description="Post a top-level entry or reply to a specific entry"),
+        ],
+        message: Annotated[str, Field(min_length=1, description="Entry or reply body")],
+        entry_id: Annotated[
+            str | int | None,
+            Field(description="Parent discussion entry ID; required only for post_reply"),
+        ] = None,
+    ) -> dict[str, Any]:
+        """Plan a new discussion entry or an entry-specific reply."""
+        course_id = _sid(course_id)
+        topic_id = _sid(topic_id)
+        message = message.strip()
+        if not message:
+            raise ValueError("message must contain non-whitespace text")
+        if operation == "post_reply" and entry_id is None:
+            raise ValueError("post_reply requires entry_id")
+        if operation == "post_entry" and entry_id is not None:
+            raise ValueError("entry_id is only valid for post_reply")
+
+        topic_endpoint = f"/api/v1/courses/{course_id}/discussion_topics/{topic_id}"
+        parent_id = _sid(entry_id) if entry_id is not None else None
+        preconditions: list[Precondition] = []
+        parent_entry: dict[str, Any] | None = None
+        async with AsyncCanvasClient.from_environment() as client:
+            topic = await client.get(topic_endpoint)
+            if parent_id is not None:
+                entry_list_endpoint = f"{topic_endpoint}/entry_list"
+                entry_list_params = {"ids[]": [parent_id]}
+                entry_payload = await client.get(entry_list_endpoint, entry_list_params)
+                entries = (
+                    entry_payload.get("entries", [])
+                    if isinstance(entry_payload, dict)
+                    else entry_payload if isinstance(entry_payload, list) else []
+                )
+                matching = [
+                    item for item in entries
+                    if isinstance(item, dict) and str(item.get("id")) == parent_id
+                ]
+                if len(matching) != 1:
+                    raise ValueError(f"Discussion entry {parent_id} was not found in topic {topic_id}")
+                parent_entry = matching[0]
+                preconditions.append(
+                    Precondition(
+                        endpoint=entry_list_endpoint,
+                        params=entry_list_params,
+                        fingerprint=fingerprint(entry_payload),
+                    )
+                )
+
+        endpoint = f"{topic_endpoint}/entries"
+        if parent_id is not None:
+            endpoint += f"/{parent_id}/replies"
+        warnings = [
+            "Applying this plan publishes the message immediately and may notify discussion participants."
+        ]
+        group_children = topic.get("group_topic_children") or []
+        if group_children:
+            warnings.append(
+                "This is a group discussion root topic. Post to the intended child group topic instead."
+            )
+        return await plan_store.create(
+            action="discussion_entry",
+            summary=(
+                f"Reply to discussion entry {parent_id} in topic {topic_id}"
+                if parent_id is not None
+                else f"Post a new entry in discussion topic {topic_id}"
+            ),
+            preview={
+                "operation": operation,
+                "topic": {
+                    key: topic.get(key)
+                    for key in ("id", "title", "published", "locked", "discussion_type")
+                    if key in topic
+                },
+                "parent_entry": (
+                    {
+                        "id": parent_entry.get("id"),
+                        "user_name": parent_entry.get("user_name"),
+                        "created_at": parent_entry.get("created_at"),
+                        "message": _plain_text(parent_entry.get("message"), 2_000),
+                    }
+                    if parent_entry is not None else None
+                ),
+                "message": message,
+            },
+            mutations=[Mutation("POST", endpoint, data={"message": message})],
+            preconditions=preconditions,
+            warnings=warnings,
         )
 
     async def canvas_plan_module_change(
@@ -1138,12 +1458,16 @@ class AssistantTools:
         excuse: bool | None = None,
         comment: str | None = None,
         group_comment: bool = False,
+        comment_attempt: Annotated[
+            int | None,
+            Field(ge=1, description="Optional submission attempt to associate with the comment"),
+        ] = None,
         rubric_assessment: Annotated[
             dict[str, dict[str, Any]] | None,
             Field(description="Rubric criterion IDs mapped to points, rating_id, or comments"),
         ] = None,
     ) -> dict[str, Any]:
-        """Plan one student's grade, excuse status, or private submission comment."""
+        """Plan one student's grade, excuse status, or student-visible submission comment."""
         if (student_id is None) == (anonymous_id is None):
             raise ValueError("Provide exactly one of student_id or anonymous_id")
         identifier = _sid(anonymous_id) if anonymous_id is not None else _sid(student_id)
@@ -1153,19 +1477,38 @@ class AssistantTools:
             else f"submissions/{identifier}"
         )
         endpoint = f"/api/v1/courses/{_sid(course_id)}/assignments/{_sid(assignment_id)}/{target}"
-        before, condition = await self._snapshot(endpoint)
+        snapshot_params = {
+            "include[]": ["submission_comments", "rubric_assessment", "submission_history", "visibility"]
+        }
+        before, condition = await self._snapshot(endpoint, snapshot_params)
         data: dict[str, Any] = {}
         if posted_grade is not None:
             data["submission[posted_grade]"] = posted_grade
         if excuse is not None:
             data["submission[excuse]"] = excuse
         if comment is not None:
+            if not comment.strip():
+                raise ValueError("comment must contain non-whitespace text")
             data["comment[text_comment]"] = comment
             data["comment[group_comment]"] = group_comment
+            if comment_attempt is not None:
+                data["comment[attempt]"] = comment_attempt
+        elif comment_attempt is not None:
+            raise ValueError("comment_attempt requires comment")
+        if group_comment and comment is None:
+            raise ValueError("group_comment requires comment")
         if rubric_assessment:
             data.update(_form_payload(rubric_assessment, "rubric_assessment"))
         if not data:
             raise ValueError("Provide posted_grade, excuse, comment, or rubric_assessment")
+        warnings: list[str] = []
+        if comment is not None:
+            warnings.append(
+                "Applying this plan posts the submission comment immediately and Canvas may notify the student."
+            )
+        if group_comment:
+            warnings.append("This comment is marked as a group comment and may notify every group member.")
+        previous_comments = before.get("submission_comments") or []
         return await plan_store.create(
             action="grade_change",
             summary=(
@@ -1174,12 +1517,176 @@ class AssistantTools:
             ),
             preview={
                 "before": _compact([before], ("score", "grade", "excused", "workflow_state"))[0],
+                "recent_comments": [
+                    {
+                        "id": item.get("id"),
+                        "author_name": item.get("author_name"),
+                        "created_at": item.get("created_at"),
+                        "comment": _plain_text(item.get("comment"), 2_000),
+                    }
+                    for item in previous_comments[-5:]
+                    if isinstance(item, dict)
+                ],
                 "changes": data,
                 "identifier_type": "anonymous_id" if anonymous_id is not None else "student_id",
                 "identifier": identifier,
             },
             mutations=[Mutation("PUT", endpoint, data=data)],
             preconditions=[condition],
+            warnings=warnings,
+        )
+
+    async def canvas_plan_quiz_submission_grade(
+        self,
+        course_id: Annotated[str | int, Field(description="Canvas course ID")],
+        quiz_id: Annotated[str | int, Field(description="Classic Quiz ID")],
+        quiz_submission_id: Annotated[
+            str | int, Field(description="Completed Classic Quiz submission ID")
+        ],
+        question_updates: Annotated[
+            list[QuizQuestionGradeUpdate] | None,
+            Field(
+                max_length=100,
+                description="Question IDs with a score, feedback comment, or both",
+            ),
+        ] = None,
+        fudge_points: Annotated[
+            float | None,
+            Field(description="Optional signed adjustment to the attempt total"),
+        ] = None,
+    ) -> dict[str, Any]:
+        """Plan per-question scores or comments for a completed Classic Quiz attempt."""
+        course_id = _sid(course_id)
+        quiz_id = _sid(quiz_id)
+        quiz_submission_id = _sid(quiz_submission_id)
+        normalized_updates = [
+            item
+            if isinstance(item, QuizQuestionGradeUpdate)
+            else QuizQuestionGradeUpdate.model_validate(item)
+            for item in (question_updates or [])
+        ]
+        if not normalized_updates and fudge_points is None:
+            raise ValueError("Provide question_updates, fudge_points, or both")
+        if fudge_points is not None and not math.isfinite(fudge_points):
+            raise ValueError("fudge_points must be a finite number")
+
+        async with AsyncCanvasClient.from_environment() as client:
+            review, state = await self._load_quiz_submission_review(
+                client,
+                course_id=course_id,
+                quiz_id=quiz_id,
+                quiz_submission_id=quiz_submission_id,
+                student_id=None,
+                include_all_questions=True,
+            )
+        submission = review["quiz_submission"]
+        if submission.get("workflow_state") != "complete":
+            raise ValueError("Classic Quiz question grading requires a completed attempt")
+        attempt = submission.get("attempt")
+        if not isinstance(attempt, int) or attempt < 1:
+            raise ValueError("Canvas returned an invalid Classic Quiz attempt number")
+
+        current_questions = {
+            str(item["question_id"]): item for item in review["questions"]
+        }
+        seen: set[str] = set()
+        preview_updates: list[dict[str, Any]] = []
+        data: dict[str, Any] = {"quiz_submissions[][attempt]": attempt}
+        warnings = [
+            "The plan is the draft. Canvas has no Classic Quiz grading draft; applying it persists the scores and comments immediately."
+        ]
+        unavailable_before = False
+        for item in normalized_updates:
+            question_id = _sid(item.question_id)
+            if question_id in seen:
+                raise ValueError(f"Question {question_id} appears more than once")
+            seen.add(question_id)
+            if question_id not in current_questions:
+                raise ValueError(
+                    f"Question {question_id} does not belong to quiz submission {quiz_submission_id}"
+                )
+            if item.score is None and item.comment is None:
+                raise ValueError(
+                    f"Question {question_id} requires a score, comment, or both"
+                )
+            if item.score is not None and item.score < 0:
+                raise ValueError(f"Question {question_id} score cannot be negative")
+            if item.score is not None and not math.isfinite(item.score):
+                raise ValueError(f"Question {question_id} score must be a finite number")
+            current = current_questions[question_id]
+            if item.score is not None:
+                data[
+                    f"quiz_submissions[][questions][{question_id}][score]"
+                ] = item.score
+                unavailable_before = unavailable_before or not current["score_available"]
+                points_possible = current.get("points_possible")
+                if points_possible is not None and item.score > float(points_possible):
+                    warnings.append(
+                        f"Question {question_id} score {item.score:g} exceeds its "
+                        f"{float(points_possible):g} available points."
+                    )
+            if item.comment is not None:
+                data[
+                    f"quiz_submissions[][questions][{question_id}][comment]"
+                ] = item.comment
+            preview_updates.append(
+                {
+                    "question_id": question_id,
+                    "question_name": current.get("question_name"),
+                    "question_text": current.get("question_text"),
+                    "student_answer": current.get("answer"),
+                    "answer_available": current.get("answer_available"),
+                    "before": {
+                        "score": current.get("score"),
+                        "score_available": current.get("score_available"),
+                        "comment": current.get("comment"),
+                        "comment_available": current.get("comment_available"),
+                    },
+                    "changes": {
+                        **({"score": item.score} if item.score is not None else {}),
+                        **({"comment": item.comment} if item.comment is not None else {}),
+                    },
+                }
+            )
+        if fudge_points is not None:
+            data["quiz_submissions[][fudge_points]"] = fudge_points
+        if unavailable_before:
+            warnings.append(
+                "Canvas did not expose at least one current per-question score, so that before value cannot be shown."
+            )
+        preconditions = [
+            Precondition(
+                endpoint=state["submission_endpoint"],
+                params=state["submission_params"],
+                fingerprint=fingerprint(state["submission_payload"]),
+            ),
+            Precondition(
+                endpoint=state["answer_endpoint"],
+                params=state["answer_params"],
+                fingerprint=fingerprint(state["answer_payload"]),
+            ),
+        ]
+        return await plan_store.create(
+            action="quiz_submission_grade",
+            summary=(
+                f"Grade {len(preview_updates)} question(s) in Classic Quiz submission "
+                f"{quiz_submission_id}"
+            ),
+            preview={
+                "quiz_submission": submission,
+                "question_updates": preview_updates,
+                "fudge_points": fudge_points,
+            },
+            mutations=[
+                Mutation(
+                    "PUT",
+                    f"/api/v1/courses/{course_id}/quizzes/{quiz_id}/submissions/"
+                    f"{quiz_submission_id}",
+                    data=data,
+                )
+            ],
+            preconditions=preconditions,
+            warnings=warnings,
         )
 
     async def _upload(self, client: AsyncCanvasClient, mutation: Mutation) -> Any:

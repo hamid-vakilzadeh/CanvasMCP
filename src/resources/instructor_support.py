@@ -35,7 +35,9 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
         "visible_tools": [
             "canvas_list_grading_queue",
             "canvas_get_submission_review",
+            "canvas_get_quiz_submission_review",
             "canvas_plan_grade_change",
+            "canvas_plan_quiz_submission_grade",
             "canvas_apply_change",
         ],
         "write_workflow": "Plan the grade or comment, review the preview, then apply it with confirm=true.",
@@ -77,7 +79,11 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
     },
     "discussions": {
         "summary": "Create and maintain discussion topics and their entries.",
-        "visible_tools": ["canvas_plan_discussion_change", "canvas_apply_change"],
+        "visible_tools": [
+            "canvas_plan_discussion_change",
+            "canvas_plan_discussion_entry",
+            "canvas_apply_change",
+        ],
         "search_examples": ["list discussions", "discussion entries", "discussion replies"],
     },
     "modules": {
@@ -86,8 +92,13 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
         "search_examples": ["list module items", "module prerequisites", "module completion"],
     },
     "quizzes": {
-        "summary": "Create and maintain Classic Quizzes and New Quizzes when enabled.",
-        "visible_tools": ["canvas_plan_quiz_change", "canvas_apply_change"],
+        "summary": "Create quizzes and review or grade completed Classic Quiz attempts.",
+        "visible_tools": [
+            "canvas_plan_quiz_change",
+            "canvas_get_quiz_submission_review",
+            "canvas_plan_quiz_submission_grade",
+            "canvas_apply_change",
+        ],
         "search_examples": ["quiz questions", "question groups", "quiz reports", "quiz submissions"],
     },
     "files": {
