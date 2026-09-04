@@ -456,6 +456,63 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(data, {"name": "Exams", "position": 2, "group_weight": 40})
         self.assertNotIn("assignment_group[name]", data)
 
+    async def test_create_rubric_encodes_criteria_and_assignment_association(self):
+        assignment = {
+            "id": "9",
+            "name": "Reflection",
+            "points_possible": 10,
+            "published": False,
+        }
+        client = FakeCanvasClient(get_values=[assignment])
+        with patch.object(
+            assistant_module.AsyncCanvasClient,
+            "from_environment",
+            return_value=client,
+        ):
+            public = await self.tools.canvas_plan_advanced_action(
+                action="create_rubric",
+                course_id=7,
+                arguments={
+                    "assignment_id": 9,
+                    "title": "Reflection rubric",
+                    "use_for_grading": True,
+                    "criteria": [
+                        {
+                            "description": "Insight",
+                            "points": 10,
+                            "ratings": [
+                                {"description": "Strong", "points": 10},
+                                {"description": "Developing", "points": 5},
+                                {"description": "Missing", "points": 0},
+                            ],
+                        }
+                    ],
+                },
+            )
+
+        pending = self.store._plans[public["plan_token"]]
+        mutation = pending.mutations[0]
+        self.assertEqual(mutation.method, "POST")
+        self.assertEqual(mutation.endpoint, "/api/v1/courses/7/rubrics")
+        self.assertEqual(mutation.data["rubric[title]"], "Reflection rubric")
+        self.assertEqual(
+            mutation.data["rubric[criteria][0][ratings][1][description]"],
+            "Developing",
+        )
+        self.assertEqual(
+            mutation.data["rubric[criteria][0][ratings][1][points]"], 5
+        )
+        self.assertEqual(
+            mutation.data["rubric_association[association_id]"], "9"
+        )
+        self.assertEqual(
+            mutation.data["rubric_association[association_type]"], "Assignment"
+        )
+        self.assertIs(mutation.data["rubric_association[use_for_grading]"], True)
+        self.assertEqual(public["preview"]["rubric"]["points_possible"], 10)
+        self.assertEqual(public["warnings"], [])
+        self.assertEqual(len(pending.preconditions), 1)
+
     async def test_assignment_group_delete_preserves_move_destination(self):
         snapshot = {"id": "9", "name": "Old group"}
         client = FakeCanvasClient(get_values=[snapshot])

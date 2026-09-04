@@ -19,7 +19,7 @@ available immediately:
 - find submissions awaiting review and inspect comments or rubric assessments;
 - review Canvas Inbox conversations and plan private student outreach;
 - create and maintain pages, assignments, announcements, discussions, modules,
-  module items, Classic Quizzes, and New Quizzes;
+  module items, Classic Quizzes, New Quizzes, and assignment rubrics;
 - upload local files and start complete or selective course copies; and
 - plan grades, submission comments, publishing changes, and deletions before
   applying them.
@@ -78,6 +78,11 @@ Grade plans support student IDs or Canvas anonymous-grading identifiers, rubric
 criterion assessments, posted grades, excuses, and private comments. Upload
 plans include a SHA-256 fingerprint and are rejected if the local file changes
 after review.
+
+Use `canvas_plan_advanced_action` with `create_rubric` to create an analytic
+rubric and associate it with an assignment. The plan validates criteria and
+ratings, compares the rubric total with the assignment points, and rejects the
+write if the assignment changes before application.
 
 Course copies may include selected source IDs in the initial plan. A staged
 selective copy stops at Canvas's `waiting_for_select` state; discover

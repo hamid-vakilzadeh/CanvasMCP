@@ -28,7 +28,7 @@ You are connected directly to the user's Canvas LMS through a fully local stdio
 server. Use the visible canvas_* tools for common instructor and course-authoring
 workflows. Content creation is a primary capability: use the page, assignment,
 announcement, discussion, module, quiz, file-upload, and course-copy planning
-tools, then ask the user to review the returned preview before calling
+tools or the advanced rubric planner, then ask the user to review the returned preview before calling
 canvas_apply_change with confirm=true.
 
 For an action that is not initially visible, call canvas_search_tools using a

@@ -72,6 +72,14 @@ class ServerCatalogTests(unittest.IsolatedAsyncioTestCase):
             discovered = {item["name"] for item in result.data}
             self.assertIn("list_files", discovered)
             self.assertNotIn("create_page", discovered)
+            rubric_result = await client.call_tool(
+                "canvas_search_tools",
+                {"query": "create and attach an analytic rubric to an assignment"},
+            )
+            self.assertIn(
+                "canvas_plan_advanced_action",
+                {item["name"] for item in rubric_result.data},
+            )
             with self.assertRaises(ToolError):
                 await client.call_tool(
                     "canvas_call_tool",

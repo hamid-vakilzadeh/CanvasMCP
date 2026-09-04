@@ -61,6 +61,15 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
         "visible_tools": ["canvas_plan_assignment_change", "canvas_apply_change"],
         "search_examples": ["list assignments", "assignment overrides", "assignment groups"],
     },
+    "rubrics": {
+        "summary": "Create an analytic rubric, attach it to an assignment, and grade with it.",
+        "visible_tools": [
+            "canvas_plan_advanced_action",
+            "canvas_plan_grade_change",
+            "canvas_apply_change",
+        ],
+        "write_workflow": "Plan create_rubric with criteria and ratings, review the point totals, then apply it.",
+    },
     "announcements": {
         "summary": "Create, schedule, update, and remove course announcements.",
         "visible_tools": ["canvas_plan_announcement_change", "canvas_apply_change"],

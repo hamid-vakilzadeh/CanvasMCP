@@ -238,7 +238,7 @@ class AssistantTools:
             },
             "authoring": [
                 "pages", "assignments", "announcements", "discussions", "modules",
-                "Classic Quizzes", "New Quizzes", "files", "course copies",
+                "Classic Quizzes", "New Quizzes", "rubrics", "files", "course copies",
             ],
             "instructor_workflows": [
                 "rosters", "student snapshots", "engagement criteria", "grading queues",
@@ -774,14 +774,14 @@ class AssistantTools:
                     "Advanced action: create/update/delete assignment_override or assignment_group; "
                     "create/update/delete folder; set/remove file_usage_rights; "
                     "create/update/delete classic_quiz_question or classic_quiz_question_group; "
-                    "set_assignment_extensions; apply_course_copy_selection"
+                    "create_rubric; set_assignment_extensions; apply_course_copy_selection"
                 )
             ),
         ],
         course_id: Annotated[str | int, Field(description="Canvas course ID")],
         arguments: Annotated[dict[str, Any], Field(description="IDs and Canvas fields required by the selected action")],
     ) -> dict[str, Any]:
-        """Plan advanced assignment overrides/groups, quiz questions/groups, folders, usage rights, or extra attempts."""
+        """Plan advanced authoring, rubric, usage-rights, and course-copy actions."""
         action = action.lower().strip()
         course_id = _sid(course_id)
         args = dict(arguments)
@@ -789,7 +789,155 @@ class AssistantTools:
         collection: str
         prefix: str | None
 
-        if action.endswith("assignment_override"):
+        if action == "create_rubric":
+            assignment_id = args.pop("assignment_id", None)
+            title = args.pop("title", None)
+            criteria = args.pop("criteria", None)
+            if assignment_id is None:
+                raise ValueError("create_rubric requires assignment_id")
+            if not isinstance(title, str) or not title.strip():
+                raise ValueError("create_rubric requires a non-empty title")
+            if not isinstance(criteria, list) or not criteria:
+                raise ValueError("create_rubric requires a non-empty criteria list")
+
+            normalized_criteria: list[dict[str, Any]] = []
+            for criterion_index, criterion in enumerate(criteria, start=1):
+                if not isinstance(criterion, dict):
+                    raise ValueError(f"Rubric criterion {criterion_index} must be an object")
+                description = criterion.get("description")
+                points = criterion.get("points")
+                ratings = criterion.get("ratings")
+                if not isinstance(description, str) or not description.strip():
+                    raise ValueError(f"Rubric criterion {criterion_index} requires a description")
+                if not isinstance(points, (int, float)) or isinstance(points, bool) or points < 0:
+                    raise ValueError(f"Rubric criterion {criterion_index} requires non-negative points")
+                if not isinstance(ratings, list) or not ratings:
+                    raise ValueError(f"Rubric criterion {criterion_index} requires ratings")
+                normalized_ratings: list[dict[str, Any]] = []
+                for rating_index, rating in enumerate(ratings, start=1):
+                    if not isinstance(rating, dict):
+                        raise ValueError(
+                            f"Rubric criterion {criterion_index} rating {rating_index} must be an object"
+                        )
+                    rating_description = rating.get("description")
+                    rating_points = rating.get("points")
+                    if not isinstance(rating_description, str) or not rating_description.strip():
+                        raise ValueError(
+                            f"Rubric criterion {criterion_index} rating {rating_index} requires a description"
+                        )
+                    if (
+                        not isinstance(rating_points, (int, float))
+                        or isinstance(rating_points, bool)
+                        or rating_points < 0
+                        or rating_points > points
+                    ):
+                        raise ValueError(
+                            f"Rubric criterion {criterion_index} rating {rating_index} points "
+                            "must be between zero and the criterion points"
+                        )
+                    normalized_rating = {
+                        "description": rating_description.strip(),
+                        "points": rating_points,
+                    }
+                    if rating.get("long_description") is not None:
+                        normalized_rating["long_description"] = rating["long_description"]
+                    normalized_ratings.append(normalized_rating)
+                normalized_criterion = {
+                    "description": description.strip(),
+                    "points": points,
+                    "ratings": normalized_ratings,
+                }
+                if criterion.get("long_description") is not None:
+                    normalized_criterion["long_description"] = criterion["long_description"]
+                if criterion.get("criterion_use_range") is not None:
+                    normalized_criterion["criterion_use_range"] = bool(
+                        criterion["criterion_use_range"]
+                    )
+                normalized_criteria.append(normalized_criterion)
+
+            use_for_grading = args.pop("use_for_grading", True)
+            hide_score_total = args.pop("hide_score_total", False)
+            purpose = args.pop("purpose", "grading")
+            free_form_comments = args.pop("free_form_criterion_comments", True)
+            association_title = args.pop("association_title", title)
+            if not isinstance(use_for_grading, bool) or not isinstance(hide_score_total, bool):
+                raise ValueError("Rubric grading and score visibility options must be booleans")
+            if not isinstance(free_form_comments, bool):
+                raise ValueError("free_form_criterion_comments must be a boolean")
+            if not isinstance(association_title, str) or not association_title.strip():
+                raise ValueError("association_title must be a non-empty string")
+            if purpose not in {"grading", "bookmark"}:
+                raise ValueError("Rubric purpose must be grading or bookmark")
+            if use_for_grading and hide_score_total:
+                raise ValueError("Canvas cannot hide the rubric score total when it is used for grading")
+            if args:
+                raise ValueError(
+                    "Unsupported create_rubric arguments: " + ", ".join(sorted(args))
+                )
+
+            assignment_id = _sid(assignment_id)
+            assignment_endpoint = (
+                f"/api/v1/courses/{course_id}/assignments/{assignment_id}"
+            )
+            assignment, condition = await self._snapshot(assignment_endpoint)
+            rubric_points = sum(float(item["points"]) for item in normalized_criteria)
+            assignment_points = assignment.get("points_possible")
+            warnings: list[str] = []
+            if assignment_points is not None and float(assignment_points) != rubric_points:
+                warnings.append(
+                    f"Rubric totals {rubric_points:g} points but the assignment totals "
+                    f"{float(assignment_points):g} points."
+                )
+            rubric_data = _form_payload(
+                {
+                    "title": title.strip(),
+                    "free_form_criterion_comments": free_form_comments,
+                    "criteria": normalized_criteria,
+                },
+                "rubric",
+            )
+            association_data = _form_payload(
+                {
+                    "association_id": assignment_id,
+                    "association_type": "Assignment",
+                    "title": association_title.strip(),
+                    "use_for_grading": use_for_grading,
+                    "hide_score_total": hide_score_total,
+                    "purpose": purpose,
+                },
+                "rubric_association",
+            )
+            return await plan_store.create(
+                action=action,
+                summary=f"Create and attach rubric to assignment {assignment_id}",
+                preview={
+                    "assignment": {
+                        key: assignment.get(key)
+                        for key in ("id", "name", "points_possible", "published")
+                        if key in assignment
+                    },
+                    "rubric": {
+                        "title": title.strip(),
+                        "points_possible": rubric_points,
+                        "criteria": normalized_criteria,
+                    },
+                    "association": {
+                        "use_for_grading": use_for_grading,
+                        "hide_score_total": hide_score_total,
+                        "purpose": purpose,
+                    },
+                },
+                mutations=[
+                    Mutation(
+                        "POST",
+                        f"/api/v1/courses/{course_id}/rubrics",
+                        data={**rubric_data, **association_data},
+                    )
+                ],
+                preconditions=[condition],
+                warnings=warnings,
+            )
+        elif action.endswith("assignment_override"):
             assignment_id = args.pop("assignment_id", None)
             if assignment_id is None:
                 raise ValueError("assignment override actions require assignment_id")
@@ -883,6 +1031,7 @@ class AssistantTools:
                 "create/update/delete_folder",
                 "create/update/delete_classic_quiz_question",
                 "create/update/delete_classic_quiz_question_group",
+                "create_rubric",
                 "set_assignment_extensions",
                 "apply_course_copy_selection",
                 "set_file_usage_rights",
