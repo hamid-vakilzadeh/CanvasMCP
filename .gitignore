@@ -12,7 +12,15 @@ wheels/
 
 # secret
 .env
+.env.*
+!.env.example
 .notes
+
+# Local diagnostics and client transcripts can contain private Canvas data.
+*.log
+*.log.*
+*.jsonl
+logs/
 
 # folders
 temp

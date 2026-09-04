@@ -100,8 +100,8 @@ def _make_request(
         )
         _raise_for_status(response)
         return response
-    except requests.exceptions.RequestException as e:
-        logger.warning("API request failed: %s", e)
+    except requests.exceptions.RequestException:
+        logger.warning("Canvas API request failed")
         raise
 
 

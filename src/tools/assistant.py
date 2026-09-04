@@ -428,7 +428,7 @@ class AssistantTools:
             score_unavailable_ids: list[str] = []
             for student in students:
                 student_id = _sid(student["id"])
-                await progress.set_message(f"Reviewing student {student_id}")
+                await progress.set_message("Reviewing student submissions")
                 submissions, submissions_next_cursor = await _bounded_pages(
                     client,
                     f"/api/v1/courses/{course_id}/students/submissions",
@@ -1729,7 +1729,7 @@ class AssistantTools:
             created_quiz_id: str | None = None
             for index, mutation in enumerate(plan.mutations):
                 label = mutation.label or f"mutation:{index + 1}"
-                await progress.set_message(label)
+                await progress.set_message("Applying Canvas change")
                 if "{created_quiz_id}" in mutation.endpoint and not created_quiz_id:
                     results.append(
                         {

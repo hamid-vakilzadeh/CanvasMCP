@@ -80,11 +80,11 @@ class LocalProtocolTests(unittest.TestCase):
         class CanvasHandler(BaseHTTPRequestHandler):
             def do_GET(self):
                 calls.append((self.path, self.headers.get("Authorization")))
-                if self.path.startswith("/api/v1/courses"):
+                if self.path.split("?", 1)[0] == "/api/v1/courses":
                     payload = [{"id": 42, "name": "Local test course", "term": {"id": 1, "name": "Fall"}}]
                     self.send_response(200)
                 else:
-                    payload = {"error": "Unexpected test endpoint"}
+                    payload = {"error": "Synthetic Student synthetic.student@example.test 987654321"}
                     self.send_response(404)
                 body = json.dumps(payload).encode()
                 self.send_header("Content-Type", "application/json")
@@ -121,6 +121,9 @@ class LocalProtocolTests(unittest.TestCase):
                 "CANVAS_URL": f"http://127.0.0.1:{canvas.server_port}/",
                 "CANVAS_ACCESS_TOKEN": "local-test-token",
                 "FASTMCP_SERVER_AUTH": "invalid-test-provider",
+                "FASTMCP_LOG_LEVEL": "DEBUG",
+                "FASTMCP_LOG_ENABLED": "true",
+                "FASTMCP_TELEMETRY_MODE": "native",
                 "NO_PROXY": "127.0.0.1",
             }
             # Override to verify an installed npm package with this same protocol test.
@@ -217,6 +220,20 @@ class LocalProtocolTests(unittest.TestCase):
                     self.assertIn("html", content["contents"][0]["text"].lower())
                     prompts = request(7, "prompts/list", {})
                     self.assertIn("build_canvas_course", [p["name"] for p in prompts["prompts"]])
+                    # FastMCP logs rejected Pydantic inputs by default. Exercise
+                    # that real path with synthetic personally identifying data.
+                    private = "Synthetic Student synthetic.student@example.test 987654321"
+                    invalid = request(8, "tools/call", {
+                        "name": "canvas_list_courses", "arguments": {"limit": private},
+                    })
+                    self.assertTrue(invalid.get("isError"), invalid)
+                    # Exercise an HTTP failure through an actual Canvas read.
+                    failed = request(9, "tools/call", {
+                        "name": "canvas_get_submission_review",
+                        "arguments": {"course_id": "42", "assignment_id": "987654321", "student_id": "123456789"},
+                    })
+                    self.assertTrue(failed.get("isError"), failed)
+                    self.assertIn("canvas_not_found", failed["content"][0]["text"])
                     process.stdin.close()
                     self.assertEqual(process.wait(timeout=10), 0)
                     reader.join(timeout=5)
@@ -227,6 +244,9 @@ class LocalProtocolTests(unittest.TestCase):
                     stderr.seek(0)
                     diagnostics = stderr.read()
                     self.assertNotIn("local-test-token", diagnostics)
+                    self.assertIn("Diagnostic details suppressed for privacy.", diagnostics)
+                    for value in ("Synthetic Student", "example.test", "987654321", "123456789", "Local test course", "Traceback"):
+                        self.assertNotIn(value, diagnostics)
                 finally:
                     if process.poll() is None:
                         process.kill()

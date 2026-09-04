@@ -39,7 +39,7 @@ child.on("error", (error) => {
   if (error.code === "ENOENT") {
     console.error("Canvas MCP requires uv. Install it from https://docs.astral.sh/uv/getting-started/installation/ and ensure uv is on your MCP client's PATH.");
   } else {
-    console.error(`Canvas MCP could not start uv: ${error.message}`);
+    console.error("Canvas MCP could not start uv. Check the installation and executable permissions.");
   }
   process.exitCode = 1;
 });

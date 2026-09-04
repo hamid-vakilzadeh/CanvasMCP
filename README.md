@@ -127,6 +127,28 @@ There is no Redis server, external worker, database, or cloud queue. Task handle
 progress, and results disappear when the MCP process exits. Canvas content
 migrations can continue inside Canvas after the local task has submitted them.
 
+### Privacy and diagnostics
+
+The local entry point discards Python log messages, arguments, exception details,
+and source paths before they reach a logging handler. Python logging diagnostics
+contain only severity and a fixed component label, plus static startup and
+configuration messages. FastMCP telemetry is disabled even if inherited
+environment settings enable it. The server does not create log files or persist
+Canvas responses, plans, or background-task results.
+Progress messages use generic descriptions without student IDs or mutation labels.
+
+Tool results and actionable tool errors include Canvas data for the user. The
+AI client receives those results and may retain them in conversation history,
+diagnostic logs, or provider storage. Running the MCP server locally does not
+make the AI client or model local, and these server settings do not control the
+client's retention. Treat client transcripts and saved API responses as private.
+
+Use synthetic data in tests, bug reports, and screenshots. Keep credentials in
+the MCP client's environment configuration. Environment files, logs, JSONL
+transcripts, and the local `temp/` directory are excluded from Git; these ignore
+rules do not remove files already committed. Inspect staged changes and package
+contents before publishing.
+
 ## Requirements
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) on the MCP

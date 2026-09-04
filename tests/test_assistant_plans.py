@@ -135,6 +135,10 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([call[2]["recipients[]"] for call in posts], [["11"], ["12"]])
         self.assertEqual(progress.total, 2)
         self.assertEqual(progress.incremented, 2)
+        for message in progress.messages:
+            self.assertNotIn("11", message)
+            self.assertNotIn("12", message)
+            self.assertNotIn("Private update", message)
 
         with self.assertRaisesRegex(ValueError, "already been used"):
             await self.tools.canvas_apply_change(plan["plan_token"], True, FakeProgress())
@@ -278,6 +282,20 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
         pending = self.store._plans[public["plan_token"]]
         self.assertEqual(pending.mutations[0].endpoint, expected)
         self.assertEqual(pending.preconditions[0].endpoint, expected)
+
+    async def test_engagement_progress_omits_student_identifiers(self):
+        client = FakeCanvasClient(page_values=[{
+            "items": [{"assignment_id": "9", "missing": True}],
+            "next_cursor": None,
+        }])
+        progress = FakeProgress()
+        with patch.object(assistant_module.AsyncCanvasClient, "from_environment", return_value=client):
+            result = await self.tools.canvas_analyze_student_engagement(
+                course_id="7", student_ids=["987654321"], progress=progress,
+            )
+        self.assertEqual(result["students"][0]["student_id"], "987654321")
+        self.assertTrue(progress.messages)
+        self.assertNotIn("987654321", " ".join(progress.messages))
 
     async def test_engagement_empty_roster_uses_nonzero_progress_total(self):
         client = FakeCanvasClient(
