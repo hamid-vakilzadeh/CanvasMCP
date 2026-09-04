@@ -6,7 +6,7 @@ from pydantic import Field
 
 from .base import ToolProvider
 from canvasAPI.page import pages
-from tools.getToken import get_user_token
+from canvas_credentials import get_canvas_credentials
 
 
 class PageTools(ToolProvider):
@@ -14,7 +14,7 @@ class PageTools(ToolProvider):
 
     def _register_tools(self):
         """Register all page-related tools."""
-        # Wrap all tools with analytics if enabled
+        # Prepare tools for registration
         tools_to_register = [
             (self.show_front_page, {"page"}),
             (self.duplicate_page, {"page"}),
@@ -30,8 +30,8 @@ class PageTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def show_front_page(
         self,
@@ -43,7 +43,7 @@ class PageTools(ToolProvider):
     ) -> dict:
         """Retrieve the content of the front page."""
         params = self._validate_params(context_type=context_type, context_id=context_id)
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.show_front_page(**params)
 
@@ -54,7 +54,7 @@ class PageTools(ToolProvider):
     ) -> dict:
         """Duplicate a wiki page."""
         params = self._validate_params(course_id=course_id, url_or_id=url_or_id)
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.duplicate_page(**params)
 
@@ -100,7 +100,7 @@ class PageTools(ToolProvider):
             notify_of_update=notify_of_update,
             published=published,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.update_front_page(**params)
 
@@ -151,7 +151,7 @@ class PageTools(ToolProvider):
             include=include,
             all_pages=all_pages,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.list_pages(**params)
 
@@ -207,7 +207,7 @@ class PageTools(ToolProvider):
             front_page=front_page,
             publish_at=publish_at,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.create_page(**params)
 
@@ -224,7 +224,7 @@ class PageTools(ToolProvider):
         params = self._validate_params(
             context_type=context_type, context_id=context_id, url_or_id=url_or_id
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.show_page(**params)
 
@@ -282,7 +282,7 @@ class PageTools(ToolProvider):
             publish_at=publish_at,
             front_page=front_page,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.update_page(**params)
 
@@ -299,7 +299,7 @@ class PageTools(ToolProvider):
         params = self._validate_params(
             context_type=context_type, context_id=context_id, url_or_id=url_or_id
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.delete_page(**params)
 
@@ -325,7 +325,7 @@ class PageTools(ToolProvider):
             url_or_id=url_or_id,
             all_pages=all_pages,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.list_revisions(**params)
 
@@ -353,7 +353,7 @@ class PageTools(ToolProvider):
             revision_id=revision_id,
             summary=summary,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.show_revision(**params)
 
@@ -376,6 +376,6 @@ class PageTools(ToolProvider):
             url_or_id=url_or_id,
             revision_id=revision_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return pages.revert_to_revision(**params)

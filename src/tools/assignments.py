@@ -6,7 +6,7 @@ from datetime import datetime
 
 from .base import ToolProvider
 from canvasAPI.assignment import assignments, assignment_groups, assignment_extensions
-from tools.getToken import get_user_token
+from canvas_credentials import get_canvas_credentials
 
 
 class AssignmentTools(ToolProvider):
@@ -25,8 +25,8 @@ class AssignmentTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def list_assignments(
         self,
@@ -114,7 +114,7 @@ class AssignmentTools(ToolProvider):
             new_quizzes=new_quizzes,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         response: list[assignments.Assignment] = assignments.list_assignments(**params)
 
@@ -171,7 +171,7 @@ class AssignmentTools(ToolProvider):
             needs_grading_count_by_section=needs_grading_count_by_section,
             all_dates=all_dates,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.get_assignment(**params)
 
@@ -391,7 +391,7 @@ class AssignmentTools(ToolProvider):
             allowed_attempts=allowed_attempts,
             annotatable_attachment_id=annotatable_attachment_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.create_assignment(**params)
 
@@ -634,7 +634,7 @@ class AssignmentTools(ToolProvider):
             annotatable_attachment_id=annotatable_attachment_id,
             force_updated_at=force_updated_at,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.update_assignment(**params)
 
@@ -650,7 +650,7 @@ class AssignmentTools(ToolProvider):
             course_id=course_id,
             assignment_id=assignment_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.delete_assignment(**params)
 
@@ -673,7 +673,7 @@ class AssignmentTools(ToolProvider):
             assignment_id=assignment_id,
             result_type=result_type,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.duplicate_assignment(**params)
 
@@ -692,7 +692,7 @@ class AssignmentTools(ToolProvider):
             course_id=course_id,
             assignment_updates=assignment_updates,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.bulk_update_assignment_dates(**params)
 
@@ -716,8 +716,8 @@ class AssignmentOverrideTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def list_assignment_overrides(
         self,
@@ -730,7 +730,7 @@ class AssignmentOverrideTools(ToolProvider):
             assignment_id=assignment_id,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.list_assignment_overrides(**params)
 
@@ -746,7 +746,7 @@ class AssignmentOverrideTools(ToolProvider):
             assignment_id=assignment_id,
             override_id=override_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.get_assignment_override(**params)
 
@@ -797,7 +797,7 @@ class AssignmentOverrideTools(ToolProvider):
             unlock_at=datetime.fromisoformat(unlock_at) if unlock_at else None,
             lock_at=datetime.fromisoformat(lock_at) if lock_at else None,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.create_assignment_override(**params)
 
@@ -848,7 +848,7 @@ class AssignmentOverrideTools(ToolProvider):
             unlock_at=datetime.fromisoformat(unlock_at) if unlock_at else None,
             lock_at=datetime.fromisoformat(lock_at) if lock_at else None,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.update_assignment_override(**params)
 
@@ -864,7 +864,7 @@ class AssignmentOverrideTools(ToolProvider):
             assignment_id=assignment_id,
             override_id=override_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.delete_assignment_override(**params)
 
@@ -878,7 +878,7 @@ class AssignmentOverrideTools(ToolProvider):
             group_id=group_id,
             assignment_id=assignment_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.get_group_override_redirect(**params)
 
@@ -892,7 +892,7 @@ class AssignmentOverrideTools(ToolProvider):
             course_section_id=course_section_id,
             assignment_id=assignment_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.get_section_override_redirect(**params)
 
@@ -909,7 +909,7 @@ class AssignmentOverrideTools(ToolProvider):
             course_id=course_id,
             assignment_overrides=assignment_overrides,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.batch_retrieve_overrides(**params)
 
@@ -926,7 +926,7 @@ class AssignmentOverrideTools(ToolProvider):
             course_id=course_id,
             assignment_overrides=assignment_overrides,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.batch_create_overrides(**params)
 
@@ -945,7 +945,7 @@ class AssignmentOverrideTools(ToolProvider):
             course_id=course_id,
             assignment_overrides=assignment_overrides,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignments.batch_update_overrides(**params)
 
@@ -964,8 +964,8 @@ class AssignmentGroupTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def list_assignment_groups(
         self,
@@ -1024,7 +1024,7 @@ class AssignmentGroupTools(ToolProvider):
             scope_assignments_to_student=scope_assignments_to_student,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignment_groups.list_assignment_groups(**params)
 
@@ -1064,7 +1064,7 @@ class AssignmentGroupTools(ToolProvider):
             override_assignment_dates=override_assignment_dates,
             grading_period_id=grading_period_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignment_groups.get_assignment_group(**params)
 
@@ -1100,7 +1100,7 @@ class AssignmentGroupTools(ToolProvider):
             sis_source_id=sis_source_id,
             integration_data=integration_data,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignment_groups.create_assignment_group(**params)
 
@@ -1148,7 +1148,7 @@ class AssignmentGroupTools(ToolProvider):
             integration_data=integration_data,
             rules=rules,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignment_groups.update_assignment_group(**params)
 
@@ -1169,7 +1169,7 @@ class AssignmentGroupTools(ToolProvider):
             assignment_group_id=assignment_group_id,
             move_assignments_to=move_assignments_to,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignment_groups.delete_assignment_group(**params)
 
@@ -1185,8 +1185,8 @@ class AssignmentExtensionTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def set_assignment_extensions(
         self,
@@ -1205,7 +1205,7 @@ class AssignmentExtensionTools(ToolProvider):
             assignment_id=assignment_id,
             extensions=extensions,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignment_extensions.set_assignment_extensions(**params)
 
@@ -1225,6 +1225,6 @@ class AssignmentExtensionTools(ToolProvider):
             user_id=user_id,
             extra_attempts=extra_attempts,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return assignment_extensions.set_single_student_assignment_extension(**params)

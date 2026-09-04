@@ -12,9 +12,9 @@ class CanvasReferenceTools(ToolProvider):
 
     def _register_tools(self):
         """Register all Canvas reference-related tools."""
-        # Wrap tools with analytics if enabled
-        get_rules_tool = self._wrap_tool_with_analytics(self.get_canvas_content_creation_rules)
-        search_tool = self._wrap_tool_with_analytics(self.search_canvas_reference)
+        # Prepare tools for registration
+        get_rules_tool = self._prepare_tool(self.get_canvas_content_creation_rules)
+        search_tool = self._prepare_tool(self.search_canvas_reference)
         
         self.mcp.tool(
             get_rules_tool,
@@ -39,7 +39,7 @@ class CanvasReferenceTools(ToolProvider):
         """
         try:
             # Get the path to the reference file
-            reference_path = "content" / "canvas_content_creation_reference.md"
+            reference_path = Path(__file__).parent / "content" / "canvas_content_creation_reference.md"
 
             if not reference_path.exists():
                 return f"❌ Canvas content creation reference file not found at: {reference_path}"

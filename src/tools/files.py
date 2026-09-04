@@ -5,7 +5,7 @@ from pydantic import Field
 
 from .base import ToolProvider
 from canvasAPI.file import files
-from tools.getToken import get_user_token
+from canvas_credentials import get_canvas_credentials
 
 
 class FileTools(ToolProvider):
@@ -30,8 +30,8 @@ class FileTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def get_quota(
         self,
@@ -48,7 +48,7 @@ class FileTools(ToolProvider):
             context_type=context_type,
             context_id=context_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.get_quota(**params)
 
@@ -103,7 +103,7 @@ class FileTools(ToolProvider):
             order=order,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         response: list[files.File] = files.list_files(**params)
 
@@ -158,7 +158,7 @@ class FileTools(ToolProvider):
             replacement_chain_context_type=replacement_chain_context_type,
             replacement_chain_context_id=replacement_chain_context_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.get_file(**params)
 
@@ -177,7 +177,7 @@ class FileTools(ToolProvider):
             file_id=file_id,
             submission_id=submission_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.get_public_url(**params)
 
@@ -231,7 +231,7 @@ class FileTools(ToolProvider):
             hidden=hidden,
             visibility_level=visibility_level,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.update_file(**params)
 
@@ -250,7 +250,7 @@ class FileTools(ToolProvider):
             file_id=file_id,
             replace=replace,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.delete_file(**params)
 
@@ -264,7 +264,7 @@ class FileTools(ToolProvider):
         params = self._validate_params(
             file_id=file_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.reset_verifier(**params)
 
@@ -278,7 +278,7 @@ class FileTools(ToolProvider):
         params = self._validate_params(
             file_id=file_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.get_icon_metadata(**params)
 
@@ -340,7 +340,7 @@ class FileTools(ToolProvider):
             success_include=success_include,
             submit_assignment=submit_assignment,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.upload_file_via_url(**params)
 
@@ -417,7 +417,7 @@ class FileTools(ToolProvider):
             max_wait_time=max_wait_time,
             poll_interval=poll_interval,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.complete_upload_from_url(**params)
 
@@ -441,7 +441,7 @@ class FileTools(ToolProvider):
             max_wait_time=max_wait_time,
             poll_interval=poll_interval,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         result = files.monitor_upload_progress(**params)
         return result if result else None
@@ -460,7 +460,7 @@ class FileTools(ToolProvider):
             course_id=course_id,
             migration_id=migration_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.translate_file_reference(**params)
 
@@ -483,7 +483,7 @@ class FileTools(ToolProvider):
             source_file_id=source_file_id,
             on_duplicate=on_duplicate,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.copy_file(**params)
 
@@ -505,8 +505,8 @@ class FolderTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def list_folders(
         self,
@@ -524,7 +524,7 @@ class FolderTools(ToolProvider):
             context_id=context_id,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         response: list[files.Folder] = files.list_folders(**params)
 
@@ -566,7 +566,7 @@ class FolderTools(ToolProvider):
             context_id=context_id,
             full_path=full_path,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.resolve_path(**params)
 
@@ -591,7 +591,7 @@ class FolderTools(ToolProvider):
             context_type=context_type,
             context_id=context_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.get_folder(**params)
 
@@ -649,7 +649,7 @@ class FolderTools(ToolProvider):
             hidden=hidden,
             position=position,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.create_folder(**params)
 
@@ -698,7 +698,7 @@ class FolderTools(ToolProvider):
             hidden=hidden,
             position=position,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.update_folder(**params)
 
@@ -717,7 +717,7 @@ class FolderTools(ToolProvider):
             folder_id=folder_id,
             force=force,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         files.delete_folder(**params)
 
@@ -735,7 +735,7 @@ class FolderTools(ToolProvider):
             dest_folder_id=dest_folder_id,
             source_folder_id=source_folder_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.copy_folder(**params)
 
@@ -754,7 +754,7 @@ class FolderTools(ToolProvider):
             context_type=context_type,
             context_id=context_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.get_media_folder(**params)
 
@@ -771,8 +771,8 @@ class UsageRightsTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def set_usage_rights(
         self,
@@ -819,7 +819,7 @@ class UsageRightsTools(ToolProvider):
             folder_ids=folder_ids,
             publish=publish,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.set_usage_rights(**params)
 
@@ -848,7 +848,7 @@ class UsageRightsTools(ToolProvider):
             file_ids=file_ids,
             folder_ids=folder_ids,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         files.remove_usage_rights(**params)
 
@@ -868,6 +868,6 @@ class UsageRightsTools(ToolProvider):
             context_id=context_id,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return files.list_licenses(**params)

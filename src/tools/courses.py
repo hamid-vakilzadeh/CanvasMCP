@@ -5,7 +5,7 @@ from pydantic import Field
 
 from .base import ToolProvider
 from canvasAPI.course import courses
-from tools.getToken import get_user_token
+from canvas_credentials import get_canvas_credentials
 
 
 class CourseTools(ToolProvider):
@@ -13,11 +13,11 @@ class CourseTools(ToolProvider):
 
     def _register_tools(self):
         """Register all course-related tools."""
-        # Wrap tools with analytics if enabled
-        list_courses_tool = self._wrap_tool_with_analytics(self.list_courses)
-        get_course_tool = self._wrap_tool_with_analytics(self.get_course)
-        update_course_tool = self._wrap_tool_with_analytics(self.update_course)
-        reset_course_tool = self._wrap_tool_with_analytics(self.reset_course_content)
+        # Prepare tools for registration
+        list_courses_tool = self._prepare_tool(self.list_courses)
+        get_course_tool = self._prepare_tool(self.get_course)
+        update_course_tool = self._prepare_tool(self.update_course)
+        reset_course_tool = self._prepare_tool(self.reset_course_content)
 
         # Register wrapped tools
         self.mcp.tool(list_courses_tool, tags={"course"})
@@ -30,7 +30,7 @@ class CourseTools(ToolProvider):
         Use this function to get course information such as course name, course ID and term information.
         """
 
-        base_url, access_token = get_user_token()
+        base_url, access_token = get_canvas_credentials()
 
         result = courses.list_courses(
             base_url=base_url,
@@ -148,7 +148,7 @@ class CourseTools(ToolProvider):
         additional data such as enrollment information, grading details, and course settings.
 
         """
-        base_url, access_token = get_user_token()
+        base_url, access_token = get_canvas_credentials()
 
         try:
             # Build include list based on boolean parameters
@@ -417,7 +417,7 @@ class CourseTools(ToolProvider):
         specify will be updated - all others will remain unchanged.
 
         """
-        base_url, access_token = get_user_token()
+        base_url, access_token = get_canvas_credentials()
 
         try:
             result = courses.update_course(
@@ -495,7 +495,7 @@ class CourseTools(ToolProvider):
         all course content including assignments, discussions, pages, files, etc.
 
         """
-        base_url, access_token = get_user_token()
+        base_url, access_token = get_canvas_credentials()
 
         try:
             result = courses.reset_course_content(

@@ -1,0 +1,31 @@
+{
+  "name": "@hamid-vakilzadeh/canvas-mcp",
+  "version": "0.1.0",
+  "description": "Run Canvas LMS tools locally as a stdio MCP server",
+  "type": "module",
+  "bin": {
+    "canvas-mcp": "bin/canvas-mcp.js"
+  },
+  "files": [
+    "bin/canvas-mcp.js",
+    "src/**/*.py",
+    "src/**/*.md",
+    "pyproject.toml",
+    "uv.lock",
+    ".python-version"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hamid-vakilzadeh/CanvasMCP.git"
+  },
+  "scripts": {
+    "test": "node --test tests/launcher.test.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": ["canvas", "lms", "mcp", "stdio"]
+}

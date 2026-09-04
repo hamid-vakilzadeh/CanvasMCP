@@ -6,7 +6,7 @@ from datetime import datetime
 
 from .base import ToolProvider
 from canvasAPI.discussionTopic import discussionTopics
-from tools.getToken import get_user_token
+from canvas_credentials import get_canvas_credentials
 
 
 class DiscussionTools(ToolProvider):
@@ -25,8 +25,8 @@ class DiscussionTools(ToolProvider):
         ]
 
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def list_discussion_topics(
         self,
@@ -81,7 +81,7 @@ class DiscussionTools(ToolProvider):
             exclude_context_module_locked_topics=exclude_context_module_locked_topics,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.list_discussion_topics(**params)
 
@@ -111,7 +111,7 @@ class DiscussionTools(ToolProvider):
             topic_id=topic_id,
             include=include,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.get_discussion_topic(**params)
 
@@ -227,7 +227,7 @@ class DiscussionTools(ToolProvider):
             expanded_locked=expanded_locked,
             sort_by_rating=sort_by_rating,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.create_discussion_topic(**params)
 
@@ -350,7 +350,7 @@ class DiscussionTools(ToolProvider):
             expanded_locked=expanded_locked,
             sort_by_rating=sort_by_rating,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.update_discussion_topic(**params)
 
@@ -374,7 +374,7 @@ class DiscussionTools(ToolProvider):
             group_id=group_id,
             topic_id=topic_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.delete_discussion_topic(**params)
 
@@ -398,7 +398,7 @@ class DiscussionTools(ToolProvider):
             group_id=group_id,
             topic_id=topic_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.duplicate_discussion_topic(**params)
 
@@ -423,7 +423,7 @@ class DiscussionTools(ToolProvider):
             group_id=group_id,
             order=order,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.reorder_pinned_topics(**params)
 
@@ -446,8 +446,8 @@ class DiscussionEntryTools(ToolProvider):
         ]
 
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def list_topic_entries(
         self,
@@ -468,7 +468,7 @@ class DiscussionEntryTools(ToolProvider):
             topic_id=topic_id,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.list_topic_entries(**params)
 
@@ -492,7 +492,7 @@ class DiscussionEntryTools(ToolProvider):
             topic_id=topic_id,
             message=message,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.post_entry(**params)
 
@@ -517,7 +517,7 @@ class DiscussionEntryTools(ToolProvider):
             entry_id=entry_id,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.list_entry_replies(**params)
 
@@ -543,7 +543,7 @@ class DiscussionEntryTools(ToolProvider):
             entry_id=entry_id,
             message=message,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.post_reply(**params)
 
@@ -569,7 +569,7 @@ class DiscussionEntryTools(ToolProvider):
             entry_id=entry_id,
             message=message,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.update_entry(**params)
 
@@ -593,7 +593,7 @@ class DiscussionEntryTools(ToolProvider):
             topic_id=topic_id,
             entry_id=entry_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.delete_entry(**params)
 
@@ -622,7 +622,7 @@ class DiscussionEntryTools(ToolProvider):
             entry_id=entry_id,
             forced_read_state=forced_read_state,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         discussionTopics.mark_entry_read(**params)
 
@@ -651,7 +651,7 @@ class DiscussionEntryTools(ToolProvider):
             entry_id=entry_id,
             forced_read_state=forced_read_state,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         discussionTopics.mark_entry_unread(**params)
 
@@ -677,7 +677,7 @@ class DiscussionEntryTools(ToolProvider):
             entry_id=entry_id,
             rating=rating,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         discussionTopics.rate_entry(**params)
 
@@ -693,8 +693,8 @@ class AnnouncementTools(ToolProvider):
         ]
 
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def create_announcement(
         self,
@@ -747,7 +747,7 @@ class AnnouncementTools(ToolProvider):
             specific_sections=specific_sections,
             lock_comment=lock_comment,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.create_discussion_topic(**params)
 
@@ -790,6 +790,6 @@ class AnnouncementTools(ToolProvider):
             search_term=search_term,
             all_pages=True,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return discussionTopics.list_discussion_topics(**params)

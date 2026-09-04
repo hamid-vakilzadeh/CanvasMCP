@@ -18,7 +18,7 @@ from canvasAPI.contentMigration.contentMigration import (
     get_migration_issue,
     update_migration_issue,
 )
-from tools.getToken import get_user_token
+from canvas_credentials import get_canvas_credentials
 
 
 class ContentMigrationTools(ToolProvider):
@@ -38,8 +38,8 @@ class ContentMigrationTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def list_content_migrations(
         self,
@@ -65,7 +65,7 @@ class ContentMigrationTools(ToolProvider):
             context_id=context_id,
             all_pages=all_pages,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         if ctx:
             await ctx.debug("Executing API request to Canvas")
@@ -92,7 +92,7 @@ class ContentMigrationTools(ToolProvider):
             context_id=context_id,
             migration_id=migration_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return get_content_migration(**params)
 
@@ -131,7 +131,7 @@ class ContentMigrationTools(ToolProvider):
             selective_import=selective_import,
             select=select,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return create_content_migration(**params)
 
@@ -148,7 +148,7 @@ class ContentMigrationTools(ToolProvider):
             context_type=context_type,
             context_id=context_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return list_migration_systems(**params)
 
@@ -253,7 +253,7 @@ class ContentMigrationTools(ToolProvider):
             insert_into_module_type=insert_into_module_type,
             insert_into_module_position=insert_into_module_position,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         try:
             if ctx:
@@ -331,7 +331,7 @@ class ContentMigrationTools(ToolProvider):
             poll_interval=poll_interval,
             max_wait_time=max_wait_time,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         if ctx:
             await ctx.report_progress(progress=10, total=100)
@@ -582,7 +582,7 @@ class ContentMigrationTools(ToolProvider):
             migration_id=migration_id,
             selected_properties=selected_properties,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         try:
             if ctx:
@@ -688,7 +688,7 @@ class ContentMigrationTools(ToolProvider):
             destination_course_id=destination_course_id,
             migration_id=migration_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         try:
             if not monitor_progress:
@@ -767,8 +767,8 @@ class MigrationIssueTools(ToolProvider):
         ]
         
         for tool_func, tags in tools_to_register:
-            wrapped_tool = self._wrap_tool_with_analytics(tool_func)
-            self.mcp.tool(wrapped_tool, tags=tags)
+            prepared_tool = self._prepare_tool(tool_func)
+            self.mcp.tool(prepared_tool, tags=tags)
 
     async def list_migration_issues(
         self,
@@ -791,7 +791,7 @@ class MigrationIssueTools(ToolProvider):
             content_migration_id=content_migration_id,
             all_pages=all_pages,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return list_migration_issues(**params)
 
@@ -814,7 +814,7 @@ class MigrationIssueTools(ToolProvider):
             content_migration_id=content_migration_id,
             issue_id=issue_id,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return get_migration_issue(**params)
 
@@ -842,6 +842,6 @@ class MigrationIssueTools(ToolProvider):
             issue_id=issue_id,
             workflow_state=workflow_state,
         )
-        params["base_url"], params["access_token"] = get_user_token()
+        params["base_url"], params["access_token"] = get_canvas_credentials()
 
         return update_migration_issue(**params)

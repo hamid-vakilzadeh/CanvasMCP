@@ -5,10 +5,10 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 RUN pip install uv
-RUN uv sync --frozen
+RUN uv sync --frozen --no-dev
 
 COPY src/ ./src/
 
-EXPOSE 3000
+ENV PYTHONUNBUFFERED=1
 
-CMD ["uv", "run", "python", "src/index.py"]
+CMD ["uv", "run", "--frozen", "--no-dev", "python", "src/local.py"]
