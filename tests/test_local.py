@@ -167,21 +167,53 @@ class LocalProtocolTests(unittest.TestCase):
                     send({"method": "notifications/initialized"})
                     tools = request(2, "tools/list", {})["tools"]
                     names = {tool["name"] for tool in tools}
-                    self.assertTrue({"list_courses", "create_page", "create_quiz", "list_modules"} <= names)
-                    self.assertEqual(len(names), 118)
-                    result = request(3, "tools/call", {"name": "list_courses", "arguments": {}})
+                    self.assertEqual(
+                        names,
+                        {
+                            "canvas_capabilities",
+                            "canvas_list_courses",
+                            "canvas_get_course_structure",
+                            "canvas_list_course_people",
+                            "canvas_get_student_snapshot",
+                            "canvas_analyze_student_engagement",
+                            "canvas_list_grading_queue",
+                            "canvas_get_submission_review",
+                            "canvas_list_inbox",
+                            "canvas_get_conversation",
+                            "canvas_plan_communication",
+                            "canvas_plan_announcement_change",
+                            "canvas_plan_page_change",
+                            "canvas_plan_assignment_change",
+                            "canvas_plan_discussion_change",
+                            "canvas_plan_module_change",
+                            "canvas_plan_quiz_change",
+                            "canvas_plan_file_upload",
+                            "canvas_plan_course_copy",
+                            "canvas_plan_grade_change",
+                            "canvas_apply_change",
+                            "canvas_search_tools",
+                            "canvas_call_tool",
+                        },
+                    )
+                    self.assertNotIn("create_page", names)
+                    result = request(3, "tools/call", {"name": "canvas_list_courses", "arguments": {}})
                     self.assertFalse(result.get("isError"), result)
                     self.assertIn("Local test course", result["content"][0]["text"])
                     self.assertEqual(len(calls), 1)
                     self.assertTrue(calls[0][0].startswith("/api/v1/courses?"))
                     self.assertEqual(calls[0][1], "Bearer local-test-token")
-                    reference = request(4, "tools/call", {"name": "get_canvas_content_creation_rules", "arguments": {}})
+                    reference = request(4, "tools/call", {
+                        "name": "canvas_call_tool",
+                        "arguments": {"name": "get_canvas_content_creation_rules", "arguments": {}},
+                    })
                     self.assertIn("Canvas Content Creation Reference", reference["content"][0]["text"])
                     self.assertNotIn("Error reading", reference["content"][0]["text"])
                     resources = request(5, "resources/list", {})
                     self.assertIn("resource://content-creation-reference", [r["uri"] for r in resources["resources"]])
                     content = request(6, "resources/read", {"uri": "resource://content-creation-reference"})
                     self.assertIn("html", content["contents"][0]["text"].lower())
+                    prompts = request(7, "prompts/list", {})
+                    self.assertIn("build_canvas_course", [p["name"] for p in prompts["prompts"]])
                     process.stdin.close()
                     self.assertEqual(process.wait(timeout=10), 0)
                     reader.join(timeout=5)

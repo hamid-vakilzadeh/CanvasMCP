@@ -1,6 +1,8 @@
 """Base tool provider class for organizing Canvas MCP tools."""
 
+import asyncio
 from abc import ABC, abstractmethod
+from functools import wraps
 from typing import Any, Dict, Callable
 from fastmcp import FastMCP
 
@@ -73,5 +75,16 @@ class ToolProvider(ABC):
         return validate_and_convert_params(**kwargs)
 
     def _prepare_tool(self, tool_func: Callable) -> Callable:
-        """Return a tool callable ready for FastMCP registration."""
-        return tool_func
+        """Run legacy synchronous Canvas clients outside the server event loop."""
+
+        @wraps(tool_func)
+        async def threaded(*args, **kwargs):
+            # Legacy Context use is limited to optional logging/progress. The
+            # underlying requests client is synchronous, so run the complete
+            # coroutine in a worker thread and omit the loop-bound Context.
+            if "ctx" in kwargs:
+                kwargs = {**kwargs, "ctx": None}
+            coroutine = tool_func(*args, **kwargs)
+            return await asyncio.to_thread(asyncio.run, coroutine)
+
+        return threaded

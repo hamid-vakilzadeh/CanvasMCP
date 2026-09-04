@@ -7,6 +7,17 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+REQUEST_TIMEOUT = (5, 30)
+MAX_PAGINATION_PAGES = 20
+MAX_PAGINATION_ITEMS = 1000
+
+
+def _origin(url: str) -> tuple[str, str, int | None]:
+    parsed = urlparse(url)
+    scheme = parsed.scheme.lower()
+    port = parsed.port or (443 if scheme == "https" else 80 if scheme == "http" else None)
+    return scheme, (parsed.hostname or "").lower(), port
+
 
 def _format_http_error(response: requests.Response) -> str:
     """Create a concise Canvas API error without exposing the full request URL."""
@@ -68,7 +79,10 @@ def _make_request(
         requests.exceptions.RequestException: For HTTP errors
     """
 
-    headers = {"Authorization": f"Bearer {access_token}"}
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json+canvas-string-ids",
+    }
     url = f"{base_url}{endpoint}"
 
     if json_data:
@@ -77,7 +91,12 @@ def _make_request(
 
     try:
         response = requests.request(
-            method=method, url=url, headers=headers, params=params, data=data
+            method=method,
+            url=url,
+            headers=headers,
+            params=params,
+            data=data,
+            timeout=REQUEST_TIMEOUT,
         )
         _raise_for_status(response)
         return response
@@ -111,14 +130,19 @@ def _get_all_pages(
         List of all items from all pages
     """
 
-    headers = {"Authorization": f"Bearer {access_token}"}
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json+canvas-string-ids",
+    }
 
     all_items = []
     response = _make_request(
         base_url, access_token, method, endpoint, params, data, json_data
     )
 
-    while True:
+    pages = 0
+    while pages < MAX_PAGINATION_PAGES and len(all_items) < MAX_PAGINATION_ITEMS:
+        pages += 1
         items = response.json()
         if isinstance(items, list):
             all_items.extend(items)
@@ -128,9 +152,13 @@ def _get_all_pages(
         # Check if there's a next page using the links attribute
         if "next" in response.links:
             next_url = response.links["next"]["url"]
-            response = requests.get(next_url, headers=headers)
+            if _origin(next_url) != _origin(base_url):
+                raise requests.exceptions.RequestException(
+                    "Canvas pagination URL changed origin"
+                )
+            response = requests.get(next_url, headers=headers, timeout=REQUEST_TIMEOUT)
             _raise_for_status(response)
         else:
             break
 
-    return all_items
+    return all_items[:MAX_PAGINATION_ITEMS]
