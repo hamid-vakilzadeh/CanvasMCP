@@ -53,6 +53,8 @@ class ServerCatalogTests(unittest.IsolatedAsyncioTestCase):
             [tool.model_dump(mode="json") for tool in tools], separators=(",", ":")
         ).encode()
         self.assertLess(len(payload), 25_000)
+        review_tool = next(tool for tool in tools if tool.name == "canvas_get_quiz_submission_review")
+        self.assertNotIn("include_all_questions", review_tool.input_schema["properties"])
 
         for name in {
             "canvas_analyze_student_engagement",

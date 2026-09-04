@@ -17,7 +17,7 @@ available immediately:
 - inspect courses, modules, pages, assignments, and quizzes;
 - list students and review enrollment, progress, submissions, and activity;
 - find submissions awaiting review and inspect comments or rubric assessments;
-- inspect completed Classic Quiz attempts and plan question-level scores or feedback;
+- review and grade essay and file-upload questions in completed Classic Quiz attempts;
 - review Canvas Inbox conversations and plan private student outreach;
 - create and maintain pages, assignments, announcements, discussions, modules,
   module items, Classic Quizzes, New Quizzes, and assignment rubrics;
@@ -35,7 +35,7 @@ tool returns that Canvas capability or permission error.
 Only 26 tools are visible initially. This keeps the tool schemas much smaller
 than registering every Canvas endpoint at once.
 
-In a serialized `tools/list` measurement, the visible schemas are about 24.7 KB,
+In a serialized `tools/list` measurement, the visible schemas are about 24.6 KB,
 down from 161.3 KB for the previous 118-tool catalog. That is an 85% reduction;
 discovery adds at most five relevant schemas only when they are needed.
 
@@ -82,10 +82,12 @@ Comments are posted immediately when a plan is applied and Canvas may notify the
 student. A plan is the draft; ordinary SpeedGrader comments do not have a Canvas
 draft state.
 
-`canvas_get_quiz_submission_review` returns the version of the Classic Quiz
-questions presented for a completed attempt. Canvas may omit student answers or
-current per-question scores even when the instructor can see the prompts; the
-tool reports those fields as unavailable. `canvas_plan_quiz_submission_grade`
+`canvas_get_quiz_submission_review` returns only essay and file-upload questions
+from the version of the Classic Quiz presented for the attempt. These are the
+question types that require manual grading. Auto-graded and unknown question types
+are excluded, and the grading planner rejects updates to them. Canvas may omit
+student answers or current per-question scores even when the instructor can see
+the prompts; the tool reports those fields as unavailable. `canvas_plan_quiz_submission_grade`
 can prepare question scores, question comments, or a total-score adjustment.
 Canvas applies those edits immediately after `canvas_apply_change`; Classic Quiz
 grading has no provisional or draft API.

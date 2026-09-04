@@ -92,7 +92,7 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
         "search_examples": ["list module items", "module prerequisites", "module completion"],
     },
     "quizzes": {
-        "summary": "Create quizzes and review or grade completed Classic Quiz attempts.",
+        "summary": "Create quizzes and review or grade Classic Quiz essay and file-upload questions.",
         "visible_tools": [
             "canvas_plan_quiz_change",
             "canvas_get_quiz_submission_review",

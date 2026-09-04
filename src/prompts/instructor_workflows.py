@@ -166,8 +166,9 @@ to {assignment_scope}. Use canvas_list_grading_queue, group submissions by
 assignment and urgency, and report counts for unreviewed, late, and missing work.
 Do not treat missing work as submitted work. Open ordinary submissions with
 canvas_get_submission_review. For a completed Classic Quiz that needs manual
-question scoring, use canvas_get_quiz_submission_review and report explicitly
-when Canvas withholds answer or current-score fields. Preserve anonymous grading.
+question scoring, use canvas_get_quiz_submission_review for essay and file-upload
+questions only. Report explicitly when Canvas withholds answer or current-score
+fields. Preserve anonymous grading.
 Recommend a review order, but do not assign grades or post comments unless the
 faculty member explicitly requests a preview with canvas_plan_grade_change or
 canvas_plan_quiz_submission_grade and then approves canvas_apply_change."""

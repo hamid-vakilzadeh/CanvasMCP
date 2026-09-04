@@ -117,7 +117,7 @@ def _plain_text(value: Any, limit: int = 20_000) -> str | None:
 
 
 class QuizQuestionGradeUpdate(BaseModel):
-    """One Classic Quiz question score or feedback change."""
+    """One manually graded Classic Quiz question score or feedback change."""
 
     question_id: str | int
     score: float | None = None
@@ -554,7 +554,6 @@ class AssistantTools:
         quiz_id: str,
         quiz_submission_id: str | None,
         student_id: str | None,
-        include_all_questions: bool,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         include_params = {"include[]": ["submission", "quiz", "user"]}
         if quiz_submission_id is not None:
@@ -640,7 +639,7 @@ class AssistantTools:
                 nested_definition if isinstance(nested_definition, dict) else record
             )
             question_type = definition.get("question_type") or record.get("question_type")
-            if not include_all_questions and question_type not in manual_types:
+            if question_type not in manual_types:
                 continue
             questions.append(
                 {
@@ -677,7 +676,7 @@ class AssistantTools:
             "questions": questions,
             "question_count": len(questions),
             "answers_unavailable": sum(
-                item["question_type"] in manual_types and not item["answer_available"]
+                not item["answer_available"]
                 for item in questions
             ),
             "question_data_truncated": bool(next_cursor),
@@ -704,12 +703,8 @@ class AssistantTools:
             str | int | None,
             Field(description="Student ID; selects the latest returned attempt"),
         ] = None,
-        include_all_questions: Annotated[
-            bool,
-            Field(description="Include auto-graded questions as well as essay and file-upload questions"),
-        ] = False,
     ) -> dict[str, Any]:
-        """Review a completed Classic Quiz attempt and its question-level grading data."""
+        """Review only essay and file-upload questions in a Classic Quiz attempt."""
         if (quiz_submission_id is None) == (student_id is None):
             raise ValueError("Provide exactly one of quiz_submission_id or student_id")
         normalized_submission_id = (
@@ -723,7 +718,6 @@ class AssistantTools:
                 quiz_id=_sid(quiz_id),
                 quiz_submission_id=normalized_submission_id,
                 student_id=normalized_student_id,
-                include_all_questions=include_all_questions,
             )
         return review
 
@@ -1547,7 +1541,7 @@ class AssistantTools:
             list[QuizQuestionGradeUpdate] | None,
             Field(
                 max_length=100,
-                description="Question IDs with a score, feedback comment, or both",
+                description="Essay or file-upload question IDs with a score, feedback comment, or both",
             ),
         ] = None,
         fudge_points: Annotated[
@@ -1555,7 +1549,7 @@ class AssistantTools:
             Field(description="Optional signed adjustment to the attempt total"),
         ] = None,
     ) -> dict[str, Any]:
-        """Plan per-question scores or comments for a completed Classic Quiz attempt."""
+        """Plan essay/file-upload scores or comments, or an overall quiz score adjustment."""
         course_id = _sid(course_id)
         quiz_id = _sid(quiz_id)
         quiz_submission_id = _sid(quiz_submission_id)
@@ -1577,7 +1571,6 @@ class AssistantTools:
                 quiz_id=quiz_id,
                 quiz_submission_id=quiz_submission_id,
                 student_id=None,
-                include_all_questions=True,
             )
         submission = review["quiz_submission"]
         if submission.get("workflow_state") != "complete":
@@ -1603,7 +1596,9 @@ class AssistantTools:
             seen.add(question_id)
             if question_id not in current_questions:
                 raise ValueError(
-                    f"Question {question_id} does not belong to quiz submission {quiz_submission_id}"
+                    f"Question {question_id} is not an essay or file-upload question "
+                    f"in quiz submission {quiz_submission_id}; only manually graded "
+                    "question types are supported"
                 )
             if item.score is None and item.comment is None:
                 raise ValueError(

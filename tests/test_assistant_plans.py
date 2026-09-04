@@ -933,7 +933,7 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
             )
         self.assertTrue(any("group member" in warning for warning in public["warnings"]))
 
-    async def test_quiz_submission_review_returns_manual_question_data(self):
+    async def test_quiz_submission_review_filters_mixed_quiz_to_manual_questions(self):
         submission_payload = {
             "quiz_submissions": [
                 {
@@ -952,7 +952,10 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
                     "answer": "<p>Student explanation</p>",
                     "score": 3.5,
                     "comment": "Good start",
-                }
+                },
+                {"id": "91", "answer": "Choice A", "score": 1},
+                {"id": "92"},
+                {"id": "93", "answer": "Unclassified answer"},
             ]
         }
         client = FakeCanvasClient(
@@ -966,10 +969,13 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
                             "question_type": "essay_question",
                             "question_text": "<p>Explain the control.</p>",
                             "points_possible": 5,
-                        }
+                        },
+                        {"id": "91", "question_type": "multiple_choice_question"},
+                        {"id": "92", "question_type": "file_upload_question"},
+                        {"id": "93"},
                     ],
                     "next_cursor": None,
-                    "count": 1,
+                    "count": 4,
                 }
             ],
         )
@@ -982,10 +988,12 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
                 course_id=7, quiz_id=8, quiz_submission_id=40
             )
 
-        self.assertEqual(review["question_count"], 1)
+        self.assertEqual(review["question_count"], 2)
+        self.assertEqual([q["question_id"] for q in review["questions"]], ["90", "92"])
         self.assertEqual(review["questions"][0]["answer"], "Student explanation")
         self.assertEqual(review["questions"][0]["score"], 3.5)
-        self.assertEqual(review["answers_unavailable"], 0)
+        self.assertFalse(review["questions"][1]["answer_available"])
+        self.assertEqual(review["answers_unavailable"], 1)
 
     async def test_quiz_question_grade_plan_uses_documented_form_keys_and_applies(self):
         submission_payload = {
@@ -1001,7 +1009,9 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
         }
         answer_payload = {
             "quiz_submission_questions": [
-                {"id": "90", "answer": "Response", "score": 3.0, "comment": None}
+                {"id": "90", "answer": "Response", "score": 3.0, "comment": None},
+                {"id": "91", "score": 1},
+                {"id": "92"},
             ]
         }
         definition_page = {
@@ -1012,10 +1022,12 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
                     "question_type": "essay_question",
                     "question_text": "Explain.",
                     "points_possible": 5,
-                }
+                },
+                {"id": "91", "question_type": "multiple_choice_question"},
+                {"id": "92", "question_type": "file_upload_question", "points_possible": 5},
             ],
             "next_cursor": None,
-            "count": 1,
+            "count": 3,
         }
         planning_client = FakeCanvasClient(
             get_values=[submission_payload, answer_payload],
@@ -1033,7 +1045,8 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
                 question_updates=[
                     QuizQuestionGradeUpdate(
                         question_id=90, score=4.5, comment="Clear explanation"
-                    )
+                    ),
+                    QuizQuestionGradeUpdate(question_id=92, score=4),
                 ],
             )
 
@@ -1041,6 +1054,8 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
         data = pending.mutations[0].data
         self.assertEqual(data["quiz_submissions[][attempt]"], 2)
         self.assertEqual(data["quiz_submissions[][questions][90][score]"], 4.5)
+        self.assertEqual(data["quiz_submissions[][questions][92][score]"], 4)
+        self.assertFalse(any("[91]" in key for key in data))
         self.assertEqual(
             data["quiz_submissions[][questions][90][comment]"], "Clear explanation"
         )
@@ -1074,7 +1089,7 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
             "count": 1,
         }
         for update, message in (
-            (QuizQuestionGradeUpdate(question_id=999, score=1), "does not belong"),
+            (QuizQuestionGradeUpdate(question_id=999, score=1), "only manually graded"),
             (QuizQuestionGradeUpdate(question_id=90, score=-1), "cannot be negative"),
         ):
             client = FakeCanvasClient(
@@ -1089,6 +1104,61 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
                     await self.tools.canvas_plan_quiz_submission_grade(
                         7, 8, 40, [update]
                     )
+
+    async def test_quiz_grade_rejects_mixed_batch_with_auto_or_unknown_question(self):
+        submission_payload = {
+            "quiz_submissions": [
+                {"id": "40", "user_id": "11", "attempt": 1, "workflow_state": "complete"}
+            ]
+        }
+        # A missing score does not make an automatically graded question eligible.
+        for question_type in (
+            "multiple_choice_question", "true_false_question", "short_answer_question",
+            "fill_in_multiple_blanks_question", "multiple_answers_question",
+            "multiple_dropdowns_question", "matching_question", "numerical_question",
+            "calculated_question", "text_only_question", "future_question_type", None,
+        ):
+            with self.subTest(question_type=question_type):
+                client = FakeCanvasClient(
+                    get_values=[submission_payload, {"quiz_submission_questions": [{"id": "91"}]}],
+                    page_values=[{
+                        "items": [
+                            {"id": "90", "question_type": "essay_question"},
+                            {"id": "91", "question_type": question_type},
+                        ],
+                        "next_cursor": None,
+                        "count": 2,
+                    }],
+                )
+                with patch.object(
+                    assistant_module.AsyncCanvasClient, "from_environment", return_value=client
+                ):
+                    with self.assertRaisesRegex(ValueError, "only manually graded"):
+                        await self.tools.canvas_plan_quiz_submission_grade(
+                            7, 8, 40,
+                            [
+                                QuizQuestionGradeUpdate(question_id=90, score=3),
+                                QuizQuestionGradeUpdate(question_id=91, comment="Feedback"),
+                            ],
+                        )
+                self.assertFalse(self.store._plans)
+                self.assertTrue(all(call[0] in {"GET", "PAGE"} for call in client.calls))
+
+    async def test_auto_graded_only_quiz_has_no_manual_questions(self):
+        client = FakeCanvasClient(
+            get_values=[
+                {"quiz_submissions": [{"id": "40", "attempt": 1, "workflow_state": "complete"}]},
+                {"quiz_submission_questions": [{"id": "91", "question_type": "true_false_question"}]},
+            ],
+            page_values=[{"items": [], "next_cursor": None, "count": 0}],
+        )
+        with patch.object(
+            assistant_module.AsyncCanvasClient, "from_environment", return_value=client
+        ):
+            review = await self.tools.canvas_get_quiz_submission_review(7, 8, 40)
+        self.assertEqual(review["questions"], [])
+        self.assertEqual(review["question_count"], 0)
+        self.assertEqual(review["answers_unavailable"], 0)
 
 
 if __name__ == "__main__":
