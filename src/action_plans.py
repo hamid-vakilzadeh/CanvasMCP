@@ -45,6 +45,7 @@ class PendingPlan:
     preconditions: list[Precondition] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     destructive: bool = False
+    local_draft: dict[str, Any] | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc) + PLAN_TTL
@@ -88,6 +89,7 @@ class PlanStore:
         preconditions: list[Precondition] | None = None,
         warnings: list[str] | None = None,
         destructive: bool = False,
+        local_draft: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         now = datetime.now(timezone.utc)
         plan = PendingPlan(
@@ -99,6 +101,7 @@ class PlanStore:
             preconditions=preconditions or [],
             warnings=warnings or [],
             destructive=destructive,
+            local_draft=local_draft,
             created_at=now,
             expires_at=now + PLAN_TTL,
         )

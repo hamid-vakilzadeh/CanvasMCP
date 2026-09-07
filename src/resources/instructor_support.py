@@ -231,57 +231,11 @@ def register_instructor_resources(mcp: FastMCP) -> None:
         annotations=RESOURCE_ANNOTATIONS,
     )
     async def canvas_student_snapshot(course_id: str, student_id: str) -> dict[str, Any]:
-        course_id, student_id = _resource_id(str(course_id)), _resource_id(str(student_id))
-        requests: dict[str, Any]
-        async with AsyncCanvasClient.from_environment() as client:
-            requests = {
-                "enrollments": client.get(
-                    f"/api/v1/courses/{course_id}/enrollments",
-                    {"user_id": student_id, "type[]": ["StudentEnrollment"]},
-                ),
-                "progress": client.get(
-                    f"/api/v1/courses/{course_id}/users/{student_id}/progress"
-                ),
-                "submissions": client.page(
-                    f"/api/v1/courses/{course_id}/students/submissions",
-                    params={"student_ids[]": [student_id], "include[]": ["assignment"]},
-                    limit=100,
-                ),
-                "activity": client.get(
-                    f"/api/v1/courses/{course_id}/analytics/users/{student_id}/activity"
-                ),
-            }
-            results = await asyncio.gather(*requests.values(), return_exceptions=True)
+        from reporting.data import collect_snapshot, compact_snapshot
 
-        snapshot: dict[str, Any] = {
-            "course_id": course_id,
-            "student_id": student_id,
-            "warnings": [],
-        }
-        for section, result in zip(requests, results, strict=True):
-            if isinstance(result, Exception):
-                snapshot["warnings"].append(_warning(section, result))
-            else:
-                snapshot[section] = result
-        submission_page = snapshot.get("submissions")
-        submissions = submission_page.get("items", []) if isinstance(submission_page, dict) else []
-        if isinstance(submissions, list):
-            snapshot["submissions"] = _compact(
-                submissions,
-                (
-                    "id",
-                    "assignment_id",
-                    "workflow_state",
-                    "submitted_at",
-                    "late",
-                    "missing",
-                    "score",
-                    "grade",
-                    "assignment",
-                ),
-            )
-            snapshot["submissions_next_cursor"] = submission_page.get("next_cursor")
-        return snapshot
+        course_id, student_id = _resource_id(str(course_id)), _resource_id(str(student_id))
+        async with AsyncCanvasClient.from_environment() as client:
+            return compact_snapshot(await collect_snapshot(client, course_id, student_id), activity_key="activity")
 
     @mcp.resource(
         "canvas://reference/actions/{domain}",

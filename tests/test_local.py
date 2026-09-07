@@ -178,6 +178,8 @@ class LocalProtocolTests(unittest.TestCase):
                             "canvas_get_course_structure",
                             "canvas_list_course_people",
                             "canvas_get_student_snapshot",
+                            "canvas_open_student_dashboard",
+                            "canvas_dashboard_data",
                             "canvas_analyze_student_engagement",
                             "canvas_list_grading_queue",
                             "canvas_get_submission_review",

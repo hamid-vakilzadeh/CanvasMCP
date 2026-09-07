@@ -175,6 +175,7 @@ class AssistantTools:
         "canvas_get_course_structure",
         "canvas_list_course_people",
         "canvas_get_student_snapshot",
+        "canvas_open_student_dashboard",
         "canvas_analyze_student_engagement",
         "canvas_list_grading_queue",
         "canvas_get_submission_review",
@@ -272,7 +273,12 @@ class AssistantTools:
                 "rosters", "student snapshots", "engagement criteria", "grading queues",
                 "submission review", "Classic Quiz essay review and scoring",
                 "grades and comments", "discussion posts and replies", "private Inbox outreach",
+                "interactive student dashboard", "comprehensive evidence-based faculty learning review",
+                "local discussion watcher and saved faculty drafts",
             ],
+            "reporting": {"templates": "canvas://reports/templates", "search": "student report, learning review, discussion watch",
+                          "model": "Dashboard selection does not invoke AI; the connected AI client analyzes review evidence.",
+                          "durability": "Report jobs and discussion queues persist in private account-isolated local state."},
             "writes": "Create a plan, review it, then call canvas_apply_change with confirm=true.",
             "background_tasks": {
                 "mode": "optional",
@@ -362,38 +368,10 @@ class AssistantTools:
         student_id: Annotated[str | int, Field(description="Canvas student ID")],
     ) -> dict[str, Any]:
         """Combine enrollment, progress, submissions, and analytics for one student."""
-        course_id, student_id = _sid(course_id), _sid(student_id)
-        warnings: list[dict[str, Any]] = []
+        from reporting.data import collect_snapshot, compact_snapshot
+
         async with AsyncCanvasClient.from_environment() as client:
-            calls = {
-                "enrollments": client.get(
-                    f"/api/v1/courses/{course_id}/enrollments",
-                    {"user_id": student_id, "type[]": ["StudentEnrollment"]},
-                ),
-                "progress": client.get(f"/api/v1/courses/{course_id}/users/{student_id}/progress"),
-                "submissions": client.page(
-                    f"/api/v1/courses/{course_id}/students/submissions",
-                    params={"student_ids[]": [student_id], "include[]": ["assignment"]},
-                    limit=100,
-                ),
-                "analytics": client.get(f"/api/v1/courses/{course_id}/analytics/users/{student_id}/activity"),
-            }
-            results = await asyncio.gather(*calls.values(), return_exceptions=True)
-        sections: dict[str, Any] = {}
-        for key, value in zip(calls, results, strict=True):
-            if isinstance(value, Exception):
-                warnings.append({"section": key, "error": str(value)})
-            else:
-                sections[key] = value
-        submission_page = sections.get("submissions", {})
-        submissions = submission_page.get("items", []) if isinstance(submission_page, dict) else []
-        if isinstance(submissions, list):
-            sections["submissions"] = _compact(
-                submissions,
-                ("id", "assignment_id", "workflow_state", "submitted_at", "late", "missing", "score", "grade", "assignment"),
-            )
-            sections["submissions_next_cursor"] = submission_page.get("next_cursor")
-        return {"course_id": course_id, "student_id": student_id, **sections, "warnings": warnings}
+            return compact_snapshot(await collect_snapshot(client, _sid(course_id), _sid(student_id)))
 
     async def canvas_analyze_student_engagement(
         self,
@@ -1719,6 +1697,12 @@ class AssistantTools:
         if confirm is not True:
             raise ValueError("confirm must be true")
         plan = await plan_store.consume(plan_token)
+        if plan.local_draft:
+            from discussion_watch import Watcher
+            from reporting.runtime import runtime
+            store = await runtime.store()
+            async with runtime.client_factory() as client:
+                return await Watcher(store, runtime.user_id).apply_draft(client, plan)
         results: list[dict[str, Any]] = []
         async with AsyncCanvasClient.from_environment() as client:
             for condition in plan.preconditions:

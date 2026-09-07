@@ -21,6 +21,7 @@ from tools.contentMigration import ContentMigrationTools
 from tools.assistant import AssistantTools
 from resources.content_creation_rules import register_content_creation_resource
 from instructor_experience import register_instructor_experience
+from reporting.tools import ReportingTools
 
 
 SERVER_INSTRUCTIONS = """
@@ -33,9 +34,17 @@ the advanced rubric planner. Ask the user to review the returned preview before
 calling canvas_apply_change with confirm=true.
 
 For an action that is not initially visible, call canvas_search_tools using a
-plain-language description. Execute discovered read tools with canvas_call_tool.
-Never use a discovered direct mutation tool; all writes must use a canvas_plan_*
+plain-language description. Execute discovered tools with canvas_call_tool.
+Never use a direct Canvas mutation tool; all Canvas writes must use a canvas_plan_*
 tool followed by canvas_apply_change. Call canvas_capabilities when unsure.
+
+For student dashboards and comprehensive AI learning reviews, search for
+student report or learning review. Canonical guidance is at canvas://reports/templates.
+Dashboard selection uses direct read tools, without AI inference. Learning reviews
+collect durable evidence, then require the AI client to read every batch and save
+cited analysis before rendering. Accepted background work is not completed work.
+Local report jobs and discussion queue updates do not write to Canvas. Search for
+discussion watch to configure independent local polling and faculty-reviewed drafts.
 """.strip()
 
 
@@ -110,13 +119,14 @@ def create_server() -> FastMCP:
     ):
         provider(mcp)
     AssistantTools(mcp)
+    ReportingTools(mcp)
     register_content_creation_resource(mcp)
     register_instructor_experience(mcp)
     mcp.disable(names=DIRECT_WRITE_TOOLS, components={"tool"})
     mcp.add_transform(
         BM25SearchTransform(
             max_results=5,
-            always_visible=AssistantTools.VISIBLE_NAMES,
+            always_visible=[*AssistantTools.VISIBLE_NAMES, 'canvas_dashboard_data'],
             search_tool_name="canvas_search_tools",
             call_tool_name="canvas_call_tool",
         )

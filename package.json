@@ -10,6 +10,11 @@
     "bin/canvas-mcp.js",
     "src/**/*.py",
     "src/**/*.md",
+    "src/reporting/ui/*.html",
+    "src/reporting/ui/*.css",
+    "src/reporting/ui/*.js",
+    "REPORTING.md",
+    "REPORTING_VALIDATION.md",
     "pyproject.toml",
     "uv.lock",
     ".python-version"
@@ -22,10 +27,25 @@
     "url": "git+https://github.com/hamid-vakilzadeh/CanvasMCP.git"
   },
   "scripts": {
-    "test": "node --test tests/launcher.test.js"
+    "test": "node --test tests/launcher.test.js",
+    "build:dashboard": "node scripts/build-dashboard.mjs",
+    "check:dashboard": "tsc --noEmit",
+    "test:dashboard": "playwright test",
+    "prepack": "npm run build:dashboard"
   },
   "publishConfig": {
     "access": "public"
   },
-  "keywords": ["canvas", "lms", "mcp", "stdio"]
+  "keywords": [
+    "canvas",
+    "lms",
+    "mcp",
+    "stdio"
+  ],
+  "devDependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@playwright/test": "^1.63.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
 }

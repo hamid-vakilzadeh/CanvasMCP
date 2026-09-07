@@ -47,12 +47,14 @@ class ServerCatalogTests(unittest.IsolatedAsyncioTestCase):
         names = {tool.name for tool in tools}
         self.assertEqual(
             names,
-            {*AssistantTools.VISIBLE_NAMES, "canvas_search_tools", "canvas_call_tool"},
+            {*AssistantTools.VISIBLE_NAMES, "canvas_search_tools", "canvas_call_tool", "canvas_dashboard_data"},
         )
         payload = json.dumps(
             [tool.model_dump(mode="json") for tool in tools], separators=(",", ":")
         ).encode()
-        self.assertLess(len(payload), 25_000)
+        bridge = next(tool for tool in tools if tool.name == 'canvas_dashboard_data')
+        self.assertEqual(bridge.meta['ui']['visibility'], ['app'])
+        self.assertLess(len(payload), 28_000)  # Includes a host-only bridge and one dashboard entry tool.
         review_tool = next(tool for tool in tools if tool.name == "canvas_get_quiz_submission_review")
         self.assertNotIn("include_all_questions", review_tool.input_schema["properties"])
 

@@ -2,8 +2,10 @@
 
 Canvas MCP gives an AI client direct access to Canvas LMS through one local
 **stdio** process. The client starts the process and communicates over
-stdin/stdout. Canvas MCP does not start an HTTP listener, send analytics, or use
-Unkey or another authentication service.
+stdin/stdout. Normal MCP startup has no HTTP listener. An optional student
+dashboard can open a private loopback-only browser interface; the MCP transport
+remains stdio. Canvas MCP does not send analytics or use Unkey or another
+authentication service.
 
 The process reads a Canvas URL and personal access token from the MCP client and
 connects directly to Canvas. Canvas and its file-upload service still require
@@ -16,6 +18,9 @@ available immediately:
 
 - inspect courses, modules, pages, assignments, and quizzes;
 - list students and review enrollment, progress, submissions, and activity;
+- explore an interactive student dashboard and generate evidence-linked faculty
+  learning reviews with the connected AI client;
+- monitor selected discussions locally and save drafts for faculty review;
 - find submissions awaiting review and inspect comments or rubric assessments;
 - review and grade essay and file-upload questions in completed Classic Quiz attempts;
 - review Canvas Inbox conversations and plan private student outreach;
@@ -32,17 +37,21 @@ tool returns that Canvas capability or permission error.
 
 ### Compact tool catalog
 
-Only 26 tools are visible initially. This keeps the tool schemas much smaller
+The initial catalog declares 27 tools as model-visible and one bridge as app-only.
+Hosts that do not honor MCP Apps visibility may show all 28. This keeps the schemas much smaller
 than registering every Canvas endpoint at once.
 
-In a serialized `tools/list` measurement, the visible schemas are about 24.6 KB,
-down from 161.3 KB for the previous 118-tool catalog. That is an 85% reduction;
-discovery adds at most five relevant schemas only when they are needed.
+The current serialized model-visible schemas measure 25,431 bytes (27 tools);
+the full host catalog measures 26,838 bytes (28 tools). Discovery adds at most
+five relevant schemas when needed. These are payload measurements, not model
+token counts or evidence of a measured reasoning improvement. See
+[reporting validation](REPORTING_VALIDATION.md) for measured workflow results.
 
 | Area | Visible tools |
 | --- | --- |
 | Discovery | `canvas_capabilities`, `canvas_search_tools`, `canvas_call_tool` |
 | Courses and students | `canvas_list_courses`, `canvas_get_course_structure`, `canvas_list_course_people`, `canvas_get_student_snapshot`, `canvas_analyze_student_engagement`, `canvas_list_grading_queue`, `canvas_get_submission_review`, `canvas_get_quiz_submission_review` |
+| Reports | `canvas_open_student_dashboard`; discover report data, learning-review and discussion-watch tools as needed |
 | Communication | `canvas_list_inbox`, `canvas_get_conversation`, `canvas_plan_communication`, `canvas_plan_announcement_change` |
 | Authoring | `canvas_plan_page_change`, `canvas_plan_assignment_change`, `canvas_plan_discussion_change`, `canvas_plan_discussion_entry`, `canvas_plan_module_change`, `canvas_plan_quiz_change`, `canvas_plan_file_upload`, `canvas_plan_course_copy` |
 | Grades and execution | `canvas_plan_grade_change`, `canvas_plan_quiz_submission_grade`, `canvas_apply_change` |
@@ -54,14 +63,35 @@ available through FastMCP Tool Search:
    assignment overrides" or "show quiz question groups."
 2. Review the returned matches. Search returns at most five tools.
 3. Call the discovered read action with `canvas_call_tool`. Direct low-level
-   writes are excluded from discovery; use the visible planning tools for every
-   write.
+   writes are excluded from discovery; use planning tools for every Canvas
+   write. Report jobs and queue decisions update private local state.
 
 The existing flexible argument converter remains available to discovered tools,
 including clients that serialize list or object arguments as text.
 
 The bundled `resource://content-creation-reference` resource contains Canvas-safe
 HTML and CSS guidance for creating course content.
+
+### Student reports and discussion monitoring
+
+Ask the AI client to open the student dashboard for a course and student. The
+server uses an embedded MCP App when the host advertises support; otherwise it
+returns a private localhost browser link. A student selection reads Canvas
+without invoking a model. The browser version is also available with
+`canvas-mcp dashboard` using the same Canvas environment variables.
+
+A comprehensive learning review is separate: the server collects evidence,
+including supported documents, and the existing AI client reads bounded batches
+and saves cited findings. The result is a printable, self-contained faculty HTML
+report with explicit coverage gaps. There is no built-in model provider or key.
+
+Discussion monitoring uses `canvas-mcp watch` in a separate local process.
+Configure selected topics through the MCP tools. The first scan is a baseline;
+later posts and edits enter a private queue. AI decisions and drafts wait for
+faculty review, and sending still requires plan/apply.
+
+See [setup, workflows, privacy and limitations](REPORTING.md) and the canonical
+`canvas://reports/templates` resources. No skill or companion plugin is required.
 
 ### Plan before applying writes
 

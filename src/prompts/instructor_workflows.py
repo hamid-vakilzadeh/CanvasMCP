@@ -104,6 +104,12 @@ Read canvas://courses/{course_id}/students/{student_id}/snapshot and retrieve
 additional evidence only when necessary. Faculty focus:
 {focus or "Summarize participation, submitted work, missing work, and current performance."}
 
+For an interactive overview, use canvas_open_student_dashboard. For a comprehensive
+review of all accessible work, read canvas://reports/templates/learning-review and
+discover canvas_start_learning_review. Collect evidence, review every batch, save
+cited analysis, and render the faculty report. Accepted collection is not completed
+analysis; report unavailable work explicitly.
+
 Separate observed Canvas facts from interpretation. Describe explicit matched
 criteria rather than predicting that a student is “at risk.” Mention unavailable
 or permission-restricted sections. Omit email, login, and SIS identifiers unless

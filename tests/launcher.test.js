@@ -79,3 +79,10 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
     assert.match(stderr, /terminated/);
   });
 }
+
+test("forwards optional local commands without changing stdio defaults", {skip:process.platform === 'win32'}, (t) => {
+  const directory=fixture(t, `console.log(JSON.stringify(process.argv.slice(2)));`);
+  const result=spawnSync(process.execPath,[launcher,'watch','--once'],{env:{...process.env,PATH:directory},encoding:'utf8'});
+  assert.equal(result.status,0,result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout).slice(-2),['watch','--once']);
+});

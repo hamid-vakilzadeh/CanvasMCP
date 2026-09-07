@@ -86,6 +86,8 @@ class FakeCanvasClient:
                     "body": "omitted from the compact view",
                 }
             ]
+        elif endpoint.endswith('/enrollments'):
+            items = await self.get(endpoint, params)
         else:
             raise AssertionError(f"Unexpected page {endpoint} {params} {cursor} {limit}")
         return {"items": items, "next_cursor": None, "count": len(items)}

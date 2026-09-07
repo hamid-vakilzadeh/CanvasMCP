@@ -22,6 +22,7 @@ const cacheRoot = process.platform === "win32"
 const child = spawn("uv", [
   "run", "--project", project, "--frozen", "--no-dev",
   "python", join(project, "src", "local.py"),
+  ...process.argv.slice(2),
 ], {
   stdio: "inherit",
   // On POSIX, give uv and Python their own process group so signals reach both.

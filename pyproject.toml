@@ -7,8 +7,14 @@ requires-python = ">=3.13"
 dependencies = [
     "fastmcp[tasks]==4.0.2",
     "httpx2>=2.5,<3",
+    "openpyxl>=3.1,<4",
     "pydantic>=2.12,<3",
+    "pypdf>=6,<7",
+    "python-docx>=1.2,<2",
+    "python-pptx>=1,<2",
     "requests>=2.32.4",
+    "starlette>=1.6,<2",
+    "uvicorn>=0.35,<1",
 ]
 
 [dependency-groups]

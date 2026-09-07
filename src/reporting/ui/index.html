@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Canvas · Student overview</title><style nonce="{{NONCE}}">{{STYLE}}</style></head>
+<body><a class="skip" href="#student-report">Skip to student report</a>
+<header class="top"><div class="brand"><span class="brand-icon" aria-hidden="true">C</span><span>Canvas<span class="brand-sub">Faculty workspace</span></span></div><span class="private">Local connection · Private workspace</span></header>
+<main><div class="page-heading"><div><p class="eyebrow">Student reports</p><h1>A clearer view of progress.</h1><p class="intro">Explore the record. Read the work. Choose the next step.</p></div><button id="print" class="secondary">Print overview</button></div>
+<section class="selectors" aria-label="Select course and student"><label>Course<select id="course"><option value="">Loading courses…</option></select></label><label>Find a student<input id="student-search" type="search" placeholder="Search by name" autocomplete="off"></label><label>Student<select id="student"><option value="">Choose a course first</option></select></label><button id="more-students" class="secondary" hidden>Load more students</button></section>
+<p id="connection" class="muted">Connecting to your local Canvas server…</p><p id="status" role="status" aria-live="polite"></p><div id="error" class="notice" role="alert" hidden></div>
+<div id="student-report" tabindex="-1"><div class="empty"><p class="eyebrow">One student. The full picture.</p><h2>Select a course and student to begin.</h2><p>Grades and submission details appear here. A deeper learning review is available when you need to read across the work.</p></div></div>
+<section id="reviews" class="review-panel" hidden><div class="section-heading"><div><p class="eyebrow">Read across the work</p><h2>Faculty learning review</h2><p class="muted">An evidence-based analysis by your connected AI client. Collection and analysis are separate steps.</p></div><button id="start-review">Create learning review</button></div><div id="review-jobs"></div><button id="more-reviews" class="secondary" hidden>Load more reviews</button></section>
+<footer>Canvas-calculated facts are separate from AI interpretations. Recorded activity does not establish attendance, effort, understanding, or misconduct.</footer></main>
+<script nonce="{{NONCE}}">window.CANVAS_DASHBOARD={{CONFIG}};</script><script nonce="{{NONCE}}">{{SCRIPT}}</script></body></html>
