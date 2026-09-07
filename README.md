@@ -79,8 +79,10 @@ another.
 Grade plans support student IDs or Canvas anonymous-grading identifiers, rubric
 criterion assessments, posted grades, excuses, and student-visible comments.
 Comments are posted immediately when a plan is applied and Canvas may notify the
-student. A plan is the draft; ordinary SpeedGrader comments do not have a Canvas
-draft state.
+student, subject to Canvas posting and visibility settings. An unapplied plan is
+a temporary local preview, not a Canvas draft comment. Canvas's
+[SpeedGrader interface supports draft comments](https://community.instructure.com/en/kb/articles/664292),
+but this MCP does not expose that workflow or moderated/provisional grading.
 
 `canvas_get_quiz_submission_review` returns only essay and file-upload questions
 from the version of the Classic Quiz presented for the attempt. These are the
@@ -89,8 +91,10 @@ are excluded, and the grading planner rejects updates to them. Canvas may omit
 student answers or current per-question scores even when the instructor can see
 the prompts; the tool reports those fields as unavailable. `canvas_plan_quiz_submission_grade`
 can prepare question scores, question comments, or a total-score adjustment.
-Canvas applies those edits immediately after `canvas_apply_change`; Classic Quiz
-grading has no provisional or draft API.
+Canvas persists those edits after `canvas_apply_change`; the Classic Quiz scoring
+endpoint used here has no documented draft parameter. Canvas's separate
+[moderated grading API](https://developerdocs.instructure.com/services/canvas/resources/moderated_grading)
+is not exposed by this MCP.
 
 Discussion entries and entry-specific replies use the same plan/apply boundary.
 The preview includes the topic and, for a reply, the parent entry. Applying a
@@ -306,7 +310,7 @@ npm pack --dry-run
 ```
 
 The Python tests launch the real stdio server against a fake Canvas API, inspect
-the 23-tool catalog, and exercise discovery, planning, background-task compatible
+the 26-tool catalog, and exercise discovery, planning, background-task compatible
 tools, resources, and credential isolation. Node tests cover launcher argument
 and stdio forwarding, missing `uv`, exit status, and termination. Tests do not
 require a real Canvas account or token.

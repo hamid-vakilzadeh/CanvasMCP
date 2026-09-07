@@ -1,67 +1,50 @@
-Looking through the document carefully, I found some formatting issues and missing elements. Here's the corrected version:
+# Canvas HTML Editor Allowlist: practical authoring guidance
 
-# Canvas HTML Editor Allowlist
+Verified 2026-09-04 against Instructure's
+[Canvas HTML Editor Allowlist](https://community.instructure.com/en/kb/articles/387066-canvas-html-editor-allowlist).
+Use that source for the complete current tag, attribute, protocol, CSS, and MathML
+rules; this guide is a focused working reference, not an exhaustive copied list.
 
-This document lists the HTML codes that are permissible in Canvas.
+## HTML and context
 
-## Allowed HTML Tags
+Canvas sanitizes authored HTML. Pages remove `object` and `embed`; discussion
+replies restrict `id` attributes except certain inline-media links. Notification
+emails preserve only basic formatting. Rich content that works on a page may
+therefore behave differently in a reply or notification.
 
-a, acronym, address, area, article, aside, audio, b, bdo, big, blockquote, br, caption, cite, code, col, colgroup, dd, del, details, dfn, div, dl, dt, em, embed, footer, h2, h3, h4, h5, h6, header, hr, i, img, ins, iframe, kbd, legend, li, map, nav, object, ol, p, param, picture, pre, q, ruby, rp, rt, samp, section, small, span, strike, strong, sub, summary, sup, table, tbody, td, tfoot, th, thead, time, tr, track, tt, u, ul, var, video
+## CSS properties and layout
 
-## MathML tags
+Inline `style` supports selected properties, including flex/grid layouts. Canvas
+filters individual values as well: `position: fixed` and `position: sticky` are
+removed. Do not assume arbitrary CSS survives saving. Prefer simple layouts that
+remain readable on narrow screens.
 
-annotation, annotation-xml, maction, maligngroup, malignmark, math, menclose, merror, mfenced, mfrac, mglyph, mi, mlabeledtr, mlongdiv, mmultiscripts, mn, mo, mover, mpadded, mphantom, mprescripts, mroot, mrow, ms, mscarries, mscarry, msgroup, msline, mspace, msqrt, msrow, mstack, mstyle, msub, msubsup, msup, mtable, mtd, mtext, mtr, munder, munderover, none, semantics, mark
+## iframe, media, and attributes
 
-## Allowed Attributes on HTML Elements
+Allowed iframe attributes and sandbox tokens are filtered. Page support for an
+iframe does not imply that every context or external provider permits embedding.
+Check saved markup and the destination's actual behavior when embeds matter.
 
-*all elements allow style, class, id, title, role, lang, dir*
+## Accessible content
 
-| Element | Allowed Attribute(s) |
-|---------|---------------------|
-| **a** | href, target, name |
-| **abbr** | title |
-| **area** | alt, coords, href, shape, target |
-| **aria** | labelledby, atomic, busy, controls, describedby, disabled, dropeffect, flowto, grabbed, haspopup, hidden, invalid, label, labelledby, live, owns, relevant, autocomplete, checked, disabled, expanded, haspopup, hidden, invalid, label, level, multiline, multiselectable, orientation, pressed, readonly, required, selected, sort, valuemax, valuemin, valuenow, valuetext |
-| **audio** | name, src, muted, controls |
-| **blockquote** | cite |
-| **col** | span, width |
-| **colgroup** | span, width |
-| **embed** | name, src, type, allowfullscreen, pluginspage, wmode, allowscriptaccess, width, height |
-| **font** | face, color, size |
-| **img** | align, alt, height, src, title, usemap, width |
-| **iframe** | src, width, height, name, align, allowfullscreen |
-| **map** | name |
-| **object** | width, height, style, data, type, classid, codebase |
-| **ol** | start, type |
-| **param** | name, value |
-| **q** | cite |
-| **source** | Height, media, sizes, src, srcset, type, width |
-| **table** | summary, width, border, cellpadding, cellspacing, center, frame, rules |
-| **tr** | align, valign, dir |
-| **td** | abbr, axis, colspan, rowspan, width, align, valign, dir |
-| **th** | abbr, axis, colspan, rowspan, width, align, valign, dir, scope |
-| **ul** | type |
-| **video** | name, src, allowfullscreen, muted, poster, width, height, controls, playsinline |
+Use descriptive headings in a coherent hierarchy; let the Canvas page title
+provide the surrounding context. Use meaningful link text, image alternatives,
+table headers with `scope`, and captions/transcripts for instructional media.
+Avoid color-only instructions and wide layout tables.
 
-## Allowed protocols for some elements
+```html
+<h2>Practice reflection</h2>
+<p>Explain one decision and the evidence supporting it.</p>
+<details>
+  <summary>Before submitting</summary>
+  <p>Check that your explanation identifies the evidence.</p>
+</details>
+```
 
-**ftp, http, https, mailto**
-- a href
+## Saving and verification
 
-**http, https**
-- blockquote cite
-- img src
-- q cite
-- object data
-- embed src
-- iframe src
-- style any
-
-**skype**
-- href
-
-## Allowed style properties
-
-background, border, border-radius, clear, color, cursor, direction, display, flex, float, font, grid, height, left, line-height, list-style, margin, max-height, max-width, min-height, min-width, overflow, overflow-x, overflow-y, padding, position, right, text-align, table-layout, text-decoration, text-indent, top, vertical-align, visibility, white-space, width, z-index, zoom
-
----
+Use the appropriate content planner with only the intended fields. After an
+authorized apply, use the returned URL/ID. Read back saved HTML when sanitization
+could affect structure, links, or media. Preserve publication and notification
+settings unless the task calls for changing them. API success alone does not
+verify the visual result or student access.

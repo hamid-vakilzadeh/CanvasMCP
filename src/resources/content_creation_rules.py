@@ -11,7 +11,7 @@ def register_content_creation_resource(mcp: FastMCP) -> None:
     @mcp.resource(
         uri="resource://content-creation-reference",
         name="Canvas Content Creation Reference",
-        description="Comprehensive guidelines for creating HTML/CSS content that works within Canvas LMS security constraints and limitations",
+        description="Practical Canvas HTML/CSS guidance with a link to the current official allowlist",
         mime_type="text/markdown",
         tags={"canvas", "html", "css", "content-creation", "reference"},
         annotations={"readOnlyHint": True, "idempotentHint": True},
@@ -25,17 +25,8 @@ def register_content_creation_resource(mcp: FastMCP) -> None:
         """
         Canvas LMS Content Creation Reference Guide
 
-        Returns comprehensive guidelines for creating HTML/CSS content that works
-        within Canvas LMS security constraints and limitations.
-
-        This resource provides:
-        - Allowed HTML elements and CSS properties
-        - Security restrictions and why they exist
-        - Working layout patterns and code examples
-        - Icon strategies that actually work
-        - Common pitfalls and their solutions
-        - Mobile considerations
-        - Testing protocols
+        Returns focused authoring guidance, context-specific restrictions,
+        accessibility advice, and the official source for complete current rules.
         """
         try:
             # Get the path to the reference file using pathlib

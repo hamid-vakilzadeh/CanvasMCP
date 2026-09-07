@@ -26,20 +26,20 @@ class CanvasReferenceTools(ToolProvider):
 
     async def get_canvas_content_creation_rules(self) -> str:
         """
-        Get the complete Canvas HTML/CSS content creation reference guide.
+        Get the Canvas HTML/CSS content creation guidance and official allowlist link.
 
-        This returns the comprehensive Canvas HTML allowlist including:
-        - Allowed HTML tags and attributes
-        - Permitted CSS properties
-        - Security restrictions and protocols
-        - MathML support details
+        Covers context-specific restrictions, accessible markup, saved-content
+        verification, and where to check exact HTML/CSS and MathML support.
 
         Use this when you need to understand what HTML/CSS is allowed in Canvas
         or when creating content that needs to work within Canvas security constraints.
         """
         try:
             # Get the path to the reference file
-            reference_path = Path(__file__).parent / "content" / "canvas_content_creation_reference.md"
+            reference_path = (
+                Path(__file__).parent.parent
+                / "resources" / "content" / "canvas_content_creation_reference.md"
+            )
 
             if not reference_path.exists():
                 return f"❌ Canvas content creation reference file not found at: {reference_path}"
@@ -67,7 +67,7 @@ class CanvasReferenceTools(ToolProvider):
         """
         Search the Canvas content creation reference for specific terms.
 
-        This searches through the Canvas HTML allowlist and returns relevant sections
+        This searches the Canvas content guidance and returns relevant sections
         that match your search term. Useful for quickly finding information about
         specific HTML tags, CSS properties, or Canvas restrictions.
 
