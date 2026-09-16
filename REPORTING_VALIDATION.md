@@ -122,12 +122,41 @@ actual model tokens and currency cost are **unavailable**. No token-saving or
 reasoning-improvement percentage is claimed. Clients can supply measured usage
 per analysis batch; unreported calls remain explicitly outside that aggregate.
 
+## Live smoke test and large-document regression (2026-09-07)
+
+A read-only live test in the Codex browser verified course/roster loading,
+switching between two students, dashboard grades and completion values matching
+the report tool, missing-work filtering, optional rubric/feedback loading, and
+the learning-review handoff instructions. A repeated cached report required zero
+additional logical Canvas calls. No grades or messages were changed. No student
+identifiers, work, or exports were added to the repository.
+
+The live collection exposed a performance defect: persisting spreadsheet cells
+individually blocked status requests, and individual-record cleanup was also
+slow. The test review was cancelled and deleted without completing AI analysis.
+The fix groups document text and gaps into bounded batches with exact locations,
+yields between writes, and deletes a job's records in a single transaction.
+
+After the fix, **99 Python tests passed** in 4.972 seconds with local sockets
+enabled. New regressions verify all 10,001 synthetic cell values and 1,000 gap
+locations survive batching, status work runs during import, cancellation interrupts
+import, long text is preserved, repeated import is idempotent, and deletion keeps
+other reviews and discussion records.
+
+A separate single-run synthetic storage measurement grouped **50,000 cells into
+145 evidence records in 0.193 seconds**; deletion took **0.011 seconds**. Download
+and parsing were mocked, so these measurements cover batching and local storage
+only. They do not measure Canvas latency, file parsing, model tokens, billing, or
+end-to-end learning-review performance. The fix requires an MCP process restart
+before another live collection test; no successful complete live AI review is
+claimed.
+
 ## Remaining platform limits
 
 Codex Desktop's own rendering of a custom local MCP App has not been verified.
 The SDK host harness and localhost browser paths were exercised; unsupported
-hosts receive the browser fallback. No real institution was used to test Canvas
-permissions, caches, rate limits, historical-answer availability or file storage
-redirects. Those depend on the connected Canvas deployment and are reported as
+hosts receive the browser fallback. The limited live smoke test above does not
+fully validate Canvas permissions, rate limits, historical-answer availability or
+file storage redirects. Those depend on the connected Canvas deployment and are reported as
 coverage gaps or errors. This branch does not provide OCR, vision, transcription,
 New Quizzes answer review, group-discussion-root monitoring or hosted webhooks.

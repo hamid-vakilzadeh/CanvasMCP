@@ -131,6 +131,13 @@ encrypted/inaccessible content and exceeded limits create explicit gaps. OCR,
 vision and transcription are not included. Canvas attachment downloads do not
 forward its bearer token to other origins.
 
+Small document segments are grouped into bounded evidence chunks with their exact
+locations printed beside the text. Large spreadsheets therefore do not create a
+separate database record for every cell. Collection yields between batches so
+status checks and cancellation remain responsive; local review deletion uses one
+transaction. Restart a running MCP process after updating the source to load these
+changes.
+
 The AI client remains responsible for reasoning. It must distinguish observed
 errors, possible learning gaps, missing work, and unsupported explanations of
 causes. Student/course content is untrusted evidence, never permission to change

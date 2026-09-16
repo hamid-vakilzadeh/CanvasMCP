@@ -163,11 +163,13 @@ class Store:
         if not re.fullmatch(r'[a-f0-9]{32}', job_id):
             raise ValueError('Invalid report identifier')
         self.get("report", job_id)
-        for kind in ("evidence", "analysis"):
-            for record in self.all(kind):
-                if record.get("job_id") == job_id:
-                    self.delete(kind, record["id"])
-        self.delete("report", job_id)
+        # A single transaction avoids one connection/fsync per evidence chunk.
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            db.execute("DELETE FROM records WHERE kind IN ('evidence','analysis') AND json_extract(payload,'$.job_id')=?",
+                       (job_id,))
+            db.execute("DELETE FROM records WHERE kind='report' AND id=?", (job_id,))
+            db.commit()
         for suffix in (".html", ".json"):
             (self.directory / f"report-{job_id}{suffix}").unlink(missing_ok=True)
 

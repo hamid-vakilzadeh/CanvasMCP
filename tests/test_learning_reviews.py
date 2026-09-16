@@ -4,11 +4,12 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import AsyncMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from report_fixtures import SyntheticCanvas
 from reporting.render import render_review
-from reporting.reviews import Reviews
+from reporting.reviews import CHUNK_CHARACTERS, ReviewCancelled, Reviews, document_batches
 from reporting.runtime import Runtime
 from reporting.state import Store
 
@@ -125,6 +126,82 @@ class LearningReviewTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('"score": 0',text)
         self.assertIn('attempt-specific version',text)
         self.assertNotIn('Auto answer excluded',text)
+
+    async def test_large_document_import_batches_locations_and_keeps_controls_responsive(self):
+        segments = [{'location': f'sheet Synthetic, cell A{i}', 'text': str(i % 100)}
+                    for i in range(1, 10001)]
+        segments.append({'location': 'sheet Synthetic, cell B1', 'text': 'Formula: =SUM(A1:A10000)\nCached result: unavailable'})
+        gaps = [{'location': f'sheet Synthetic, cell B{i}', 'reason': 'formula_result_unavailable_not_calculated'}
+                for i in range(1, 1001)]
+        extracted = {'segments': segments, 'gaps': gaps}
+        job = self.reviews.create('42', '7')
+        ticks = []
+
+        async def observe():
+            while True:
+                ticks.append(len(self.reviews.evidence(job['id'])))
+                await asyncio.sleep(0)
+
+        monitor = asyncio.create_task(observe())
+        try:
+            with patch('reporting.reviews.download_attachment', new=AsyncMock(return_value=b'synthetic')), \
+                 patch('reporting.reviews.extract_isolated', new=AsyncMock(return_value=extracted)):
+                await self.reviews.attachment(SyntheticCanvas(), job['id'], {'id':'1','filename':'synthetic.xlsx'}, {})
+                first = self.reviews.evidence(job['id'])
+                await self.reviews.attachment(SyntheticCanvas(), job['id'], {'id':'1','filename':'synthetic.xlsx'}, {})
+        finally:
+            monitor.cancel()
+            await asyncio.gather(monitor, return_exceptions=True)
+        evidence = self.reviews.evidence(job['id'])
+        self.assertEqual(evidence, first)  # Resume/repeated attachment is idempotent.
+        self.assertLess(len(evidence), 50)
+        self.assertTrue(all(len(e['text']) <= CHUNK_CHARACTERS for e in evidence))
+        text = '\n\n'.join(e['text'] for e in evidence if e['kind'] == 'file')
+        for segment in segments:
+            self.assertIn(f"[{segment['location']}]\n{segment['text']}", text)
+        gap_text = '\n\n'.join(e['text'] for e in evidence if e['kind'] == 'gap')
+        for gap in gaps:
+            self.assertIn(f"[{gap['location']}]\n{gap['reason']}", gap_text)
+        self.assertTrue(any(0 < n < len(evidence) for n in ticks))
+
+    async def test_document_import_cancellation_runs_between_batches(self):
+        segments = [{'location': f'row {i}', 'text': 'Synthetic row ' + str(i)} for i in range(10000)]
+        job = self.reviews.create('42', '7')
+
+        async def cancel():
+            await asyncio.sleep(0)
+            self.store.update('report', job['id'], {'status': 'cancelled'})
+
+        task = asyncio.create_task(cancel())
+        with patch('reporting.reviews.download_attachment', new=AsyncMock(return_value=b'synthetic')), \
+             patch('reporting.reviews.extract_isolated', new=AsyncMock(return_value={'segments':segments,'gaps':[]})):
+            with self.assertRaises(ReviewCancelled):
+                await self.reviews.attachment(SyntheticCanvas(), job['id'], {'filename':'synthetic.csv'}, {})
+        await task
+        self.assertLess(len(self.reviews.evidence(job['id'])), len(list(document_batches(segments))))
+
+    def test_long_document_segments_preserve_all_text_and_source_locations(self):
+        original = 'Synthetic paragraph. ' * 2000
+        result = list(document_batches([{'location':'page 1','text':original}]))
+        self.assertEqual(''.join(s['text'] for s in result), original)
+        self.assertTrue(all(s['location'] == 'page 1' and len(s['text']) <= CHUNK_CHARACTERS for s in result))
+
+    def test_delete_review_keeps_other_jobs_and_discussion_records(self):
+        first = self.reviews.create('42', '7')
+        second = self.reviews.create('42', '8')
+        self.reviews.add(first['id'], 'file', 'Synthetic first work', {'location':'page 1'})
+        self.reviews.add(second['id'], 'file', 'Synthetic other work', {'location':'page 1'})
+        self.store.create('analysis', {'job_id': first['id'], 'summary':'Synthetic first analysis'})
+        other_analysis = self.store.create('analysis', {'job_id':second['id'], 'summary':'Synthetic other analysis'})
+        watch = self.store.create('watch', {'status':'paused'})
+        export = self.store.directory / f"report-{first['id']}.html"
+        export.write_text('Synthetic export')
+        self.store.delete_job(first['id'])
+        self.assertFalse(export.exists())
+        self.assertEqual([r['id'] for r in self.store.all('report')], [second['id']])
+        self.assertEqual([r['job_id'] for r in self.store.all('evidence')], [second['id']])
+        self.assertEqual(self.store.all('analysis'), [other_analysis])
+        self.assertEqual(self.store.all('watch'), [watch])
 
 
 if __name__ == '__main__': unittest.main()
