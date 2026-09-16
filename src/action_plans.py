@@ -24,7 +24,7 @@ class Mutation:
     method: str
     endpoint: str
     data: dict[str, Any] | None = None
-    json_data: dict[str, Any] | None = None
+    json_data: dict[str, Any] | list[dict[str, Any]] | None = None
     label: str | None = None
 
 

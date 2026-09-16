@@ -135,7 +135,7 @@ class AsyncCanvasClient:
         *,
         params: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
-        json_data: dict[str, Any] | None = None,
+        json_data: dict[str, Any] | list[dict[str, Any]] | None = None,
     ) -> Any:
         method = method.upper()
         url = self._url(endpoint)
@@ -174,7 +174,7 @@ class AsyncCanvasClient:
         endpoint: str,
         *,
         data: dict[str, Any] | None = None,
-        json_data: dict[str, Any] | None = None,
+        json_data: dict[str, Any] | list[dict[str, Any]] | None = None,
     ) -> Any:
         return await self.request("POST", endpoint, data=data, json_data=json_data)
 
@@ -183,7 +183,7 @@ class AsyncCanvasClient:
         endpoint: str,
         *,
         data: dict[str, Any] | None = None,
-        json_data: dict[str, Any] | None = None,
+        json_data: dict[str, Any] | list[dict[str, Any]] | None = None,
     ) -> Any:
         return await self.request("PUT", endpoint, data=data, json_data=json_data)
 
@@ -192,7 +192,7 @@ class AsyncCanvasClient:
         endpoint: str,
         *,
         data: dict[str, Any] | None = None,
-        json_data: dict[str, Any] | None = None,
+        json_data: dict[str, Any] | list[dict[str, Any]] | None = None,
     ) -> Any:
         return await self.request("PATCH", endpoint, data=data, json_data=json_data)
 

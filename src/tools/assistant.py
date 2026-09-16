@@ -275,7 +275,15 @@ class AssistantTools:
                 "grades and comments", "discussion posts and replies", "private Inbox outreach",
                 "interactive student dashboard", "comprehensive evidence-based faculty learning review",
                 "local discussion watcher and saved faculty drafts",
+                "student quiz extra time and per-quiz multipliers; New Quizzes course accommodations",
             ],
+            "quiz_accommodations": {
+                "planner": "canvas_plan_quiz_accommodations",
+                "search": "quiz extra time 1.5x accommodations",
+                "classic": "Set extra minutes or a multiplier across selected or all current timed quizzes; re-run for newly created quizzes.",
+                "new": "Per-quiz extra minutes/multipliers or course-level fixed minutes; no documented course-level multiplier parameter.",
+                "limits": "Availability end dates can truncate attempts; Classic running-attempt end times require separate moderation.",
+            },
             "reporting": {"templates": "canvas://reports/templates", "search": "student report, learning review, discussion watch",
                           "model": "Dashboard selection does not invoke AI; the connected AI client analyzes review evidence.",
                           "durability": "Report jobs and discussion queues persist in private account-isolated local state."},
@@ -1742,11 +1750,34 @@ class AssistantTools:
                         raw_id = value.get("id")
                         if raw_id is not None:
                             created_quiz_id = _sid(raw_id)
-                    results.append({"label": label, "status": "applied", "result": value})
+                    if plan.action == 'quiz_accommodations':
+                        from tools.quiz_accommodations import accommodation_result
+                        results.append({'label': label, **accommodation_result(mutation, value)})
+                    else:
+                        results.append({"label": label, "status": "applied", "result": value})
                 except Exception as exc:
-                    results.append({"label": label, "status": "failed", "error": str(exc)})
+                    if plan.action == 'quiz_accommodations':
+                        # A lost response or server error is not proof the write failed.
+                        definite_failure = isinstance(exc, CanvasAPIError) and 400 <= exc.status < 500
+                        state = 'failed' if definite_failure else 'uncertain'
+                        changes = mutation.json_data['quiz_extensions'] if isinstance(mutation.json_data, dict) else mutation.json_data
+                        results.append({'label': label, 'status': state, 'error': str(exc),
+                            'student_results': [{'student_id': str(c['user_id']), 'status': state} for c in changes]})
+                    else:
+                        results.append({"label": label, "status": "failed", "error": str(exc)})
                 await progress.increment()
         successes = sum(item["status"] == "applied" for item in results)
+        if plan.action == 'quiz_accommodations':
+            students = [s for result in results for s in result['student_results']]
+            counts = {state: sum(s['status'] == state for s in students) for state in ('applied', 'failed', 'uncertain')}
+            status = ('completed' if counts['applied'] == len(students) else 'partial' if counts['applied']
+                      else 'uncertain' if counts['uncertain'] else 'failed')
+            return {'action': plan.action, 'status': status, 'applied': successes,
+                    'failed': sum(r['status'] == 'failed' for r in results),
+                    'partial': sum(r['status'] == 'partial' for r in results),
+                    'uncertain': sum(r['status'] == 'uncertain' for r in results),
+                    'student_changes': counts, 'results': results,
+                    'next_step': 'Inspect per-student results. Verify uncertain writes in Canvas before creating a retry plan; do not replay successful targets.'}
         return {
             "action": plan.action,
             "status": "completed" if successes == len(results) else "partial" if successes else "failed",

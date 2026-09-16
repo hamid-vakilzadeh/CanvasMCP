@@ -95,6 +95,67 @@ See [setup, workflows, privacy and limitations](REPORTING.md) and the canonical
 
 ### Plan before applying writes
 
+#### Student quiz time accommodations
+
+Search for **quiz extra time 1.5x accommodations**, then call the discoverable
+`canvas_plan_quiz_accommodations` through `canvas_call_tool`. Resolve the student's
+Canvas ID from the course roster first. For example, this synthetic request plans
+time-and-a-half for every current timed Classic Quiz, including unpublished ones:
+
+```json
+{
+  "name": "canvas_plan_quiz_accommodations",
+  "arguments": {
+    "course_id": "42",
+    "student_ids": ["7"],
+    "engine": "classic",
+    "scope": "all_timed",
+    "time_multiplier": 1.5
+  }
+}
+```
+
+Use `scope="selected"` with `quiz_ids` for specific quizzes. Provide exactly one
+of `time_multiplier` or `extra_time_minutes` (0–10080). A multiplier is converted
+to extra whole minutes per quiz, rounded up: a 45-minute quiz at 1.5× receives
+23 extra minutes, for 68 minutes total. The preview shows existing Classic Quiz
+allowances and the resulting limits. Extra minutes replace the prior allowance;
+zero removes it. Attempts, grades, publication state and availability dates are
+not changed. Classic attempts already underway need separate end-time moderation.
+
+For New Quizzes use `engine="new"` and **assignment IDs**, not Classic Quiz IDs.
+Selected/all-timed scope supports per-quiz minutes or a calculated multiplier;
+`scope="course"` supports fixed `extra_time_minutes` only. The optional
+`apply_to_in_progress_quiz_sessions=true` is available only for New Quizzes course
+scope. The documented API has no course-wide multiplier field and exposes no
+current accommodation read in this tool; existing New Quizzes settings therefore
+appear as unavailable, not zero.
+
+Review the preview, then use `canvas_apply_change` with its token and
+`confirm=true`. Classic quiz/settings changes and changed all-timed inventories
+invalidate stale plans. New Quizzes HTTP 200 responses can still contain individual
+failures; the apply result reports applied, failed and uncertain student changes.
+Inspect uncertain results in Canvas before preparing another plan.
+
+`all_timed` covers the quizzes found when planning; quizzes created later need a
+new run. An availability/Until date can still cut off extra time, and preview dates
+are defaults rather than resolved student/group/section overrides. Course scope
+is the separate New Quizzes accommodation endpoint, not an ongoing Classic Quiz
+automation.
+
+Verified 2026-09-16 against the official
+[Classic Quiz Extensions API](https://developerdocs.instructure.com/services/canvas/resources/quiz_extensions),
+[New Quizzes Accommodations API](https://developerdocs.instructure.com/services/canvas/resources/new_quizzes_accommodations),
+and [Canvas's Classic extension implementation](https://github.com/instructure/canvas-lms/blob/master/app/models/quizzes/quiz_extension.rb).
+The New Quizzes resource's route definitions specify `/api/quiz/v1`; its curl
+examples currently omit `/quiz`. The implementation follows the route definitions
+and sends the documented top-level JSON array. Synthetic tests exercise both
+engines, actual HTTP JSON encoding, pagination, stale plans, and partial/uncertain
+results. No live student write was used to validate this feature. Restart the local
+MCP connection after updating to load the new tool.
+
+#### General write behavior
+
 Every curated mutation uses two steps. A `canvas_plan_*` tool returns a preview
 and a random plan token without changing Canvas. After reviewing the preview,
 call `canvas_apply_change` with that token and `confirm=true`.

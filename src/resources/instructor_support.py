@@ -92,14 +92,16 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
         "search_examples": ["list module items", "module prerequisites", "module completion"],
     },
     "quizzes": {
-        "summary": "Create quizzes and review or grade Classic Quiz essay and file-upload questions.",
+        "summary": "Create quizzes, plan student extra-time accommodations, and review or grade Classic Quiz essay and file-upload questions.",
         "visible_tools": [
             "canvas_plan_quiz_change",
             "canvas_get_quiz_submission_review",
             "canvas_plan_quiz_submission_grade",
             "canvas_apply_change",
         ],
-        "search_examples": ["quiz questions", "question groups", "quiz reports", "quiz submissions"],
+        "search_examples": ["quiz extra time 1.5x accommodations", "quiz questions", "question groups", "quiz reports", "quiz submissions"],
+        "discoverable_tools": ["canvas_plan_quiz_accommodations"],
+        "accommodation_notes": "Classic quiz IDs differ from New Quiz assignment IDs. all_timed covers existing quizzes only. Availability dates can cut off extra time. New Quizzes course scope supports fixed minutes, not a multiplier.",
     },
     "files": {
         "summary": "Inspect course files and prepare secure local-file uploads.",
