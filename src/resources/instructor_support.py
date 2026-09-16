@@ -40,7 +40,9 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
             "canvas_plan_quiz_submission_grade",
             "canvas_apply_change",
         ],
-        "write_workflow": "Plan the grade or comment, review the preview, then apply it with confirm=true.",
+        "write_workflow": "Plan the grade or comment, review the preview, then apply it with confirm=true. Check grade readback: saved does not mean student-visible. Plan release of hidden grades separately and verify job completion plus per-student visibility.",
+        "discoverable_tools": ["canvas_get_grade_posting_status", "canvas_plan_grade_release"],
+        "search_examples": ["post release hidden grades student visibility"],
     },
     "inbox": {
         "summary": "Read Canvas Inbox conversations and prepare private outreach.",

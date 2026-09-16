@@ -23,7 +23,7 @@ from fastmcp.utilities.tasks import TaskConfig
 from mcp.types import TextContent, ToolAnnotations
 from pydantic import BaseModel, Field
 
-from action_plans import Mutation, Precondition, fingerprint, plan_store
+from action_plans import FingerprintKind, Mutation, Precondition, fingerprint, plan_store
 from canvas_client import AsyncCanvasClient, CanvasAPIError
 
 
@@ -284,6 +284,12 @@ class AssistantTools:
                 "new": "Per-quiz extra minutes/multipliers or course-level fixed minutes; no documented course-level multiplier parameter.",
                 "limits": "Availability end dates can truncate attempts; Classic running-attempt end times require separate moderation.",
             },
+            "grade_posting": {
+                "status": "canvas_get_grade_posting_status",
+                "release": "canvas_plan_grade_release",
+                "search": "post release hidden grades student visibility",
+                "workflow": "Saving posted_grade does not guarantee release. Check posted_at/assignment_visible, plan release for explicit students, apply, then verify background progress and visibility.",
+            },
             "reporting": {"templates": "canvas://reports/templates", "search": "student report, learning review, discussion watch",
                           "model": "Dashboard selection does not invoke AI; the connected AI client analyzes review evidence.",
                           "durability": "Report jobs and discussion queues persist in private account-isolated local state."},
@@ -520,7 +526,9 @@ class AssistantTools:
         )
         endpoint = f"/api/v1/courses/{_sid(course_id)}/assignments/{_sid(assignment_id)}/{target}"
         async with AsyncCanvasClient.from_environment() as client:
-            return await client.get(endpoint, {"include[]": ["submission_comments", "rubric_assessment", "submission_history", "visibility"]})
+            submission = await client.get(endpoint, {"include[]": ["submission_comments", "rubric_assessment", "submission_history", "visibility"]})
+        from tools.grade_posting import grade_visibility
+        return {**submission, "grade_posting": grade_visibility(submission)}
 
     @staticmethod
     def _quiz_submissions(payload: Any) -> list[dict[str, Any]]:
@@ -750,12 +758,14 @@ class AssistantTools:
             return await client.get(endpoint, params)
 
     async def _snapshot(
-        self, endpoint: str, params: dict[str, Any] | None = None
+        self, endpoint: str, params: dict[str, Any] | None = None,
+        *, fingerprint_kind: FingerprintKind = "exact",
     ) -> tuple[dict[str, Any], Precondition]:
         async with AsyncCanvasClient.from_environment() as client:
             current = await client.get(endpoint, params)
         return current, Precondition(
-            endpoint=endpoint, fingerprint=fingerprint(current), params=params
+            endpoint=endpoint, fingerprint=fingerprint(current, kind=fingerprint_kind),
+            params=params, fingerprint_kind=fingerprint_kind,
         )
 
     async def _simple_plan(
@@ -1447,7 +1457,7 @@ class AssistantTools:
             Field(description="Rubric criterion IDs mapped to points, rating_id, or comments"),
         ] = None,
     ) -> dict[str, Any]:
-        """Plan one student's grade, excuse status, or student-visible submission comment."""
+        """Plan one student's grade, excuse status, or submission comment. Saved grades may require a separate grade-release plan to become visible."""
         if (student_id is None) == (anonymous_id is None):
             raise ValueError("Provide exactly one of student_id or anonymous_id")
         identifier = _sid(anonymous_id) if anonymous_id is not None else _sid(student_id)
@@ -1460,7 +1470,9 @@ class AssistantTools:
         snapshot_params = {
             "include[]": ["submission_comments", "rubric_assessment", "submission_history", "visibility"]
         }
-        before, condition = await self._snapshot(endpoint, snapshot_params)
+        before, condition = await self._snapshot(
+            endpoint, snapshot_params, fingerprint_kind="submission"
+        )
         data: dict[str, Any] = {}
         if posted_grade is not None:
             data["submission[posted_grade]"] = posted_grade
@@ -1484,10 +1496,16 @@ class AssistantTools:
         warnings: list[str] = []
         if comment is not None:
             warnings.append(
-                "Applying this plan posts the submission comment immediately and Canvas may notify the student."
+                "Applying stores the submission comment immediately. Hidden grades can also hide feedback; Canvas may notify the student when released."
             )
         if group_comment:
             warnings.append("This comment is marked as a group comment and may notify every group member.")
+        from tools.grade_posting import grade_visibility
+        posting = grade_visibility(before)
+        if posted_grade is not None or excuse is not None or rubric_assessment:
+            warnings.append(
+                "Saving a grade does not guarantee student visibility. Apply reads back posted_at and assignment_visible; use canvas_plan_grade_release for hidden grades. Assignment.muted alone is not authoritative."
+            )
         previous_comments = before.get("submission_comments") or []
         return await plan_store.create(
             action="grade_change",
@@ -1496,7 +1514,8 @@ class AssistantTools:
                 f"{'anonymous submission' if anonymous_id is not None else 'student'} {identifier}"
             ),
             preview={
-                "before": _compact([before], ("score", "grade", "excused", "workflow_state"))[0],
+                "before": _compact([before], ("score", "grade", "excused", "workflow_state", "posted_at", "assignment_visible"))[0],
+                "grade_posting": posting,
                 "recent_comments": [
                     {
                         "id": item.get("id"),
@@ -1639,7 +1658,8 @@ class AssistantTools:
             Precondition(
                 endpoint=state["submission_endpoint"],
                 params=state["submission_params"],
-                fingerprint=fingerprint(state["submission_payload"]),
+                fingerprint=fingerprint(state["submission_payload"], kind="submission"),
+                fingerprint_kind="submission",
             ),
             Precondition(
                 endpoint=state["answer_endpoint"],
@@ -1715,9 +1735,15 @@ class AssistantTools:
         async with AsyncCanvasClient.from_environment() as client:
             for condition in plan.preconditions:
                 current = await client.get(condition.endpoint, condition.params)
-                if fingerprint(current) != condition.fingerprint:
+                if fingerprint(current, kind=condition.fingerprint_kind) != condition.fingerprint:
                     raise ValueError("Plan is stale because the Canvas record changed; create a new plan")
             await progress.set_total(max(1, len(plan.mutations)))
+            if plan.action == "grade_release":
+                from tools.grade_posting import apply_grade_release
+                await progress.set_message("Requesting Canvas grade release")
+                result = await apply_grade_release(client, plan)
+                await progress.increment()
+                return result
             created_quiz_id: str | None = None
             for index, mutation in enumerate(plan.mutations):
                 label = mutation.label or f"mutation:{index + 1}"
@@ -1754,7 +1780,14 @@ class AssistantTools:
                         from tools.quiz_accommodations import accommodation_result
                         results.append({'label': label, **accommodation_result(mutation, value)})
                     else:
-                        results.append({"label": label, "status": "applied", "result": value})
+                        item = {"label": label, "status": "applied", "result": value}
+                        if plan.action == "grade_change" and any(
+                            key in {"submission[posted_grade]", "submission[excuse]"} or key.startswith("rubric_assessment[")
+                            for key in (mutation.data or {})
+                        ):
+                            from tools.grade_posting import grade_readback
+                            item["grade_readback"] = await grade_readback(client, endpoint)
+                        results.append(item)
                 except Exception as exc:
                     if plan.action == 'quiz_accommodations':
                         # A lost response or server error is not proof the write failed.
@@ -1784,4 +1817,6 @@ class AssistantTools:
             "applied": successes,
             "failed": len(results) - successes,
             "results": results,
+            **({"next_step": "Completed means the grade/comment write was accepted. Inspect grade_readback for student visibility; plan a separate grade release for hidden grades. Do not replay a write because readback is unavailable."}
+               if plan.action == "grade_change" else {}),
         }

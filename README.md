@@ -95,6 +95,58 @@ See [setup, workflows, privacy and limitations](REPORTING.md) and the canonical
 
 ### Plan before applying writes
 
+#### Saving grades and releasing them to students
+
+`canvas_plan_grade_change` compares the submission again before applying a grade.
+Its comparison excludes only the calculated `seconds_late` counter, recursively
+including `submission_history`; elapsed time alone no longer invalidates a plan.
+Scores, attempts, submission content, comments, rubric assessments, late-policy
+deductions and posting state still invalidate a plan when they change. Other
+Canvas record comparisons remain exact. Classic Quiz grading uses the same
+counter normalization for its included assignment submission.
+
+Canvas's `posted_grade` parameter saves a grade; it does **not** promise that a
+student can see it. Grade application now reads the submission back and returns
+`grade_readback`, separating the accepted write from its score and visibility.
+`canvas_get_submission_review` also includes `grade_posting`. These use the
+submission's `posted_at` and `assignment_visible` fields, not the deprecated
+assignment `muted` flag. Missing evidence is reported as unknown. A failed
+readback does not trigger a second write or turn an accepted write into a failure.
+Comment-only writes store feedback immediately, but hidden grades can also hide
+that feedback until release.
+
+For hidden grades, discover **post release hidden grades student visibility**:
+
+1. Use `canvas_get_grade_posting_status` with `course_id`, `assignment_id` and
+   explicit `student_ids` to inspect saved grades and visibility.
+2. Use `canvas_plan_grade_release` with those same identifiers. For example,
+   `{"course_id":"7","assignment_id":"9","student_ids":["11","12"]}`
+   targets two synthetic students. Already-visible grades are skipped. Save grades
+   first; ungraded, unavailable, or indeterminate submissions cannot be released
+   by this planner. Anonymous assignments must be released through Canvas Gradebook.
+3. Review the preview and apply its token with `canvas_apply_change`. This calls
+   Canvas's GraphQL `postAssignmentGrades` with `onlyStudentIds` and
+   `gradedOnly=true`. It does not change the posting policy or release other
+   students' grades. Released feedback may generate student notifications.
+4. An `accepted` result means Canvas queued the release. Call
+   `canvas_get_grade_posting_status` again with the returned `progress_id` and
+   target identifiers. Report completion only when progress completes **and**
+   the per-student readback confirms visibility. Inspect failures or uncertain
+   results before retrying; the plan token is single use.
+
+This checks Canvas API visibility, not whether students opened their grades.
+Permissions and institutional Canvas versions can restrict release; GraphQL
+errors, including those returned with HTTP 200, are reported explicitly.
+Moderated grading must be finalized in Canvas before release. No live student
+grade or release was used in verification; regression examples are synthetic.
+
+Verified 2026-09-16 against the official
+[Submissions API](https://developerdocs.instructure.com/services/canvas/resources/submissions),
+[Assignments API](https://developerdocs.instructure.com/services/canvas/resources/assignments),
+[GraphQL API](https://developerdocs.instructure.com/services/canvas/basics/file.graphql),
+[grade-release mutation](https://github.com/instructure/canvas-lms/blob/master/app/graphql/mutations/post_assignment_grades.rb),
+and [Progress API](https://developerdocs.instructure.com/services/canvas/resources/progress).
+
 #### Student quiz time accommodations
 
 Search for **quiz extra time 1.5x accommodations**, then call the discoverable
@@ -168,7 +220,7 @@ separate conversation for each recipient so students are not exposed to one
 another.
 
 Grade plans support student IDs or Canvas anonymous-grading identifiers, rubric
-criterion assessments, posted grades, excuses, and student-visible comments.
+criterion assessments, saved grades, excuses, and submission comments.
 Comments are posted immediately when a plan is applied and Canvas may notify the
 student, subject to Canvas posting and visibility settings. An unapplied plan is
 a temporary local preview, not a Canvas draft comment. Canvas's

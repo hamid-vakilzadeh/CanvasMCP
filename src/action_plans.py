@@ -8,13 +8,34 @@ import json
 import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Literal
 
 
 PLAN_TTL = timedelta(minutes=10)
 
 
-def fingerprint(value: Any) -> str:
+FingerprintKind = Literal["exact", "submission"]
+
+
+def _submission_state(value: Any) -> Any:
+    """Exclude the clock-derived late counter, including submission history.
+
+    Preserve every other field, including late-policy deductions, attempts,
+    answers, grades, comments and rubric assessments. Do not mutate API results.
+    """
+    if isinstance(value, dict):
+        return {key: _submission_state(item) for key, item in value.items()
+                if key != "seconds_late"}
+    if isinstance(value, list):
+        return [_submission_state(item) for item in value]
+    return value
+
+
+def fingerprint(value: Any, *, kind: FingerprintKind = "exact") -> str:
+    if kind == "submission":
+        value = _submission_state(value)
+    elif kind != "exact":
+        raise ValueError("Unknown plan comparison kind")
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(encoded.encode()).hexdigest()
 
@@ -33,6 +54,7 @@ class Precondition:
     endpoint: str
     fingerprint: str
     params: dict[str, Any] | None = None
+    fingerprint_kind: FingerprintKind = "exact"
 
 
 @dataclass(slots=True)
