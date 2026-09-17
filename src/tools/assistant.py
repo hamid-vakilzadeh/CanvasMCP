@@ -290,6 +290,12 @@ class AssistantTools:
                 "search": "post release hidden grades student visibility",
                 "workflow": "Saving posted_grade does not guarantee release. Check posted_at/assignment_visible, plan release for explicit students, apply, then verify background progress and visibility.",
             },
+            "student_groups": {
+                "search": "student project groups group sets memberships",
+                "read": ["canvas_list_group_sets", "canvas_list_groups", "canvas_get_group"],
+                "plan": ["canvas_plan_group_set_change", "canvas_plan_group_change", "canvas_plan_group_membership_change"],
+                "workflow": "Create a group set, then groups using its returned ID, then memberships. Group sets are group categories, not assignment groups. Review any moves out of other groups in the same set.",
+            },
             "reporting": {"templates": "canvas://reports/templates", "search": "student report, learning review, discussion watch",
                           "model": "Dashboard selection does not invoke AI; the connected AI client analyzes review evidence.",
                           "durability": "Report jobs and discussion queues persist in private account-isolated local state."},
@@ -1734,10 +1740,17 @@ class AssistantTools:
         results: list[dict[str, Any]] = []
         async with AsyncCanvasClient.from_environment() as client:
             for condition in plan.preconditions:
-                current = await client.get(condition.endpoint, condition.params)
+                if condition.paginated:
+                    from tools.quiz_accommodations import pages
+                    current = await pages(client, condition.endpoint, params=condition.params)
+                else:
+                    current = await client.get(condition.endpoint, condition.params)
                 if fingerprint(current, kind=condition.fingerprint_kind) != condition.fingerprint:
                     raise ValueError("Plan is stale because the Canvas record changed; create a new plan")
             await progress.set_total(max(1, len(plan.mutations)))
+            if plan.action in {"group_set_change", "group_change", "group_membership_change"}:
+                from tools.groups import apply_group_plan
+                return await apply_group_plan(client, plan, progress)
             if plan.action == "grade_release":
                 from tools.grade_posting import apply_grade_release
                 await progress.set_message("Requesting Canvas grade release")

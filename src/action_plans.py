@@ -55,6 +55,7 @@ class Precondition:
     fingerprint: str
     params: dict[str, Any] | None = None
     fingerprint_kind: FingerprintKind = "exact"
+    paginated: bool = False
 
 
 @dataclass(slots=True)

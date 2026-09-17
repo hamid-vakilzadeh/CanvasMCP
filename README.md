@@ -95,6 +95,72 @@ See [setup, workflows, privacy and limitations](REPORTING.md) and the canonical
 
 ### Plan before applying writes
 
+#### Student groups and group sets
+
+Discover **student project groups** with `canvas_search_tools`, then use the
+returned tools through `canvas_call_tool`. Canvas calls a **group set** a
+`group_category`; the MCP parameter `group_set_id` is that category ID. These
+course project groups are separate from assignment groups used for grade weights.
+
+| Tool | Purpose |
+| --- | --- |
+| `canvas_list_group_sets` | List group sets and their signup/leader settings. |
+| `canvas_list_groups` | List groups in a course, optionally within `group_set_id`. |
+| `canvas_get_group` | View group details, member names, or membership records and states. |
+| `canvas_plan_group_set_change` | Create/rename a group set; edit signup, leader selection, and group size settings. |
+| `canvas_plan_group_change` | Create a group within a set or edit its name and plain-text description. |
+| `canvas_plan_group_membership_change` | Add, move, or remove explicitly selected students. |
+
+All changes use `canvas_apply_change` after preview. Create a set first, reuse its
+returned ID to create groups, then reuse each group's ID to plan memberships.
+For example, these are separate synthetic planner argument objects:
+
+```json
+{"course_id":"42","operation":"create","changes":{"name":"Project teams"}}
+```
+
+```json
+{"course_id":"42","operation":"create","group_set_id":"20","changes":{"name":"Team A","description":"Project collaboration"}}
+```
+
+```json
+{"course_id":"42","group_id":"30","operation":"add","student_ids":["7","8"]}
+```
+
+Use `operation="update"` with `group_set_id` for a set, or `group_id` for a
+group. Group-set changes accept `self_signup` (`"enabled"`, `"restricted"`, or
+`null`), `auto_leader` (`"first"`, `"random"`, or `null`), and `group_limit`
+(positive integer or `null`). Native `null` clears a setting. A group size limit
+requires self-signup. When disabling signup, clear an existing group limit too.
+Renaming a set preserves its existing settings, including a returned signup
+deadline: Canvas's update implementation can reset omitted settings, so the
+planner resends those values. Changing signup away from `enabled` clears its
+deadline, shown in the preview's `settings_sent`.
+
+Read lists return `next_cursor`; follow it for a complete list. `canvas_get_group`
+defaults to `view="members"` (paginated user names); `view="memberships"` returns
+membership IDs and states, and `view="details"` avoids roster retrieval.
+The membership planner reads all pages before planning and never replaces the
+entire roster via `members[]`. It skips students already in the requested state.
+Moving between groups in the same set requires `allow_moves=true`; the preview
+names the groups each student will leave. Membership changes can affect access
+to group work and group-assignment grading, and Canvas may notify students.
+The apply result distinguishes successful, failed, and uncertain writes; an
+invitation/request is not reported as confirmed membership. Inspect uncertain
+results before retrying, especially after creating a group or group set.
+
+This workflow covers collaborative course project groups. Account/community
+groups, differentiation tags, deleting groups/sets, and automatic/random student
+allocation are outside this tool set. Group names, memberships, and configuration
+changes invalidate captured plans before any write. Tests use synthetic records;
+no live memberships were changed during development.
+
+Verified 2026-09-17 against the official
+[Groups and memberships API](https://developerdocs.instructure.com/services/canvas/resources/groups),
+[Group Categories API](https://developerdocs.instructure.com/services/canvas/resources/group_categories),
+[membership model](https://github.com/instructure/canvas-lms/blob/master/app/models/group_membership.rb),
+and [group-set update policy](https://github.com/instructure/canvas-lms/blob/master/app/models/group_categories/params_policy.rb).
+
 #### Saving grades and releasing them to students
 
 `canvas_plan_grade_change` compares the submission again before applying a grade.

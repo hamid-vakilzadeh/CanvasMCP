@@ -44,6 +44,14 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
         "discoverable_tools": ["canvas_get_grade_posting_status", "canvas_plan_grade_release"],
         "search_examples": ["post release hidden grades student visibility"],
     },
+    "student_groups": {
+        "summary": "View, create and edit course project groups and group sets, and add, move or remove students.",
+        "visible_tools": ["canvas_apply_change"],
+        "discoverable_tools": ["canvas_list_group_sets", "canvas_list_groups", "canvas_get_group",
+                               "canvas_plan_group_set_change", "canvas_plan_group_change", "canvas_plan_group_membership_change"],
+        "search_examples": ["student project groups", "create edit group sets", "group members memberships"],
+        "write_workflow": "Group sets are Canvas group categories. Create a set, reuse its ID to create groups, then plan memberships. Existing students can move out of another group in the same set; review the preview before applying.",
+    },
     "inbox": {
         "summary": "Read Canvas Inbox conversations and prepare private outreach.",
         "visible_tools": [

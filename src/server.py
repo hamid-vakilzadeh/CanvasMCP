@@ -21,6 +21,7 @@ from tools.contentMigration import ContentMigrationTools
 from tools.assistant import AssistantTools
 from tools.quiz_accommodations import QuizAccommodationTools
 from tools.grade_posting import GradePostingTools
+from tools.groups import GroupTools
 from resources.content_creation_rules import register_content_creation_resource
 from instructor_experience import register_instructor_experience
 from reporting.tools import ReportingTools
@@ -44,6 +45,8 @@ accommodations to find canvas_plan_quiz_accommodations. Use the correct quiz eng
 For hidden grades, search for grade posting to find canvas_get_grade_posting_status
 and canvas_plan_grade_release. Saving a grade or accepting a release job does not
 prove student visibility; verify the per-student posting status.
+For course student groups and group sets, search for student project groups.
+Group sets are Canvas group categories; assignment groups are gradebook categories.
 
 For student dashboards and comprehensive AI learning reviews, search for
 student report or learning review. Canonical guidance is at canvas://reports/templates.
@@ -128,6 +131,7 @@ def create_server() -> FastMCP:
     AssistantTools(mcp)
     QuizAccommodationTools(mcp)
     GradePostingTools(mcp)
+    GroupTools(mcp)
     ReportingTools(mcp)
     register_content_creation_resource(mcp)
     register_instructor_experience(mcp)
