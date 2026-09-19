@@ -22,6 +22,7 @@ from tools.assistant import AssistantTools
 from tools.quiz_accommodations import QuizAccommodationTools
 from tools.grade_posting import GradePostingTools
 from tools.groups import GroupTools
+from tools.attachments import AttachmentTools
 from resources.content_creation_rules import register_content_creation_resource
 from instructor_experience import register_instructor_experience
 from reporting.tools import ReportingTools
@@ -47,6 +48,9 @@ and canvas_plan_grade_release. Saving a grade or accepting a release job does no
 prove student visibility; verify the per-student posting status.
 For course student groups and group sets, search for student project groups.
 Group sets are Canvas group categories; assignment groups are gradebook categories.
+For assignment or submission attachment content, search for read assignment
+attachments. Use canvas_read_assignment_attachment with a returned file ID;
+follow text pagination and report extraction gaps before assessing the work.
 
 For student dashboards and comprehensive AI learning reviews, search for
 student report or learning review. Canonical guidance is at canvas://reports/templates.
@@ -132,6 +136,7 @@ def create_server() -> FastMCP:
     QuizAccommodationTools(mcp)
     GradePostingTools(mcp)
     GroupTools(mcp)
+    AttachmentTools(mcp)
     ReportingTools(mcp)
     register_content_creation_resource(mcp)
     register_instructor_experience(mcp)

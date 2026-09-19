@@ -296,6 +296,12 @@ class AssistantTools:
                 "plan": ["canvas_plan_group_set_change", "canvas_plan_group_change", "canvas_plan_group_membership_change"],
                 "workflow": "Create a group set, then groups using its returned ID, then memberships. Group sets are group categories, not assignment groups. Review any moves out of other groups in the same set.",
             },
+            "assignment_attachments": {
+                "search": "read assignment attachment content PDF Word Excel",
+                "read": ["canvas_list_assignment_attachments", "canvas_read_assignment_attachment"],
+                "workflow": "Reuse file IDs from submission review or list attachments. Read instruction files with source=assignment; submitted files with source=submission and student_id or anonymous_id. Follow next_cursor with identical identifiers and report coverage gaps.",
+                "limits": "25 MiB/file; no OCR, image interpretation, macros or formula calculation. Text snapshots are temporary and do not require a report job.",
+            },
             "reporting": {"templates": "canvas://reports/templates", "search": "student report, learning review, discussion watch",
                           "model": "Dashboard selection does not invoke AI; the connected AI client analyzes review evidence.",
                           "durability": "Report jobs and discussion queues persist in private account-isolated local state."},
@@ -522,7 +528,7 @@ class AssistantTools:
         student_id: Annotated[str | int | None, Field(description="Canvas student ID")]=None,
         anonymous_id: Annotated[str | None, Field(description="Anonymous grading identifier")]=None,
     ) -> dict[str, Any]:
-        """Get a submission with comments, rubric assessment, history, and visibility."""
+        """Get a submission with comments, rubric assessment, history, and visibility. Read uploaded file content with the discoverable canvas_read_assignment_attachment tool using attachment IDs."""
         if (student_id is None) == (anonymous_id is None):
             raise ValueError("Provide exactly one of student_id or anonymous_id")
         target = (
@@ -534,7 +540,9 @@ class AssistantTools:
         async with AsyncCanvasClient.from_environment() as client:
             submission = await client.get(endpoint, {"include[]": ["submission_comments", "rubric_assessment", "submission_history", "visibility"]})
         from tools.grade_posting import grade_visibility
-        return {**submission, "grade_posting": grade_visibility(submission)}
+        return {**submission, "grade_posting": grade_visibility(submission),
+                "attachment_content": {"tool": "canvas_read_assignment_attachment",
+                    "instructions": "Use an attachment id as file_id with the same course, assignment and student_id or anonymous_id. Supply attempt only for a specific historical submission; follow next_cursor and report extraction gaps."}}
 
     @staticmethod
     def _quiz_submissions(payload: Any) -> list[dict[str, Any]]:

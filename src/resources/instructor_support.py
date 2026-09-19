@@ -71,7 +71,8 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
     "assignments": {
         "summary": "Create and maintain assignments, dates, and overrides.",
         "visible_tools": ["canvas_plan_assignment_change", "canvas_apply_change"],
-        "search_examples": ["list assignments", "assignment overrides", "assignment groups"],
+        "discoverable_tools": ["canvas_list_assignment_attachments", "canvas_read_assignment_attachment"],
+        "search_examples": ["list assignments", "read assignment attachment content", "assignment overrides", "assignment groups"],
     },
     "rubrics": {
         "summary": "Create an analytic rubric, attach it to an assignment, and grade with it.",
@@ -114,9 +115,11 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
         "accommodation_notes": "Classic quiz IDs differ from New Quiz assignment IDs. all_timed covers existing quizzes only. Availability dates can cut off extra time. New Quizzes course scope supports fixed minutes, not a multiplier.",
     },
     "files": {
-        "summary": "Inspect course files and prepare secure local-file uploads.",
+        "summary": "Read assignment instruction/submission attachment content, inspect course files and prepare secure local-file uploads.",
         "visible_tools": ["canvas_plan_file_upload", "canvas_apply_change"],
-        "search_examples": ["list files", "folders", "usage rights"],
+        "discoverable_tools": ["canvas_list_assignment_attachments", "canvas_read_assignment_attachment"],
+        "search_examples": ["read assignment attachment content PDF Word Excel", "list files", "folders", "usage rights"],
+        "attachment_workflow": "Reuse submission attachment IDs or list files. source=assignment reads Canvas files linked in instructions; source=submission requires student_id or anonymous_id and optionally attempt. Follow all text chunks and report coverage gaps. Does not read external URLs, comment attachments or scanned/image content.",
     },
     "course-copies": {
         "summary": "Prepare complete or selective course copies and monitor migrations.",

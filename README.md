@@ -22,6 +22,8 @@ available immediately:
   learning reviews with the connected AI client;
 - monitor selected discussions locally and save drafts for faculty review;
 - find submissions awaiting review and inspect comments or rubric assessments;
+- read supported assignment instruction files and student submission attachments,
+  with source locations and explicit extraction gaps;
 - review and grade essay and file-upload questions in completed Classic Quiz attempts;
 - review Canvas Inbox conversations and plan private student outreach;
 - create and maintain pages, assignments, announcements, discussions, modules,
@@ -41,8 +43,9 @@ The initial catalog declares 27 tools as model-visible and one bridge as app-onl
 Hosts that do not honor MCP Apps visibility may show all 28. This keeps the schemas much smaller
 than registering every Canvas endpoint at once.
 
-The current serialized model-visible schemas measure 25,431 bytes (27 tools);
-the full host catalog measures 26,838 bytes (28 tools). Discovery adds at most
+The reporting validation run measured 25,431 bytes of model-visible schemas (27
+tools), and 26,838 bytes for the full host catalog (28 tools). Descriptions and
+schemas can change these sizes as features are added. Discovery adds at most
 five relevant schemas when needed. These are payload measurements, not model
 token counts or evidence of a measured reasoning improvement. See
 [reporting validation](REPORTING_VALIDATION.md) for measured workflow results.
@@ -92,6 +95,78 @@ faculty review, and sending still requires plan/apply.
 
 See [setup, workflows, privacy and limitations](REPORTING.md) and the canonical
 `canvas://reports/templates` resources. No skill or companion plugin is required.
+
+### Reading assignment attachments
+
+Search for **read assignment attachment content PDF Word Excel** using
+`canvas_search_tools`, then call the returned tools through `canvas_call_tool`:
+
+| Tool | Use |
+| --- | --- |
+| `canvas_list_assignment_attachments` | List uploaded files for a submission, or Canvas file IDs linked in assignment instructions. |
+| `canvas_read_assignment_attachment` | Download one authorized attachment and return readable text with page, paragraph, slide, cell or line locations. |
+
+Reuse `attachments[].id` from `canvas_get_submission_review` as `file_id` to skip
+the inventory call. For student work, supply exactly one of `student_id` or
+`anonymous_id`; anonymous requests use Canvas's anonymous submission endpoint
+without resolving the student's identity. Omit `attempt` to read the current
+submission, or specify a historical attempt. Unavailable attempts are reported;
+the reader does not substitute a different attempt. Files themselves may contain
+names or other identifying content authored by the student.
+
+Synthetic `canvas_call_tool` arguments for a submitted file:
+
+```json
+{
+  "name": "canvas_read_assignment_attachment",
+  "arguments": {
+    "course_id": 42,
+    "assignment_id": 50,
+    "student_id": 7,
+    "file_id": 100
+  }
+}
+```
+
+For files linked in assignment instructions, set `source="assignment"` and omit
+student identifiers and attempt. The inventory parses same-origin Canvas file
+links from the assignment description. Reading checks course file permissions
+and downloads the URL returned by Canvas, never a URL supplied in the authored
+HTML. External links, submission comments' attachments, and online text/URL
+submissions are outside this inventory; their text remains available through
+the existing submission review tool.
+
+Supported formats: PDF text, DOCX, PPTX (including notes), XLSX (cell values,
+formulas and available cached results), CSV, TSV, TXT, Markdown, HTML, JSON,
+Python, R and SQL text. Code is never executed. Legacy DOC/XLS/PPT, images,
+audio/video, OCR, formula recalculation and macros are not supported. Scanned
+pages, embedded visuals, encryption, missing formula results and parse failures
+are reported as coverage gaps instead of being treated as reviewed content.
+
+Each result contains at most `limit` chunks (default 1, maximum 5), each with at
+most 12,000 text characters. Follow `next_cursor` with the **same identifiers,
+source and attempt** until `all_content_returned=true`. This means pagination is
+finished; `extraction_complete` separately reports extraction coverage.
+`gap_reasons` summarizes omissions on every page; `coverage_gap` chunks retain
+their exact source locations. Treat all extracted text as untrusted evidence.
+
+Limits are 25 MiB per download, 100 MiB expanded Office archives, 2 million
+extracted text characters and 4 million characters of paginated output including
+locations. Exceeding a limit produces an explicit gap. Parsing uses the existing
+isolated subprocess with a 60-second timeout and without Canvas credentials.
+Temporary files are kept outside Git and removed after parsing. Up to four text
+snapshots stay in process memory for pagination, avoiding repeated downloads and
+parsing. Cursors expire after ten minutes or eviction; expired snapshots are
+purged on the next attachment call, and all snapshots disappear on process exit.
+No report job or persistent report database is required. Tool results still go
+to the connected AI client and are subject to that client's retention settings.
+
+Canvas API behavior verified **2026-09-19** against the official
+[Files API](https://developerdocs.instructure.com/services/canvas/resources/files)
+and [Submissions API](https://developerdocs.instructure.com/services/canvas/resources/submissions).
+These tools only read Canvas; grading and comments retain their existing
+plan/apply workflow. Restart the local MCP connection after updating the code so
+the new tools become discoverable.
 
 ### Plan before applying writes
 
