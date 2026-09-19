@@ -17,17 +17,19 @@ PLAN_TTL = timedelta(minutes=10)
 FingerprintKind = Literal["exact", "submission"]
 
 
-def _submission_state(value: Any) -> Any:
-    """Exclude the clock-derived late counter, including submission history.
+def _submission_state(value: Any, *, attachment: bool = False) -> Any:
+    """Exclude late counters and temporary attachment preview links.
 
-    Preserve every other field, including late-policy deductions, attempts,
-    answers, grades, comments and rubric assessments. Do not mutate API results.
+    Apply the attachment exception only inside `attachments`, including those
+    in submission history and comments. Preserve file IDs, download URLs and
+    every other field, including grades and feedback. Do not mutate API results.
     """
     if isinstance(value, dict):
-        return {key: _submission_state(item) for key, item in value.items()
-                if key != "seconds_late"}
+        return {key: _submission_state(item, attachment=key == "attachments")
+                for key, item in value.items()
+                if key != "seconds_late" and not (attachment and key == "preview_url")}
     if isinstance(value, list):
-        return [_submission_state(item) for item in value]
+        return [_submission_state(item, attachment=attachment) for item in value]
     return value
 
 

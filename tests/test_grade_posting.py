@@ -36,6 +36,7 @@ class SyntheticCanvas:
         self.response = {'data': {'postAssignmentGrades': {
             'progress': {'_id': '80', 'state': 'queued', 'completion': 0}, 'errors': None}}}
         self.readback_error = False
+        self.rotate_attachment_previews = False
 
     async def __aenter__(self): return self
     async def __aexit__(self, *_): pass
@@ -57,6 +58,11 @@ class SyntheticCanvas:
         # Reproduce time passing between planning and applying without sleeps.
         value['seconds_late'] += len(self.calls)
         value['submission_history'][0]['seconds_late'] += len(self.calls)
+        if self.rotate_attachment_previews:
+            # Three signed preview URLs rotate independently of the uploaded work.
+            files = [*value['attachments'], value['submission_history'][0]['attachments'][0]]
+            for item in files:
+                item['preview_url'] = f"https://preview.example.invalid/{item['id']}?token=synthetic-{len(self.calls)}"
         return value
 
     async def put(self, endpoint, *, data=None, json_data=None):
@@ -66,6 +72,11 @@ class SyntheticCanvas:
         if 'submission[posted_grade]' in data:
             submission.update(score=float(data['submission[posted_grade]']),
                               grade=data['submission[posted_grade]'], workflow_state='graded')
+        if 'comment[text_comment]' in data:
+            submission['submission_comments'].append({
+                'id': len(submission['submission_comments']) + 1,
+                'comment': data['comment[text_comment]'], 'attempt': data.get('comment[attempt]'),
+            })
         if not self.assignment['post_manually']:
             submission['posted_at'] = '2026-09-16T10:00:00Z'
         return copy.deepcopy(submission)
@@ -96,6 +107,89 @@ class GradePostingTests(unittest.IsolatedAsyncioTestCase):
 
     def graded(self, student='11'):
         self.canvas.submissions[student].update(score=5, grade='5', workflow_state='graded')
+
+    def uploaded(self):
+        submission = self.canvas.submissions['11']
+        submission.update(submission_type='online_upload', body=None)
+        submission['attachments'] = [{
+            'id': i, 'filename': f'synthetic-{i}.pdf', 'size': 1000,
+            'url': f'https://canvas.example.invalid/files/{i}/download',
+            'preview_url': f'https://preview.example.invalid/{i}?token=synthetic-original',
+        } for i in (501, 502)]
+        submission['submission_history'][0]['attachments'] = [copy.deepcopy(submission['attachments'][0])]
+        self.canvas.rotate_attachment_previews = True
+
+    async def test_mcp_uploaded_comment_applies_despite_rotating_previews_and_preserves_grade(self):
+        self.uploaded()
+        for already_graded in (False, True):
+            with self.subTest(already_graded=already_graded):
+                if already_graded:
+                    self.graded()
+                async with Client(create_server()) as client:
+                    before = await client.call_tool('canvas_get_submission_review', {
+                        'course_id': 7, 'assignment_id': 9, 'student_id': 11})
+                    comment = f'Synthetic upload feedback {already_graded}'
+                    plan = await client.call_tool('canvas_plan_grade_change', {
+                        'course_id': 7, 'assignment_id': 9, 'student_id': 11,
+                        'comment': comment, 'comment_attempt': 1})
+                    result = await client.call_tool('canvas_apply_change', {
+                        'plan_token': plan.data['plan_token'], 'confirm': True})
+                    after = await client.call_tool('canvas_get_submission_review', {
+                        'course_id': 7, 'assignment_id': 9, 'student_id': 11})
+                self.assertEqual(result.data['status'], 'completed')
+                self.assertEqual(after.data['submission_comments'][-1]['comment'], comment)
+                self.assertEqual(after.data['submission_comments'][-1]['attempt'], 1)
+                for field in ('score', 'grade', 'excused', 'workflow_state', 'posted_at',
+                              'rubric_assessment', 'attempt', 'points_deducted', 'assignment_visible'):
+                    self.assertEqual(before.data[field], after.data[field], field)
+                self.assertNotEqual(before.data['attachments'][0]['preview_url'], after.data['attachments'][0]['preview_url'])
+                writes = [call for call in self.canvas.calls if call[0] == 'PUT']
+                self.assertEqual(writes[-1][2], {'comment[text_comment]': comment,
+                    'comment[group_comment]': False, 'comment[attempt]': 1})
+        self.assertEqual(sum(call[0] == 'PUT' for call in self.canvas.calls), 2)
+
+    async def test_uploaded_comment_still_rejects_real_file_and_submission_changes(self):
+        self.uploaded()
+        changes = [
+            lambda s: s['attachments'][0].update(id=999),
+            lambda s: s['attachments'][0].update(filename='replacement.pdf'),
+            lambda s: s['attachments'][0].update(size=2000),
+            lambda s: s['attachments'][0].update(url='https://canvas.example.invalid/files/999/download'),
+            lambda s: s['attachments'].pop(),
+            lambda s: s['attachments'].append({**s['attachments'][0], 'id': 503}),
+            lambda s: s['submission_history'][0]['attachments'][0].update(id=999),
+            lambda s: s.update(score=4, grade='4'),
+            lambda s: s.update(attempt=2),
+            lambda s: s['submission_comments'].append({'id': 2, 'comment': 'Concurrent feedback'}),
+            lambda s: s['rubric_assessment']['criterion'].update(points=2),
+        ]
+        for index, change in enumerate(changes):
+            with self.subTest(change=index):
+                before = copy.deepcopy(self.canvas.submissions['11'])
+                plan = await self.assistant.canvas_plan_grade_change(7, 9, student_id=11, comment='Synthetic upload feedback')
+                change(self.canvas.submissions['11'])
+                with self.assertRaisesRegex(ValueError, 'stale'):
+                    await self.apply(plan)
+                self.canvas.submissions['11'] = before
+        self.assertFalse(any(call[0] == 'PUT' for call in self.canvas.calls))
+
+    def test_preview_exception_is_attachment_scoped_submission_only_and_non_mutating(self):
+        self.uploaded()
+        before = copy.deepcopy(self.canvas.submissions['11'])
+        before['submission_comments'][0]['attachments'] = [copy.deepcopy(before['attachments'][0])]
+        original = copy.deepcopy(before)
+        after = copy.deepcopy(before)
+        for item in [*after['attachments'], after['submission_history'][0]['attachments'][0],
+                     after['submission_comments'][0]['attachments'][0]]:
+            item['preview_url'] = 'https://preview.example.invalid/rotated'
+        self.assertEqual(fingerprint(before, kind='submission'), fingerprint(after, kind='submission'))
+        self.assertNotEqual(fingerprint(before), fingerprint(after))
+        self.assertEqual(before, original)
+        after['preview_url'] = 'A non-attachment field still matters'
+        self.assertNotEqual(fingerprint(before, kind='submission'), fingerprint(after, kind='submission'))
+        after.pop('preview_url')
+        after['submission_comments'][0]['preview_url'] = 'A non-attachment comment field still matters'
+        self.assertNotEqual(fingerprint(before, kind='submission'), fingerprint(after, kind='submission'))
 
     async def test_mcp_grade_plan_ignores_both_ticking_counters_and_reports_hidden_grade(self):
         async with Client(create_server()) as client:

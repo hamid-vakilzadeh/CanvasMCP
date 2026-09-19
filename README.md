@@ -238,13 +238,15 @@ and [group-set update policy](https://github.com/instructure/canvas-lms/blob/mas
 
 #### Saving grades and releasing them to students
 
-`canvas_plan_grade_change` compares the submission again before applying a grade.
-Its comparison excludes only the calculated `seconds_late` counter, recursively
-including `submission_history`; elapsed time alone no longer invalidates a plan.
-Scores, attempts, submission content, comments, rubric assessments, late-policy
-deductions and posting state still invalidate a plan when they change. Other
-Canvas record comparisons remain exact. Classic Quiz grading uses the same
-counter normalization for its included assignment submission.
+`canvas_plan_grade_change` compares the submission again before applying a grade
+or comment. Its comparison excludes calculated `seconds_late` counters and
+temporary `preview_url` fields on attachment objects, including attachments in
+submission history and comments. Elapsed time or refreshed preview links alone
+do not invalidate a plan. Attachment IDs, filenames, sizes, download URLs,
+added/removed files, scores, attempts, submission content, comments, rubric
+assessments, late-policy deductions and posting state still invalidate a plan
+when they change. Other Canvas record comparisons remain exact. Classic Quiz
+grading uses the same normalization for its included assignment submission.
 
 Canvas's `posted_grade` parameter saves a grade; it does **not** promise that a
 student can see it. Grade application now reads the submission back and returns
