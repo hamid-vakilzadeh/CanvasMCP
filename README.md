@@ -52,6 +52,9 @@ five relevant schemas when needed. These are payload measurements, not model
 token counts or evidence of a measured reasoning improvement. See
 [reporting validation](REPORTING_VALIDATION.md) for measured workflow results.
 
+The following table shows the full catalog with `FERPA=true`. With `FERPA=false`,
+only the course-authoring and discovery tools remain available.
+
 | Area | Visible tools |
 | --- | --- |
 | Discovery | `canvas_capabilities`, `canvas_search_tools`, `canvas_call_tool` |
@@ -64,12 +67,30 @@ token counts or evidence of a measured reasoning improvement. See
 The broader Canvas API catalog is available through FastMCP Tool Search, subject
 to the same `FERPA` setting:
 
-1. Call `canvas_search_tools` with a natural-language request such as "manage
-   assignment overrides" or "show quiz question groups."
+1. Call `canvas_search_tools` with a natural-language request such as "create
+   and attach a rubric" or "show quiz question groups."
 2. Review the returned matches. Search returns at most five tools.
-3. Call the discovered read action with `canvas_call_tool`. Direct low-level
+3. Call the discovered tool with `canvas_call_tool`. Direct low-level
    writes are excluded from discovery; use planning tools for every Canvas
    write. Report jobs and queue decisions update private local state.
+
+#### Tool search and FERPA
+
+The server applies the `FERPA` restriction **before tool search**. Both discovery
+and execution follow the same setting:
+
+| Behavior | `FERPA=false` or unset | `FERPA=true` |
+| --- | --- | --- |
+| Course-authoring tool search | Available | Available |
+| Student-grade, submission, and report tool search | Excluded from results | Advanced tools are discoverable; common tools are already visible |
+| Calling a student-record tool by its exact name or through `canvas_call_tool` | Blocked | Available subject to Canvas permissions and the normal plan/apply rules |
+| Student-data options on mixed-purpose authoring tools | Rejected | Available subject to Canvas permissions |
+
+A search about grading can still return a related authoring tool, such as the
+rubric-definition planner; that does not enable reading or changing student grades.
+After changing `FERPA`, restart the MCP connection to refresh its tool catalog,
+then call `canvas_capabilities` to confirm the active setting. The same restart
+is required for Git-clone, npm, and npx installations.
 
 The existing flexible argument converter remains available to discovered tools,
 including clients that serialize list or object arguments as text.
