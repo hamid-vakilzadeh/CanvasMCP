@@ -20,7 +20,7 @@ import canvas_credentials
 def clean_env():
     return {
         key: value for key, value in os.environ.items()
-        if key not in {"CANVAS_URL", "CANVAS_ACCESS_TOKEN", "FASTMCP_SERVER_AUTH"}
+        if key not in {"CANVAS_URL", "CANVAS_ACCESS_TOKEN", "FASTMCP_SERVER_AUTH", "FERPA"}
     }
 
 
@@ -120,6 +120,7 @@ class LocalProtocolTests(unittest.TestCase):
                 **clean_env(), "PYTHONPATH": str(workdir),
                 "CANVAS_URL": f"http://127.0.0.1:{canvas.server_port}/",
                 "CANVAS_ACCESS_TOKEN": "local-test-token",
+                "FERPA": "true",
                 "FASTMCP_SERVER_AUTH": "invalid-test-provider",
                 "FASTMCP_LOG_LEVEL": "DEBUG",
                 "FASTMCP_LOG_ENABLED": "true",

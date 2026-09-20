@@ -17,6 +17,10 @@ import tools.quiz_accommodations as accommodations
 from test_assistant_plans import FakeMCP, FakeProgress
 
 
+from ferpa_test_support import enable_synthetic_student_records
+
+setUpModule = enable_synthetic_student_records
+
 class Canvas:
     def __init__(self):
         self.calls = []

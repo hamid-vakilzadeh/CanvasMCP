@@ -6,28 +6,28 @@ workflow changes Canvas grades or sends messages.
 
 ## Installation and startup
 
-Normal MCP configuration stays unchanged: run the existing stdio command with
-`CANVAS_URL` and `CANVAS_ACCESS_TOKEN` in the MCP client's environment. There is no
+Run the existing stdio command with `CANVAS_URL`, `CANVAS_ACCESS_TOKEN`, and
+`FERPA=true` in the MCP client's environment. Reporting and discussion monitoring
+are disabled when `FERPA` is false or unset. There is no
 third-party auth, hosted MCP endpoint, or additional model-provider key.
 
-After this branch is published through the normal package release process, the
-same files are included in `@hamid-vakilzadeh/canvas-mcp`. For development now:
+The same report files are packaged in `@hamid-vakilzadeh/canvas-mcp`. For development now:
 
 ```sh
-git clone --branch codex/student-reports https://github.com/hamid-vakilzadeh/CanvasMCP.git
+git clone --branch dev https://github.com/hamid-vakilzadeh/CanvasMCP.git
 cd CanvasMCP
 uv sync --frozen --no-dev
 uv run --frozen --no-dev python src/local.py
 ```
 
-This feature branch is based on `dev`; it has not been merged to `main` or released
-to the registry. To test an npm package locally, run `npm ci`, `npm pack`, then use
+The reporting feature is merged into `main`; use `dev` for ongoing development.
+This does not imply an npm registry release. To test an npm package locally, run `npm ci`, `npm pack`, then use
 the generated tarball with `npx --package /absolute/path/to/package.tgz canvas-mcp`.
 The compiled UI is included, so consumers do not need a frontend build. Git
 contributors can rebuild it with `npm run build:dashboard` and type-check with
 `npm run check:dashboard`.
 
-Optional commands, after providing those same environment variables:
+Optional commands, after providing the credentials and `FERPA=true` in that terminal:
 
 ```sh
 canvas-mcp dashboard
@@ -44,7 +44,7 @@ as an operating-system service or scheduled automatically.
 
 The watcher is a separate process: environment variables inside a desktop MCP
 configuration are not automatically inherited by a terminal. Provide the same
-Canvas account credentials to that terminal process. No personal configuration
+Canvas account credentials and `FERPA=true` to that terminal process. No personal configuration
 files are written by this feature. Stop a watcher before deleting its watch and
 queue records.
 

@@ -15,6 +15,10 @@ import tools.assistant as assistant_module
 from tools.assistant import AssistantTools, QuizQuestionGradeUpdate
 
 
+from ferpa_test_support import enable_synthetic_student_records
+
+setUpModule = enable_synthetic_student_records
+
 class FakeMCP:
     def tool(self, fn, **_kwargs):
         return fn

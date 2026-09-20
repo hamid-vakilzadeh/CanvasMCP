@@ -10,6 +10,7 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ResourceError
 
 from canvas_client import AsyncCanvasClient
+from ferpa import AUTHORING_TOOLS, ferpa_enabled, redact_student_fields
 
 
 RESOURCE_ANNOTATIONS = {"audience": ["assistant"], "priority": 0.9}
@@ -215,7 +216,7 @@ def register_instructor_resources(mcp: FastMCP) -> None:
                 sections[section] = []
                 truncated[section] = False
                 continue
-            sections[section] = _compact(result["items"], fields[section])
+            sections[section] = redact_student_fields(_compact(result["items"], fields[section]))
             truncated[section] = bool(result.get("next_cursor"))
 
         course_fields = (
@@ -269,6 +270,15 @@ def register_instructor_resources(mcp: FastMCP) -> None:
             raise ResourceError(
                 f"Unknown Canvas action domain '{domain}'. Supported domains: {supported}"
             )
+        if not ferpa_enabled():
+            domain = ACTION_DOMAINS[normalized]
+            tools = [name for name in domain.get("visible_tools", []) + domain.get("discoverable_tools", [])
+                     if name in AUTHORING_TOOLS and name != "canvas_apply_change"]
+            return {
+                "domain": normalized, "FERPA": False, "available_tools": tools,
+                "student_records": "Disabled. Student workflows require FERPA=true and a server restart.",
+                "mutation_rule": "Available authoring writes still require a plan followed by canvas_apply_change.",
+            }
         return {
             "domain": normalized,
             **ACTION_DOMAINS[normalized],

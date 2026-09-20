@@ -13,6 +13,7 @@ from urllib.parse import urljoin, urlparse
 import httpx2
 
 from canvas_credentials import get_canvas_credentials
+from ferpa import check_request, ferpa_enabled, redact_student_fields
 
 
 @dataclass(slots=True)
@@ -103,6 +104,8 @@ class AsyncCanvasClient:
         }.get(status, "canvas_request_failed")
         detail = response.reason_phrase or "Canvas API request failed"
         try:
+            if not ferpa_enabled():
+                return CanvasAPIError(status, code, endpoint, detail)
             body = response.json()
             if isinstance(body, dict):
                 errors = body.get("errors") or body.get("message") or body.get("error")
@@ -139,6 +142,7 @@ class AsyncCanvasClient:
     ) -> Any:
         method = method.upper()
         url = self._url(endpoint)
+        check_request(url, params, data, json_data)
         attempts = 3 if method in {"GET", "HEAD"} else 1
         response: httpx2.Response | None = None
         for attempt in range(attempts):
@@ -159,7 +163,7 @@ class AsyncCanvasClient:
             if response.status_code < 400:
                 if response.status_code == 204 or not response.content:
                     return None
-                return response.json()
+                return redact_student_fields(response.json())
             if response.status_code not in self.RETRYABLE or attempt + 1 == attempts:
                 raise self._error(response)
             await asyncio.sleep(self._retry_delay(response, attempt))
@@ -211,6 +215,9 @@ class AsyncCanvasClient:
         url = decode_cursor(cursor) if cursor else endpoint
         query = None if cursor else {**(params or {}), "per_page": limit}
         resolved_url = self._url(url)
+        if cursor and urlparse(resolved_url).path != urlparse(self._url(endpoint)).path:
+            raise ValueError("Canvas pagination cursor changed endpoint")
+        check_request(resolved_url, query)
         response: httpx2.Response | None = None
         for attempt in range(3):
             try:
@@ -231,7 +238,7 @@ class AsyncCanvasClient:
                 raise self._error(response)
             await asyncio.sleep(self._retry_delay(response, attempt))
         assert response is not None
-        payload = response.json()
+        payload = redact_student_fields(response.json())
         items = payload if isinstance(payload, list) else [payload]
         next_url = response.links.get("next", {}).get("url")
         if next_url:

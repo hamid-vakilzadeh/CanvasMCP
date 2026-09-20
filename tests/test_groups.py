@@ -17,6 +17,10 @@ from tools.groups import GroupTools
 from test_assistant_plans import FakeMCP, FakeProgress
 
 
+from ferpa_test_support import enable_synthetic_student_records
+
+setUpModule = enable_synthetic_student_records
+
 class SyntheticGroups:
     def __init__(self):
         self.calls = []

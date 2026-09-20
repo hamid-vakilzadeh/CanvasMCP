@@ -13,8 +13,9 @@ network access; "local" describes the MCP server and credential flow.
 
 ## What it can do
 
-The server is designed for instructors and course authors. Common workflows are
-available immediately:
+The server is designed for instructors and course authors. Course authoring is
+available by default. Set `FERPA=true` to also enable student-record workflows.
+With that opt-in, supported workflows include:
 
 - inspect courses, modules, pages, assignments, and quizzes;
 - list students and review enrollment, progress, submissions, and activity;
@@ -39,7 +40,8 @@ tool returns that Canvas capability or permission error.
 
 ### Compact tool catalog
 
-The initial catalog declares 27 tools as model-visible and one bridge as app-only.
+`FERPA=false` (the default) declares 14 authoring/discovery tools. With
+`FERPA=true`, the initial catalog declares 27 tools as model-visible and one bridge as app-only.
 Hosts that do not honor MCP Apps visibility may show all 28. This keeps the schemas much smaller
 than registering every Canvas endpoint at once.
 
@@ -59,8 +61,8 @@ token counts or evidence of a measured reasoning improvement. See
 | Authoring | `canvas_plan_page_change`, `canvas_plan_assignment_change`, `canvas_plan_discussion_change`, `canvas_plan_discussion_entry`, `canvas_plan_module_change`, `canvas_plan_quiz_change`, `canvas_plan_file_upload`, `canvas_plan_course_copy` |
 | Grades and execution | `canvas_plan_grade_change`, `canvas_plan_quiz_submission_grade`, `canvas_apply_change` |
 
-There is one server mode and no legacy profile. The broader Canvas API catalog is
-available through FastMCP Tool Search:
+The broader Canvas API catalog is available through FastMCP Tool Search, subject
+to the same `FERPA` setting:
 
 1. Call `canvas_search_tools` with a natural-language request such as "manage
    assignment overrides" or "show quiz question groups."
@@ -524,6 +526,7 @@ tool_timeout_sec = 300
 [mcp_servers.canvas.env]
 CANVAS_URL = "https://your-school.instructure.com"
 CANVAS_ACCESS_TOKEN = "your_canvas_api_token"
+FERPA = "false"
 ```
 
 If Codex Desktop cannot find `uv`, replace `command = "uv"` with the absolute
@@ -536,6 +539,7 @@ The same server can be added from a terminal:
 codex mcp add canvas \
   --env CANVAS_URL=https://your-school.instructure.com \
   --env CANVAS_ACCESS_TOKEN=your_canvas_api_token \
+  --env FERPA=false \
   -- uv --directory /absolute/path/to/CanvasMCP \
   run --frozen --no-dev python src/local.py
 ```
@@ -549,7 +553,7 @@ npm install -g .
 ```
 
 Then configure Codex with `command = "canvas-mcp"`, no arguments, and the same
-two environment values:
+environment values:
 
 ```toml
 [mcp_servers.canvas]
@@ -560,6 +564,7 @@ tool_timeout_sec = 300
 [mcp_servers.canvas.env]
 CANVAS_URL = "https://your-school.instructure.com"
 CANVAS_ACCESS_TOKEN = "your_canvas_api_token"
+FERPA = "false"
 ```
 
 To test an installable npx package before publishing it, create a tarball:
@@ -584,6 +589,7 @@ tool_timeout_sec = 300
 [mcp_servers.canvas.env]
 CANVAS_URL = "https://your-school.instructure.com"
 CANVAS_ACCESS_TOKEN = "your_canvas_api_token"
+FERPA = "false"
 ```
 
 Once `@hamid-vakilzadeh/canvas-mcp` is published to npm, the tarball path can be
@@ -605,12 +611,52 @@ For clients that use `mcpServers` JSON, a Git-clone configuration looks like:
       ],
       "env": {
         "CANVAS_URL": "https://your-school.instructure.com",
-        "CANVAS_ACCESS_TOKEN": "your_canvas_api_token"
+        "CANVAS_ACCESS_TOKEN": "your_canvas_api_token",
+        "FERPA": "false"
       }
     }
   }
 }
 ```
+
+## Student-record access: `FERPA`
+
+Set `FERPA` in the same MCP server environment as the Canvas credentials. The
+value is a string, `"true"` or `"false"` (case-insensitive). If omitted, it defaults
+to `false`; invalid values stop startup with a configuration error.
+
+| Setting | Available workflows |
+| --- | --- |
+| `FERPA=false` or unset | Course structure and content authoring: pages, assignments, announcements, discussion topics, modules, quiz definitions, rubrics, course files/uploads, and course copies. |
+| `FERPA=true` | All existing workflows, including student rosters/enrollments, grades, submission and quiz-attempt review, grading/comments/release, submission images/documents, student groups/accommodations, discussion entries/replies, Inbox, reports, and monitoring. Canvas permissions still apply. |
+
+For student grading and review, change the setup value to:
+
+```toml
+FERPA = "true"
+```
+
+Restart the Canvas MCP connection after changing it. Separately launched
+`canvas-mcp dashboard` and `canvas-mcp watch` processes also require `FERPA=true`
+and must be restarted after configuration changes. The npm/npx launcher forwards
+this environment variable unchanged.
+
+Disabled tools are absent from the initial catalog and search results, and cannot
+be called by name or through `canvas_call_tool`. Student resources, report UI,
+and student-workflow prompts are also hidden. Mixed-purpose authoring tools reject
+student-specific arguments and grade/submission expansions; incidental student
+fields are removed from course-definition results. Generic file-by-ID readers and
+all attachment-content readers require `FERPA=true`. Saved student plans and
+local report exports cannot bypass the restriction.
+
+Textual lists, objects, and scalar arguments still convert in both modes. The
+existing `eval` converter is preserved with `FERPA=true`; restricted mode uses
+literal-only conversion so an argument cannot execute Python to bypass the gate.
+
+`canvas_capabilities` reports the active setting and available tools. Changing the
+setting does not delete existing private reports, erase a client's prior chat
+history, or change Canvas permissions. `FERPA` controls this connection's feature
+exposure; it is not a certification of legal compliance.
 
 ## Configuration and privacy
 
@@ -636,7 +682,7 @@ npm pack --dry-run
 ```
 
 The Python tests launch the real stdio server against a fake Canvas API, inspect
-the 26-tool catalog, and exercise discovery, planning, background-task compatible
+both restricted and opted-in catalogs, and exercise discovery, planning, background-task compatible
 tools, resources, and credential isolation. Node tests cover launcher argument
 and stdio forwarding, missing `uv`, exit status, and termination. Tests do not
 require a real Canvas account or token.

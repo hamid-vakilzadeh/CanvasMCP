@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from action_plans import FingerprintKind, Mutation, Precondition, fingerprint, plan_store
 from canvas_client import AsyncCanvasClient, CanvasAPIError
+from ferpa import AUTHORING_TOOLS, check_plan, check_tool_access, ferpa_enabled, redact_student_fields
 
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
@@ -39,7 +40,8 @@ def _assistant_tool(fn):
     @wraps(fn)
     async def wrapped(*args, **kwargs):
         try:
-            return await fn(*args, **kwargs)
+            check_tool_access(fn.__name__, kwargs)
+            return redact_student_fields(await fn(*args, **kwargs))
         except CanvasAPIError as exc:
             error = {
                 "code": exc.code,
@@ -256,7 +258,20 @@ class AssistantTools:
 
     async def canvas_capabilities(self) -> dict[str, Any]:
         """Describe available Canvas workflows and how to discover advanced actions."""
+        if not ferpa_enabled():
+            return {
+                "transport": "local stdio", "authentication": ["CANVAS_URL", "CANVAS_ACCESS_TOKEN"],
+                "FERPA": False,
+                "student_records": "Disabled. Set FERPA=true in the server environment and restart to enable.",
+                "visible_tools": [name for name in self.VISIBLE_NAMES if name in AUTHORING_TOOLS]
+                                 + ["canvas_search_tools", "canvas_call_tool"],
+                "authoring": ["pages", "assignments", "announcements", "discussion topics", "modules",
+                              "Classic Quizzes", "New Quizzes", "rubrics", "file uploads", "course copies"],
+                "discovery": {"search": "canvas_search_tools", "call": "canvas_call_tool", "maximum_results": 5},
+                "writes": "Create a plan, review it, then call canvas_apply_change with confirm=true.",
+            }
         return {
+            "FERPA": True,
             "transport": "local stdio",
             "authentication": ["CANVAS_URL", "CANVAS_ACCESS_TOKEN"],
             "visible_tools": self.VISIBLE_NAMES + ["canvas_search_tools", "canvas_call_tool"],
@@ -1771,6 +1786,7 @@ class AssistantTools:
         if confirm is not True:
             raise ValueError("confirm must be true")
         plan = await plan_store.consume(plan_token)
+        check_plan(plan)
         if plan.local_draft:
             from discussion_watch import Watcher
             from reporting.runtime import runtime

@@ -17,6 +17,10 @@ from fastmcp import FastMCP
 from instructor_experience import register_instructor_experience
 
 
+from ferpa_test_support import enable_synthetic_student_records
+
+setUpModule = enable_synthetic_student_records
+
 class FakeCanvasClient:
     """Small async context manager with deterministic Canvas responses."""
 

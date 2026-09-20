@@ -3,6 +3,8 @@
 from fastmcp import FastMCP
 from fastmcp.server.transforms.search import BM25SearchTransform
 from fastmcp_tasks import TasksExtension
+from fastmcp.server.middleware import Middleware
+from ferpa import AUTHORING_RESOURCES, AUTHORING_TOOLS, ferpa_enabled, ferpa_scope
 
 from tools.courses import CourseTools
 from tools.modules import ModuleTools
@@ -98,15 +100,37 @@ DIRECT_WRITE_TOOLS = {
 }
 
 
+class FerpaMiddleware(Middleware):
+    """Keep the startup policy stable throughout discovery and nested calls."""
+
+    def __init__(self, enabled: bool):
+        self.enabled = enabled
+
+    async def on_message(self, context, call_next):
+        with ferpa_scope(self.enabled):
+            return await call_next(context)
+
+
 def create_server() -> FastMCP:
     # auth=None prevents FastMCP from loading an auth provider from inherited
     # environment settings. Canvas authenticates API calls with the user's token.
+    enabled = ferpa_enabled()
+    instructions = SERVER_INSTRUCTIONS if enabled else (
+        "Canvas MCP is running locally with FERPA=false. Student grades, submissions, "
+        "student records, Inbox, discussion entries, attachment readers, and student reports "
+        "are disabled. Course-authoring tools remain available. Do not try alternate tools "
+        "to retrieve disabled data. To enable it, the user must set FERPA=true in the "
+        "server environment and restart. Discover advanced authoring tools with "
+        "canvas_search_tools, execute them with canvas_call_tool, and use the "
+        "canvas_plan_* / canvas_apply_change preview workflow for writes."
+    )
     mcp = FastMCP(
         "Canvas-MCP",
-        instructions=SERVER_INSTRUCTIONS,
+        instructions=instructions,
         auth=None,
         mask_error_details=False,
     )
+    mcp.add_middleware(FerpaMiddleware(enabled))
     mcp.add_extension(
         TasksExtension(
             url="memory://",
@@ -144,11 +168,17 @@ def create_server() -> FastMCP:
     ReportingTools(mcp)
     register_content_creation_resource(mcp)
     register_instructor_experience(mcp)
+    if not enabled:
+        mcp.disable(components={"tool", "resource", "template", "prompt"})
+        mcp.enable(names=set(AUTHORING_TOOLS), components={"tool"})
+        mcp.enable(names=set(AUTHORING_RESOURCES), components={"resource", "template"})
+        mcp.enable(names={"build_canvas_course"}, components={"prompt"})
     mcp.disable(names=DIRECT_WRITE_TOOLS, components={"tool"})
     mcp.add_transform(
         BM25SearchTransform(
             max_results=5,
-            always_visible=[*AssistantTools.VISIBLE_NAMES, 'canvas_dashboard_data'],
+            always_visible=([*AssistantTools.VISIBLE_NAMES, 'canvas_dashboard_data'] if enabled else
+                            [name for name in AssistantTools.VISIBLE_NAMES if name in AUTHORING_TOOLS]),
             search_tool_name="canvas_search_tools",
             call_tool_name="canvas_call_tool",
         )

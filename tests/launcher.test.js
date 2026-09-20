@@ -32,14 +32,14 @@ test("missing uv gives actionable stderr without polluting stdout", (t) => {
 
 test("forwards stdio, credentials, cwd and exit status", { skip: process.platform === "win32" }, (t) => {
   const directory = fixture(t, `
-    console.error(JSON.stringify({args: process.argv.slice(2), cwd: process.cwd(), token: process.env.CANVAS_ACCESS_TOKEN, venv: process.env.UV_PROJECT_ENVIRONMENT}));
+    console.error(JSON.stringify({args: process.argv.slice(2), cwd: process.cwd(), token: process.env.CANVAS_ACCESS_TOKEN, ferpa: process.env.FERPA, venv: process.env.UV_PROJECT_ENVIRONMENT}));
     process.stdin.pipe(process.stdout);
     process.stdin.on('end', () => { process.exitCode = 7; });
   `);
   const cwd = join(directory, "working directory");
   mkdirSync(cwd);
   const result = spawnSync(process.execPath, [launcher], {
-    cwd, env: { ...process.env, PATH: directory, CANVAS_ACCESS_TOKEN: "test-token", UV_PROJECT_ENVIRONMENT: join(directory, "venv") },
+    cwd, env: { ...process.env, PATH: directory, CANVAS_ACCESS_TOKEN: "test-token", FERPA: "true", UV_PROJECT_ENVIRONMENT: join(directory, "venv") },
     input: '{"jsonrpc":"2.0"}\n', encoding: "utf8",
   });
   assert.equal(result.status, 7, result.stderr);
@@ -48,6 +48,7 @@ test("forwards stdio, credentials, cwd and exit status", { skip: process.platfor
   assert.deepEqual(info.args, ["run", "--project", root, "--frozen", "--no-dev", "python", join(root, "src", "local.py")]);
   assert.equal(info.cwd, realpathSync(cwd));
   assert.equal(info.token, "test-token");
+  assert.equal(info.ferpa, "true");
   assert.equal(info.venv, join(directory, "venv"));
 });
 

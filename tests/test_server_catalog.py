@@ -20,6 +20,10 @@ from server import DIRECT_WRITE_TOOLS, create_server
 from tools.assistant import AssistantTools
 
 
+from ferpa_test_support import enable_synthetic_student_records
+
+setUpModule = enable_synthetic_student_records
+
 class FakeWriteClient:
     @classmethod
     def from_environment(cls) -> "FakeWriteClient":

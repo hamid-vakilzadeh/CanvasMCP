@@ -15,6 +15,7 @@ from reporting.render import render_review
 from reporting.reviews import Reviews
 from reporting.runtime import runtime
 from tools.assistant import _assistant_tool, READ_ONLY
+from ferpa import require_ferpa
 
 APP_URI = 'ui://canvas/student-dashboard.html'
 TEMPLATES = Path(__file__).parent / 'templates'
@@ -54,6 +55,7 @@ class DashboardRequest(BaseModel):
 
 async def dashboard_request(request: DashboardRequest, service=runtime) -> dict:
     """The two UI adapters share exactly this allowlisted operation surface."""
+    require_ferpa()
     action = request.action
     if action == 'courses':
         return await service.courses()

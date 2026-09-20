@@ -14,6 +14,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Route
 from starlette.middleware.base import BaseHTTPMiddleware
+from ferpa import require_ferpa
 
 UI = Path(__file__).parent / 'ui'
 
@@ -91,6 +92,7 @@ _servers: list[tuple] = []
 
 async def start_dashboard(service) -> dict:
     """Start within the requesting local process, avoiding a second credential handoff."""
+    require_ferpa()
     import uvicorn
     class EmbeddedServer(uvicorn.Server):
         @contextmanager

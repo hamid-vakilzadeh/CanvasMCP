@@ -28,6 +28,10 @@ def png():
     return stream.getvalue()
 
 
+from ferpa_test_support import enable_synthetic_student_records
+
+setUpModule = enable_synthetic_student_records
+
 class ItemCanvas:
     base_url = 'https://canvas.example.invalid'
     access_token = 'synthetic-secret'

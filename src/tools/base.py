@@ -1,15 +1,17 @@
 """Base tool provider class for organizing Canvas MCP tools."""
 
 import asyncio
+import ast
 from abc import ABC, abstractmethod
 from functools import wraps
 from typing import Any, Dict, Callable
 from fastmcp import FastMCP
+from ferpa import check_tool_access, ferpa_enabled, redact_student_fields
 
 
 def validate_and_convert_params(**kwargs) -> Dict[str, Any]:
     """
-    Validate and convert parameter values to their expected types using eval().
+    Convert textual arguments; unrestricted eval requires FERPA opt-in.
 
     Args:
         **kwargs: Parameters to validate and convert
@@ -29,9 +31,10 @@ def validate_and_convert_params(**kwargs) -> Dict[str, Any]:
             converted[key] = value
             continue
 
-        # Try to eval the string to convert it to proper type
+        # Preserve existing eval conversion when opted in. Restricted mode
+        # accepts literal lists/dicts/scalars without executing Python code.
         try:
-            converted[key] = eval(value)
+            converted[key] = eval(value) if ferpa_enabled() else ast.literal_eval(value)
         except (SyntaxError, NameError, ValueError, TypeError):
             # If eval fails, keep as string
             converted[key] = value
@@ -79,12 +82,13 @@ class ToolProvider(ABC):
 
         @wraps(tool_func)
         async def threaded(*args, **kwargs):
+            check_tool_access(tool_func.__name__, kwargs)
             # Legacy Context use is limited to optional logging/progress. The
             # underlying requests client is synchronous, so run the complete
             # coroutine in a worker thread and omit the loop-bound Context.
             if "ctx" in kwargs:
                 kwargs = {**kwargs, "ctx": None}
             coroutine = tool_func(*args, **kwargs)
-            return await asyncio.to_thread(asyncio.run, coroutine)
+            return redact_student_fields(await asyncio.to_thread(asyncio.run, coroutine))
 
         return threaded

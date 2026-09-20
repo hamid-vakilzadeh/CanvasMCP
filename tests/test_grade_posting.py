@@ -16,6 +16,10 @@ from tools.grade_posting import GradePostingTools, grade_visibility
 from test_assistant_plans import FakeMCP, FakeProgress
 
 
+from ferpa_test_support import enable_synthetic_student_records
+
+setUpModule = enable_synthetic_student_records
+
 class SyntheticCanvas:
     def __init__(self):
         self.calls = []

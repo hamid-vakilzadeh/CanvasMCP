@@ -7,6 +7,7 @@ import asyncio
 
 from canvas_credentials import configure_canvas_credentials
 from private_diagnostics import configure_private_diagnostics
+from ferpa import ferpa_enabled, require_ferpa
 
 
 def main() -> None:
@@ -17,6 +18,9 @@ def main() -> None:
     parser.add_argument('--no-open', action='store_true', help='Print a dashboard link instead of opening the browser')
     args = parser.parse_args()
     try:
+        ferpa_enabled()  # Validate configuration before starting a transport or background worker.
+        if args.command:
+            require_ferpa()
         configure_canvas_credentials(
             os.getenv("CANVAS_URL"), os.getenv("CANVAS_ACCESS_TOKEN")
         )

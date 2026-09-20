@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from typing import Dict, List
 
 import requests
+from ferpa import check_request
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,7 @@ def _make_request(
         "Accept": "application/json+canvas-string-ids",
     }
     url = f"{base_url}{endpoint}"
+    check_request(url, params, data, json_data)
 
     if json_data:
         headers["Content-Type"] = "application/json"
@@ -156,6 +158,9 @@ def _get_all_pages(
                 raise requests.exceptions.RequestException(
                     "Canvas pagination URL changed origin"
                 )
+            if urlparse(next_url).path != urlparse(f"{base_url}{endpoint}").path:
+                raise ValueError("Canvas pagination URL changed endpoint")
+            check_request(next_url)
             response = requests.get(next_url, headers=headers, timeout=REQUEST_TIMEOUT)
             _raise_for_status(response)
         else:

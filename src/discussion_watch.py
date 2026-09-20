@@ -179,6 +179,8 @@ class Watcher:
 
 
 async def run_watcher(runtime, *, once=False):
+    from ferpa import require_ferpa
+    require_ferpa()
     store = await runtime.store()
     owner = secrets.token_hex(16)
     if not store.acquire('watcher', owner, seconds=90):

@@ -16,6 +16,10 @@ from tools.attachments import AttachmentTools, AssignmentFileLinks
 from test_assistant_plans import FakeMCP
 
 
+from ferpa_test_support import enable_synthetic_student_records
+
+setUpModule = enable_synthetic_student_records
+
 class SyntheticAttachments:
     base_url = 'https://canvas.example.invalid'
     access_token = 'synthetic-canvas-token'

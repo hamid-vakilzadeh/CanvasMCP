@@ -1,4 +1,5 @@
 """Synthetic-only browser fixture. Never imports or configures user credentials."""
+import os
 import atexit
 import asyncio
 from pathlib import Path
@@ -15,6 +16,7 @@ from reporting.web import app_html, create_dashboard_app
 from reporting.reviews import Reviews
 from reporting.render import render_review
 
+os.environ['FERPA'] = 'true'  # This process uses only synthetic Canvas records.
 temporary=tempfile.TemporaryDirectory(prefix='canvas-synthetic-ui-')
 atexit.register(temporary.cleanup)
 runtime=Runtime(SyntheticCanvas,Path(temporary.name))
