@@ -298,9 +298,11 @@ class AssistantTools:
             },
             "assignment_attachments": {
                 "search": "read assignment attachment content PDF Word Excel",
-                "read": ["canvas_list_assignment_attachments", "canvas_read_assignment_attachment"],
+                "read": ["canvas_list_assignment_attachments", "canvas_read_assignment_attachment",
+                         "canvas_read_quiz_attachment", "canvas_read_discussion_attachment"],
                 "workflow": "Reuse file IDs from submission review or list attachments. Read instruction files with source=assignment; submitted files with source=submission and student_id or anonymous_id. Follow next_cursor with identical identifiers and report coverage gaps.",
-                "limits": "25 MiB/file; no OCR, image interpretation, macros or formula calculation. Text snapshots are temporary and do not require a report job.",
+                "other_sources": "Quiz file-upload answers require quiz_submission_id and question_id; discussion files require topic_id and entry_id. Use their dedicated readers, not the ordinary assignment attachment inventory.",
+                "limits": "25 MiB/documents, 8 MiB/25 megapixels per image. Images return native MCP image blocks for the AI to inspect; no OCR, macros or formula calculation. Text snapshots are temporary.",
             },
             "reporting": {"templates": "canvas://reports/templates", "search": "student report, learning review, discussion watch",
                           "model": "Dashboard selection does not invoke AI; the connected AI client analyzes review evidence.",
@@ -602,6 +604,8 @@ class AssistantTools:
             raise ValueError("Canvas returned a different quiz submission than requested")
         if student_id is not None and str(submission.get("user_id")) != student_id:
             raise ValueError("The quiz submission does not belong to the requested student")
+        if submission.get("quiz_id") is not None and str(submission['quiz_id']) != quiz_id:
+            raise ValueError("The quiz submission does not belong to the requested quiz")
         attempt = submission.get("attempt")
         if not isinstance(attempt, int) or attempt < 1:
             raise ValueError("Canvas returned an invalid Classic Quiz attempt number")
@@ -639,6 +643,18 @@ class AssistantTools:
         ordered_ids = list(definitions_by_id)
         ordered_ids.extend(value for value in answers_by_id if value not in definitions_by_id)
         manual_types = {"essay_question", "file_upload_question"}
+        from quiz_submission_data import assignment_quiz_answers, answer_file_ids
+        fallback, fallback_warning = None, None
+        needs_fallback = any(
+            d.get('question_type') in manual_types and (
+                answers_by_id.get(qid, {}).get('answer') is None
+                or d.get('question_type') == 'file_upload_question')
+            for qid, d in definitions_by_id.items())
+        if needs_fallback and submission.get('submission_id') is not None:
+            try:
+                fallback = await assignment_quiz_answers(client, course_id, quiz_id, submission, attempt)
+            except CanvasAPIError as exc:
+                fallback_warning = {'code': exc.code, 'message': 'Assignment submission answer history is unavailable.'}
         questions: list[dict[str, Any]] = []
         for question_id in ordered_ids:
             record = answers_by_id.get(question_id, {})
@@ -649,6 +665,13 @@ class AssistantTools:
             question_type = definition.get("question_type") or record.get("question_type")
             if question_type not in manual_types:
                 continue
+            historical = fallback['answers'].get(question_id, {}) if fallback else {}
+            answer = record.get('answer')
+            answer_source = 'quiz_submission_questions' if answer is not None else None
+            if answer is None and question_type == 'essay_question' and historical.get('text') is not None:
+                answer, answer_source = historical['text'], 'assignment_submission_history'
+            file_ids = (answer_file_ids(historical) or answer_file_ids(record)) if question_type == 'file_upload_question' else []
+            score = record.get('score') if record.get('score') is not None else historical.get('points')
             questions.append(
                 {
                     "question_id": question_id,
@@ -660,10 +683,13 @@ class AssistantTools:
                     "points_possible": definition.get(
                         "points_possible", record.get("points_possible")
                     ),
-                    "answer": _plain_text(record.get("answer")),
-                    "answer_available": "answer" in record,
-                    "score": record.get("score"),
-                    "score_available": "score" in record,
+                    "answer": _plain_text(answer),
+                    "answer_available": answer is not None or bool(file_ids),
+                    "answer_source": answer_source or ('assignment_submission_history' if file_ids and historical else 'quiz_submission_questions' if file_ids else None),
+                    "attachment_ids": file_ids,
+                    "attachment_read_tool": 'canvas_read_quiz_attachment' if file_ids else None,
+                    "score": score,
+                    "score_available": score is not None,
                     "comment": _plain_text(record.get("comment")),
                     "comment_available": "comment" in record,
                 }
@@ -688,6 +714,7 @@ class AssistantTools:
                 for item in questions
             ),
             "question_data_truncated": bool(next_cursor),
+            "answer_history_warning": fallback_warning,
         }
         state = {
             "submission_endpoint": submission_endpoint,
@@ -696,6 +723,7 @@ class AssistantTools:
             "answer_endpoint": answer_endpoint,
             "answer_params": answer_params,
             "answer_payload": answer_payload,
+            "answer_history": fallback,
         }
         return review, state
 
@@ -712,7 +740,7 @@ class AssistantTools:
             Field(description="Student ID; selects the latest returned attempt"),
         ] = None,
     ) -> dict[str, Any]:
-        """Review only essay and file-upload questions in a Classic Quiz attempt."""
+        """Review Classic Quiz essay/file-upload answers, using matching assignment submission history when needed. Read returned attachment_ids with canvas_read_quiz_attachment for images or documents."""
         if (quiz_submission_id is None) == (student_id is None):
             raise ValueError("Provide exactly one of quiz_submission_id or student_id")
         normalized_submission_id = (
@@ -1681,6 +1709,10 @@ class AssistantTools:
                 fingerprint=fingerprint(state["answer_payload"]),
             ),
         ]
+        if state.get('answer_history') is not None:
+            history = state['answer_history']
+            preconditions.append(Precondition(history['endpoint'],
+                fingerprint(history['submission'], kind='submission'), history['params'], fingerprint_kind='submission'))
         return await plan_store.create(
             action="quiz_submission_grade",
             summary=(

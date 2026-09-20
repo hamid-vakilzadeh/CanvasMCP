@@ -51,6 +51,10 @@ Group sets are Canvas group categories; assignment groups are gradebook categori
 For assignment or submission attachment content, search for read assignment
 attachments. Use canvas_read_assignment_attachment with a returned file ID;
 follow text pagination and report extraction gaps before assessing the work.
+Classic Quiz file-upload answers use canvas_read_quiz_attachment with the quiz
+submission, question and file IDs. Discussion post/reply files use
+canvas_read_discussion_attachment with topic, entry and file IDs. These readers
+return image content blocks for visual inspection and spreadsheet cells/formulas.
 
 For student dashboards and comprehensive AI learning reviews, search for
 student report or learning review. Canonical guidance is at canvas://reports/templates.

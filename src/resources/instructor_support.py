@@ -115,11 +115,12 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
         "accommodation_notes": "Classic quiz IDs differ from New Quiz assignment IDs. all_timed covers existing quizzes only. Availability dates can cut off extra time. New Quizzes course scope supports fixed minutes, not a multiplier.",
     },
     "files": {
-        "summary": "Read assignment instruction/submission attachment content, inspect course files and prepare secure local-file uploads.",
+        "summary": "Read assignment, Classic Quiz upload-answer and discussion attachments as image content or extracted document/spreadsheet text; inspect files and prepare uploads.",
         "visible_tools": ["canvas_plan_file_upload", "canvas_apply_change"],
-        "discoverable_tools": ["canvas_list_assignment_attachments", "canvas_read_assignment_attachment"],
-        "search_examples": ["read assignment attachment content PDF Word Excel", "list files", "folders", "usage rights"],
-        "attachment_workflow": "Reuse submission attachment IDs or list files. source=assignment reads Canvas files linked in instructions; source=submission requires student_id or anonymous_id and optionally attempt. Follow all text chunks and report coverage gaps. Does not read external URLs, comment attachments or scanned/image content.",
+        "discoverable_tools": ["canvas_list_assignment_attachments", "canvas_read_assignment_attachment",
+                               "canvas_read_quiz_attachment", "canvas_read_discussion_attachment"],
+        "search_examples": ["read quiz uploaded image", "read discussion workbook attachment", "read assignment attachment content PDF Word Excel", "list files"],
+        "attachment_workflow": "Use the assignment reader for ordinary instruction/submission files, the quiz reader for file-upload question attachment_ids, and the discussion reader for files attached/linked to a specific entry. Image files return MCP image blocks. Follow all document text chunks and report coverage gaps; embedded visuals and scanned PDF pages are not extracted. External URLs are not fetched.",
     },
     "course-copies": {
         "summary": "Prepare complete or selective course copies and monitor migrations.",

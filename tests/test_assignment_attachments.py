@@ -80,6 +80,22 @@ class AssignmentAttachmentTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('url', public)
         self.assertIsNone(self.canvas.calls[-1][1])  # No unnecessary history download.
 
+    async def test_assignment_image_uses_native_content_through_mcp_proxy(self):
+        import base64
+        import io
+        from PIL import Image
+        stream = io.BytesIO()
+        Image.new('RGB', (4, 4), 'blue').save(stream, format='PNG')
+        self.canvas.file.update(display_name='Synthetic.png', **{'content-type': 'image/png'})
+        self.download.return_value = stream.getvalue()
+        async with Client(create_server()) as client:
+            result = await client.call_tool('canvas_call_tool', {'name': 'canvas_read_assignment_attachment',
+                'arguments': {'course_id': 42, 'assignment_id': 50, 'file_id': 100, 'student_id': 7}})
+        images = [c for c in result.content if c.type == 'image']
+        self.assertEqual(len(images), 1)
+        self.assertEqual(base64.b64decode(images[0].data), stream.getvalue())
+        self.assertEqual(result.structured_content['content_kind'], 'image')
+
     async def test_instruction_files_resolve_only_through_scoped_api_metadata(self):
         self.canvas.assignment['description'] += (
             '<a data-api-endpoint="https://canvas.example.invalid/api/v1/courses/42/files/100" '
@@ -166,7 +182,7 @@ class AssignmentAttachmentTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaisesRegex(ValueError, 'expired'): await self.read(cursor=cursor)
 
     async def test_unsupported_oversize_and_restricted_files_do_not_download(self):
-        for update, reason in [({'display_name': 'Synthetic.png'}, 'unsupported_format'),
+        for update, reason in [({'display_name': 'Synthetic.mp4'}, 'unsupported_format'),
                                ({'size': MAX_FILE_BYTES + 1}, 'file_size_limit'),
                                ({'locked_for_user': True}, 'file_access_restricted'),
                                ({'hidden_for_user': True}, 'file_access_restricted')]:

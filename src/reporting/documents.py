@@ -18,6 +18,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import warnings
 import zipfile
 from urllib.parse import urljoin, urlsplit
 
@@ -27,6 +28,36 @@ MAX_FILE_BYTES = 25 * 1024 * 1024
 MAX_EXPANDED_BYTES = 100 * 1024 * 1024
 MAX_TEXT_CHARS = 2_000_000
 SUPPORTED = {".pdf", ".docx", ".pptx", ".xlsx", ".csv", ".tsv", ".txt", ".md", ".html", ".htm", ".json", ".py", ".r", ".sql"}
+IMAGE_SUFFIXES = {'.png', '.jpg', '.jpeg', '.webp', '.gif'}
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+MAX_IMAGE_PIXELS = 25_000_000
+
+
+def inspect_image(data: bytes) -> dict:
+    """Validate original image bytes without transforming or interpreting them."""
+    from PIL import Image
+    try:
+        if len(data) > MAX_IMAGE_BYTES:
+            raise ValueError('image_size_limit')
+        with warnings.catch_warnings():
+            warnings.simplefilter('error', Image.DecompressionBombWarning)
+            with Image.open(io.BytesIO(data)) as img:
+                mime = {'PNG': 'image/png', 'JPEG': 'image/jpeg', 'WEBP': 'image/webp', 'GIF': 'image/gif'}.get(img.format)
+                if mime is None:
+                    raise ValueError('unsupported_image_format')
+                if img.width * img.height > MAX_IMAGE_PIXELS:
+                    raise ValueError('image_pixel_limit')
+                if getattr(img, 'n_frames', 1) != 1:
+                    raise ValueError('animated_image_not_supported')
+                metadata = {'mime_type': mime, 'width': img.width, 'height': img.height}
+                img.verify()
+            with Image.open(io.BytesIO(data)) as img:
+                img.load()
+        return {'image': metadata, 'segments': [], 'gaps': [], 'complete': True}
+    except Exception as exc:
+        known = {'image_size_limit', 'image_pixel_limit', 'unsupported_image_format', 'animated_image_not_supported'}
+        reason = str(exc) if isinstance(exc, ValueError) and str(exc) in known else 'image_decode_failed'
+        return {'segments': [], 'gaps': [{'location': 'image', 'reason': reason}], 'complete': False}
 
 
 def extract_document(data: bytes, filename: str) -> dict:
@@ -186,7 +217,7 @@ def extract_document(data: bytes, filename: str) -> dict:
     return {"segments": segments, "gaps": gaps, "complete": not gaps, "characters": sum(len(s['text']) for s in segments)}
 
 
-async def extract_isolated(data: bytes, filename: str, private_directory: Path) -> dict:
+async def extract_isolated(data: bytes, filename: str, private_directory: Path, *, image: bool = False) -> dict:
     """Run parsers without Canvas credentials and terminate a stalled parser."""
     def run():
         with tempfile.TemporaryDirectory(prefix='extract-', dir=private_directory) as directory:
@@ -195,7 +226,10 @@ async def extract_isolated(data: bytes, filename: str, private_directory: Path) 
             path.chmod(0o600)
             child_env = {k: os.environ[k] for k in ('SYSTEMROOT', 'WINDIR', 'PATH') if k in os.environ}
             try:
-                completed = subprocess.run([sys.executable, str(Path(__file__).resolve()), str(path), filename],
+                command = [sys.executable, str(Path(__file__).resolve()), str(path), filename]
+                if image:
+                    command.append('--image')
+                completed = subprocess.run(command,
                     capture_output=True, timeout=60, env=child_env, check=False)
                 if completed.returncode == 0:
                     return json.loads(completed.stdout)
@@ -255,4 +289,6 @@ if __name__ == '__main__':
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     import logging
     logging.disable(logging.CRITICAL)
-    print(json.dumps(extract_document(Path(sys.argv[1]).read_bytes(), sys.argv[2]), ensure_ascii=False))
+    data = Path(sys.argv[1]).read_bytes()
+    result = inspect_image(data) if sys.argv[3:] == ['--image'] else extract_document(data, sys.argv[2])
+    print(json.dumps(result, ensure_ascii=False))

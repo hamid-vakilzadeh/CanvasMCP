@@ -8,6 +8,7 @@ dependencies = [
     "fastmcp[tasks]==4.0.2",
     "httpx2>=2.5,<3",
     "openpyxl>=3.1,<4",
+    "pillow>=12,<13",
     "pydantic>=2.12,<3",
     "pypdf>=6,<7",
     "python-docx>=1.2,<2",

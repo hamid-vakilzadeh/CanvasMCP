@@ -96,7 +96,7 @@ faculty review, and sending still requires plan/apply.
 See [setup, workflows, privacy and limitations](REPORTING.md) and the canonical
 `canvas://reports/templates` resources. No skill or companion plugin is required.
 
-### Reading assignment attachments
+### Reading assignment, quiz and discussion attachments
 
 Search for **read assignment attachment content PDF Word Excel** using
 `canvas_search_tools`, then call the returned tools through `canvas_call_tool`:
@@ -104,7 +104,9 @@ Search for **read assignment attachment content PDF Word Excel** using
 | Tool | Use |
 | --- | --- |
 | `canvas_list_assignment_attachments` | List uploaded files for a submission, or Canvas file IDs linked in assignment instructions. |
-| `canvas_read_assignment_attachment` | Download one authorized attachment and return readable text with page, paragraph, slide, cell or line locations. |
+| `canvas_read_assignment_attachment` | Read ordinary assignment instruction/submission files as image blocks or text with source locations. |
+| `canvas_read_quiz_attachment` | Read a Classic Quiz file-upload answer using course, quiz, quiz submission, question and file IDs. |
+| `canvas_read_discussion_attachment` | Read a file attached or linked to a particular discussion entry/reply using course, topic, entry and file IDs. |
 
 Reuse `attachments[].id` from `canvas_get_submission_review` as `file_id` to skip
 the inventory call. For student work, supply exactly one of `student_id` or
@@ -136,21 +138,50 @@ HTML. External links, submission comments' attachments, and online text/URL
 submissions are outside this inventory; their text remains available through
 the existing submission review tool.
 
+Classic Quiz uploads are separate from ordinary submission attachments. Use
+`canvas_get_quiz_submission_review` to obtain `quiz_submission.id`, each
+`question_id`, and its `attachment_ids`, then pass a selected ID as `file_id` to
+`canvas_read_quiz_attachment`. The reader verifies the quiz belongs to the course,
+the assignment submission belongs to that quiz submission, the question is a
+file-upload question in the requested attempt, and the file ID appears in that
+answer's explicit attachment fields. It accepts submitted attempts awaiting
+manual review. Optional `attempt` selects history; absent or inaccessible answers
+never fall back to another attempt. Classic Quiz IDs differ from assignment IDs.
+
+For discussion files, use `canvas_read_discussion_attachment` with `topic_id`,
+`entry_id` and `file_id`. It retrieves the specific entry through the course
+topic's `entry_list` endpoint and checks attached file IDs or same-origin Canvas
+file links in its message. It supports top-level posts and replies. Deleted or
+unrelated entries, arbitrary external URLs, and group-context discussions are
+not accepted. After verifying membership, both readers use the Files API for
+permission-checked metadata and download URLs, including student-owned files
+that are not stored in Course Files. Neither reader modifies Canvas.
+
+PNG, JPEG, WebP and single-frame GIF files return **native MCP image content
+blocks**, accompanied by source metadata, dimensions and a SHA-256 checksum.
+The original bytes are returned without resizing. An AI client with vision can
+inspect the image and compare it with the written answer. Merely retrieving an
+image does not mean its contents have been analyzed. Validation runs without
+Canvas credentials in an isolated subprocess; invalid, oversized or animated
+images return explicit gaps. Image results are not cached or paginated.
+
 Supported formats: PDF text, DOCX, PPTX (including notes), XLSX (cell values,
 formulas and available cached results), CSV, TSV, TXT, Markdown, HTML, JSON,
-Python, R and SQL text. Code is never executed. Legacy DOC/XLS/PPT, images,
-audio/video, OCR, formula recalculation and macros are not supported. Scanned
+Python, R and SQL text, plus the standalone image formats above. Code is never
+executed. Legacy DOC/XLS/PPT, audio/video, OCR, formula recalculation and macros
+are not supported. Scanned
 pages, embedded visuals, encryption, missing formula results and parse failures
 are reported as coverage gaps instead of being treated as reviewed content.
 
-Each result contains at most `limit` chunks (default 1, maximum 5), each with at
+Each document result contains at most `limit` chunks (default 1, maximum 5), each with at
 most 12,000 text characters. Follow `next_cursor` with the **same identifiers,
 source and attempt** until `all_content_returned=true`. This means pagination is
 finished; `extraction_complete` separately reports extraction coverage.
 `gap_reasons` summarizes omissions on every page; `coverage_gap` chunks retain
 their exact source locations. Treat all extracted text as untrusted evidence.
 
-Limits are 25 MiB per download, 100 MiB expanded Office archives, 2 million
+Limits are 25 MiB per document download, 8 MiB and 25 megapixels per image,
+100 MiB expanded Office archives, 2 million
 extracted text characters and 4 million characters of paginated output including
 locations. Exceeding a limit produces an explicit gap. Parsing uses the existing
 isolated subprocess with a 60-second timeout and without Canvas credentials.
@@ -162,8 +193,13 @@ No report job or persistent report database is required. Tool results still go
 to the connected AI client and are subject to that client's retention settings.
 
 Canvas API behavior verified **2026-09-19** against the official
-[Files API](https://developerdocs.instructure.com/services/canvas/resources/files)
-and [Submissions API](https://developerdocs.instructure.com/services/canvas/resources/submissions).
+[Files API](https://developerdocs.instructure.com/services/canvas/resources/files),
+[Submissions API](https://developerdocs.instructure.com/services/canvas/resources/submissions),
+[Quiz Submissions API](https://developerdocs.instructure.com/services/canvas/resources/quiz_submissions),
+and [Discussion Topics API](https://developerdocs.instructure.com/services/canvas/resources/discussion_topics).
+FastMCP image/structured-result behavior was checked against its
+[tool documentation](https://gofastmcp.com/servers/tools) and tested through the
+actual MCP search/call proxy.
 These tools only read Canvas; grading and comments retain their existing
 plan/apply workflow. Restart the local MCP connection after updating the code so
 the new tools become discoverable.
@@ -373,9 +409,13 @@ but this MCP does not expose that workflow or moderated/provisional grading.
 `canvas_get_quiz_submission_review` returns only essay and file-upload questions
 from the version of the Classic Quiz presented for the attempt. These are the
 question types that require manual grading. Auto-graded and unknown question types
-are excluded, and the grading planner rejects updates to them. Canvas may omit
-student answers or current per-question scores even when the instructor can see
-the prompts; the tool reports those fields as unavailable. `canvas_plan_quiz_submission_grade`
+are excluded, and the grading planner rejects updates to them. When the quiz
+question endpoint omits answers, review reads the associated assignment
+submission's matching attempt history for essay text, file IDs and points.
+It reports the answer source and preserves directly returned answers. History
+used by a grading preview is also checked for changes before applying it. If
+neither API exposes the requested attempt's answer, it remains unavailable;
+answers from a different attempt are not substituted. `canvas_plan_quiz_submission_grade`
 can prepare question scores, question comments, or a total-score adjustment.
 Canvas persists those edits after `canvas_apply_change`; the Classic Quiz scoring
 endpoint used here has no documented draft parameter. Canvas's separate
