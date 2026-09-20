@@ -1597,7 +1597,8 @@ class AssistantTools:
         course_id: Annotated[str | int, Field(description="Canvas course ID")],
         quiz_id: Annotated[str | int, Field(description="Classic Quiz ID")],
         quiz_submission_id: Annotated[
-            str | int, Field(description="Completed Classic Quiz submission ID")
+            str | int,
+            Field(description="Classic Quiz submission ID for a complete or finished pending-review attempt"),
         ],
         question_updates: Annotated[
             list[QuizQuestionGradeUpdate] | None,
@@ -1608,7 +1609,7 @@ class AssistantTools:
         ] = None,
         fudge_points: Annotated[
             float | None,
-            Field(description="Optional signed adjustment to the attempt total"),
+            Field(description="Optional signed adjustment to the attempt total; omitting preserves the existing adjustment, 0 clears it"),
         ] = None,
     ) -> dict[str, Any]:
         """Plan essay/file-upload scores or comments, or an overall quiz score adjustment."""
@@ -1635,8 +1636,18 @@ class AssistantTools:
                 student_id=None,
             )
         submission = review["quiz_submission"]
-        if submission.get("workflow_state") != "complete":
-            raise ValueError("Classic Quiz question grading requires a completed attempt")
+        workflow_state = submission.get("workflow_state")
+        finished_at = submission.get("finished_at")
+        finished_pending_review = (
+            workflow_state == "pending_review"
+            and isinstance(finished_at, str)
+            and bool(finished_at.strip())
+        )
+        if workflow_state != "complete" and not finished_pending_review:
+            raise ValueError(
+                "Classic Quiz question grading requires a completed attempt "
+                "or a finished pending-review attempt"
+            )
         attempt = submission.get("attempt")
         if not isinstance(attempt, int) or attempt < 1:
             raise ValueError("Canvas returned an invalid Classic Quiz attempt number")
@@ -1650,6 +1661,13 @@ class AssistantTools:
         warnings = [
             "The plan is the draft. Canvas has no Classic Quiz grading draft; applying it persists the scores and comments immediately."
         ]
+        if normalized_updates and fudge_points is None and submission.get("fudge_points"):
+            warnings.append(
+                f"The existing quiz-level adjustment (fudge_points={submission['fudge_points']}) "
+                "will be preserved alongside the question scores and can change the total. "
+                "If replacing an assignment-level total-score workaround, explicitly set "
+                "fudge_points=0 only if you intend to clear that adjustment, and verify the final total."
+            )
         unavailable_before = False
         for item in normalized_updates:
             question_id = _sid(item.question_id)

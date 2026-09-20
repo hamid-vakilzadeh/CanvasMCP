@@ -1127,6 +1127,129 @@ class AssistantPlanTests(unittest.IsolatedAsyncioTestCase):
                         7, 8, 40, [update]
                     )
 
+    @staticmethod
+    def _pending_quiz_client(**submission_fields):
+        """Synthetic finished attempt with two questions awaiting manual grading."""
+        return FakeCanvasClient(
+            get_values=[
+                {"quiz_submissions": [{
+                    "id": "40", "user_id": "11", "attempt": 2,
+                    "workflow_state": "pending_review",
+                    "finished_at": "2025-01-01T12:00:00Z",
+                    "score": 0, "fudge_points": 0,
+                    **submission_fields,
+                }]},
+                {"quiz_submission_questions": [
+                    {"id": "90", "answer": "Synthetic explanation", "score": 0},
+                    {"id": "92", "score": 0},
+                ]},
+            ],
+            page_values=[{
+                "items": [
+                    {"id": "90", "question_type": "essay_question", "points_possible": 5},
+                    {"id": "92", "question_type": "file_upload_question", "points_possible": 5},
+                ],
+                "next_cursor": None, "count": 2,
+            }],
+        )
+
+    async def test_finished_pending_review_question_scores_plan_and_apply(self):
+        planning_client = self._pending_quiz_client()
+        with patch.object(
+            assistant_module.AsyncCanvasClient, "from_environment", return_value=planning_client
+        ):
+            public = await self.tools.canvas_plan_quiz_submission_grade(
+                7, 8, 40, [
+                    {"question_id": 90, "score": 4, "comment": "Clear explanation"},
+                    {"question_id": 92, "score": 5},
+                ]
+            )
+
+        self.assertTrue(all(call[0] in {"GET", "PAGE"} for call in planning_client.calls))
+        self.assertEqual(public["preview"]["quiz_submission"]["workflow_state"], "pending_review")
+        applying_client = self._pending_quiz_client()
+        with patch.object(
+            assistant_module.AsyncCanvasClient, "from_environment", return_value=applying_client
+        ):
+            result = await self.tools.canvas_apply_change(public["plan_token"], True, FakeProgress())
+
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["applied"], 1)
+        self.assertEqual([call[0] for call in applying_client.calls], ["GET", "GET", "PUT"])
+        self.assertEqual(applying_client.calls[-1], (
+            "PUT", "/api/v1/courses/7/quizzes/8/submissions/40",
+            {
+                "quiz_submissions[][attempt]": 2,
+                "quiz_submissions[][questions][90][score]": 4,
+                "quiz_submissions[][questions][90][comment]": "Clear explanation",
+                "quiz_submissions[][questions][92][score]": 5,
+            },
+            None,
+        ))
+
+    async def test_unfinished_or_ineligible_quiz_attempt_cannot_be_planned(self):
+        for fields in (
+            {"finished_at": None}, {"finished_at": ""}, {"finished_at": "   "},
+            {"workflow_state": "untaken"}, {"workflow_state": "in_progress"},
+            {"workflow_state": "preview"}, {"workflow_state": "settings_only"},
+            {"workflow_state": "unknown"}, {"workflow_state": None},
+        ):
+            with self.subTest(fields=fields):
+                client = self._pending_quiz_client(**fields)
+                with patch.object(
+                    assistant_module.AsyncCanvasClient, "from_environment", return_value=client
+                ):
+                    with self.assertRaisesRegex(ValueError, "requires a completed attempt"):
+                        await self.tools.canvas_plan_quiz_submission_grade(
+                            7, 8, 40, [{"question_id": 90, "score": 4}]
+                        )
+                self.assertFalse(self.store._plans)
+                self.assertTrue(all(call[0] in {"GET", "PAGE"} for call in client.calls))
+
+    async def test_pending_review_plan_rejects_changed_attempt_before_writing(self):
+        for changed in (
+            {"workflow_state": "untaken"}, {"attempt": 3}, {"finished_at": None},
+        ):
+            with self.subTest(changed=changed):
+                with patch.object(
+                    assistant_module.AsyncCanvasClient, "from_environment",
+                    return_value=self._pending_quiz_client(),
+                ):
+                    public = await self.tools.canvas_plan_quiz_submission_grade(
+                        7, 8, 40, [{"question_id": 90, "score": 4}]
+                    )
+                client = self._pending_quiz_client(**changed)
+                with patch.object(
+                    assistant_module.AsyncCanvasClient, "from_environment", return_value=client
+                ):
+                    with self.assertRaisesRegex(ValueError, "Plan is stale"):
+                        await self.tools.canvas_apply_change(public["plan_token"], True, FakeProgress())
+                self.assertEqual([call[0] for call in client.calls], ["GET"])
+
+    async def test_quiz_question_grading_warns_before_preserving_total_adjustment(self):
+        for existing, requested, expect_warning in (
+            (5, None, True), (-1, None, True), (0, None, False),
+            (None, None, False), (5, 0, False), (5, 1, False),
+        ):
+            with self.subTest(existing=existing, requested=requested):
+                with patch.object(
+                    assistant_module.AsyncCanvasClient, "from_environment",
+                    return_value=self._pending_quiz_client(fudge_points=existing),
+                ):
+                    public = await self.tools.canvas_plan_quiz_submission_grade(
+                        7, 8, 40, [{"question_id": 90, "score": 4}], fudge_points=requested
+                    )
+                self.assertEqual(
+                    any("will be preserved" in warning for warning in public["warnings"]),
+                    expect_warning,
+                )
+                self.assertEqual(public["preview"]["quiz_submission"]["fudge_points"], existing)
+                data = self.store._plans[public["plan_token"]].mutations[0].data
+                if requested is None:
+                    self.assertNotIn("quiz_submissions[][fudge_points]", data)
+                else:
+                    self.assertEqual(data["quiz_submissions[][fudge_points]"], requested)
+
     async def test_quiz_grade_rejects_mixed_batch_with_auto_or_unknown_question(self):
         submission_payload = {
             "quiz_submissions": [

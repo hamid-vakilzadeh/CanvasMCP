@@ -440,6 +440,17 @@ used by a grading preview is also checked for changes before applying it. If
 neither API exposes the requested attempt's answer, it remains unavailable;
 answers from a different attempt are not substituted. `canvas_plan_quiz_submission_grade`
 can prepare question scores, question comments, or a total-score adjustment.
+It accepts `complete` attempts and `pending_review` attempts with a `finished_at`
+timestamp; written questions awaiting grading do not require resubmission.
+Unfinished attempts remain blocked, and changes to the attempt after planning
+still invalidate the plan. This follows Canvas's
+[completed-attempt grading behavior](https://github.com/instructure/canvas-lms/blob/master/app/models/quizzes/quiz_submission.rb)
+(verified September 19, 2026).
+
+An assignment-level total-score override can leave a quiz-level `fudge_points`
+adjustment. Question grading preserves that adjustment unless you explicitly
+provide a replacement. The planner warns when a nonzero adjustment would remain;
+use `fudge_points=0` only when you intend to clear it, then verify the final total.
 Canvas persists those edits after `canvas_apply_change`; the Classic Quiz scoring
 endpoint used here has no documented draft parameter. Canvas's separate
 [moderated grading API](https://developerdocs.instructure.com/services/canvas/resources/moderated_grading)
