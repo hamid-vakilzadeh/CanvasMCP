@@ -53,7 +53,7 @@ STUDENT_FIELDS = frozenset({
     "discussion_subentry_count", "participants", "recent_replies", "entries", "replies",
     "last_reply_at", "last_reply", "assessment_requests", "all_dates", "overrides",
     "quiz_extensions", "score_statistics", "submission_statistics", "submissions_download_url",
-    "quiz_statistics_url", "quiz_submission_versions_html_url",
+    "quiz_statistics_url", "quiz_submission_versions_html_url", "quiz_statistics", "question_statistics",
 })
 STUDENT_ARGUMENTS = STUDENT_FIELDS | {
     "student_id", "student_ids", "user_id", "user_ids", "anonymous_id", "as_user_id",
@@ -63,7 +63,7 @@ STUDENT_ARGUMENTS = STUDENT_FIELDS | {
 _PRIVATE_PATH = re.compile(
     r"/(?:submissions|anonymous_submissions|quiz_submissions|students|enrollments|analytics|"
     r"outcome_results|outcome_rollups|conversations|entries|replies|entry_list|view|"
-    r"extensions|accommodations|overrides|users|memberships)(?:/|$)|/api/graphql(?:/|$)"
+    r"extensions|accommodations|overrides|users|memberships|statistics)(?:/|$)|/api/graphql(?:/|$)"
 )
 
 

@@ -685,7 +685,9 @@ class AssistantTools:
             answer_source = 'quiz_submission_questions' if answer is not None else None
             if answer is None and question_type == 'essay_question' and historical.get('text') is not None:
                 answer, answer_source = historical['text'], 'assignment_submission_history'
-            file_ids = (answer_file_ids(historical) or answer_file_ids(record)) if question_type == 'file_upload_question' else []
+            file_context = {'canvas_url': getattr(client, 'base_url', None), 'course_id': course_id,
+                            'user_id': submission.get('user_id')}
+            file_ids = answer_file_ids(historical, **file_context) or answer_file_ids(record, **file_context)
             score = record.get('score') if record.get('score') is not None else historical.get('points')
             questions.append(
                 {

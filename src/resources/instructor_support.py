@@ -111,8 +111,9 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
             "canvas_plan_quiz_submission_grade",
             "canvas_apply_change",
         ],
-        "search_examples": ["quiz extra time 1.5x accommodations", "quiz questions", "question groups", "quiz reports", "quiz submissions"],
-        "discoverable_tools": ["canvas_plan_quiz_accommodations"],
+        "search_examples": ["anonymous survey statistics response counts averages", "quiz extra time 1.5x accommodations", "quiz questions", "question groups", "quiz reports", "quiz submissions"],
+        "discoverable_tools": ["canvas_plan_quiz_accommodations", "canvas_get_quiz_statistics"],
+        "statistics_notes": "Classic Quiz statistics return completed submission and answer counts without identities. Standard agreement choices map 1–5; N/A and unanswered responses are excluded. Use answer_values for custom scales. Read generated_at, denominators and warnings; unavailable counts are not zeros. Uses Canvas kept completed attempts, not all retakes. Verified 2026-10-03: https://developerdocs.instructure.com/services/canvas/resources/quiz_statistics",
         "accommodation_notes": "Classic quiz IDs differ from New Quiz assignment IDs. all_timed covers existing quizzes only. Availability dates can cut off extra time. New Quizzes course scope supports fixed minutes, not a multiplier.",
     },
     "files": {
@@ -120,8 +121,8 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
         "visible_tools": ["canvas_plan_file_upload", "canvas_apply_change"],
         "discoverable_tools": ["canvas_list_assignment_attachments", "canvas_read_assignment_attachment",
                                "canvas_read_quiz_attachment", "canvas_read_discussion_attachment"],
-        "search_examples": ["read ZIP assignment attachment", "read quiz uploaded image", "read discussion workbook attachment", "read assignment attachment content PDF Word Excel", "list files"],
-        "attachment_workflow": "Use the assignment reader for ordinary instruction/submission files, the quiz reader for file-upload question attachment_ids, and the discussion reader for files attached/linked to a specific entry. ZIP attachments first return an inventory; call the same reader with archive_member set to an exact listed path to read a member. Listing files does not review their contents. Image files return MCP image blocks. Follow all document text chunks and report coverage gaps; embedded visuals and scanned PDF pages are not extracted. External URLs are not fetched.",
+        "search_examples": ["download original unsupported attachment", "read ZIP assignment attachment", "read quiz essay embedded image", "read discussion workbook attachment", "read assignment attachment content PDF Word Excel", "list files"],
+        "attachment_workflow": "Use the assignment reader for ordinary instruction/submission files, the quiz reader for uploaded files and Canvas file links/images inside submitted essay answers, and the discussion reader for files attached/linked to a specific entry. ZIP attachments first return an inventory; call the same reader with archive_member set to an exact listed path to read a member. Listing files does not review their contents. Use download_original=true on the same reader to save original bytes of any format to a private local temporary file; it returns local_path without parsing. Image files return MCP image blocks. Follow all document text chunks and report coverage gaps; embedded visuals and scanned PDF pages are not extracted. External URLs are not fetched.",
     },
     "course-copies": {
         "summary": "Prepare complete or selective course copies and monitor migrations.",

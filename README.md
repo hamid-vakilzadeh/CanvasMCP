@@ -109,8 +109,13 @@ For ZIP attachments, the reader lists the files first, then reads selected membe
 Supported images are returned as image content; documents and spreadsheets return
 text with source locations. Unreadable files and extraction limits are reported
 explicitly. Password-protected and nested ZIP archives are not supported.
+Readers also recognize Canvas files embedded or linked in submitted quiz essays.
+Use `download_original=true` to save an attachment privately for local inspection,
+including formats the reader cannot parse. Downloads retain the 25 MiB size limit.
 
 See [Reports and dashboards](REPORTING.md) for the optional reporting workflow.
+Anonymous Classic Quiz surveys support aggregate response counts and 1–5 averages,
+excluding “Not applicable,” without returning student identities.
 Tool schemas and built-in resources provide the detailed operational guidance.
 
 ## Development
