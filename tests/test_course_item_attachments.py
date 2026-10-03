@@ -151,6 +151,86 @@ class CourseItemAttachmentTests(unittest.IsolatedAsyncioTestCase):
         self.canvas.quiz_submission['workflow_state'] = 'untaken'
         with self.assertRaisesRegex(ValueError, 'submitted'): await self.quiz_read()
 
+    async def test_essay_embedded_files_are_discovered_and_read_through_mcp(self):
+        answer = self.canvas.submission['submission_history'][1]['submission_data'][1]
+        answer['text'] = (
+            '<p>Synthetic explanation</p><img src="/users/7/files/101/preview?verifier=AUTHORED">'
+            '<a href="/courses/42/files/201/download">Evidence</a>'
+            '<img src="https://outside.invalid/files/999/preview">'
+        )
+        async with Client(create_server()) as client:
+            found = await client.call_tool('canvas_search_tools', {'query': 'read quiz essay embedded image'})
+            self.assertIn('canvas_read_quiz_attachment', {t['name'] for t in found.data})
+            review = await client.call_tool('canvas_get_quiz_submission_review', {
+                'course_id': 42, 'quiz_id': 21, 'quiz_submission_id': 30})
+            essay = next(q for q in review.data['questions'] if q['question_id'] == '72')
+            self.assertEqual(essay['attachment_ids'], ['101', '201'])
+            self.assertEqual(essay['attachment_read_tool'], 'canvas_read_quiz_attachment')
+            result = await client.call_tool('canvas_call_tool', {
+                'name': 'canvas_read_quiz_attachment', 'arguments': {
+                    'course_id': 42, 'quiz_id': 21, 'quiz_submission_id': 30,
+                    'question_id': 72, 'file_id': 101, 'attempt': 2}})
+            self.assertEqual(base64.b64decode(result.content[-1].data), self.image_bytes)
+            self.assertNotIn('AUTHORED', self.download.call_args.args[0]['url'])
+        workbook = Workbook(); workbook.active['A1'] = 'Synthetic document evidence'
+        stream = io.BytesIO(); workbook.save(stream); workbook.close()
+        self.download.return_value = stream.getvalue()
+        document = await self.quiz_read(question_id=72, file_id=201)
+        self.assertIn('Synthetic document evidence', str(document.structured_content['chunks']))
+
+    async def test_quiz_file_access_uses_verified_submission_location(self):
+        answer = self.canvas.submission['submission_history'][1]['submission_data'][1]
+        answer['text'] = '<img src="/users/7/files/101/preview?location=quiz_submission_999&amp;verifier=SYNTHETIC">'
+        original_get = self.canvas.get
+
+        async def require_quiz_context(endpoint, params=None):
+            if endpoint == '/api/v1/files/101':
+                self.assertEqual(params, {'verifier': 'SYNTHETIC'})
+            return await original_get(endpoint, params=params)
+
+        with patch.object(self.canvas, 'get', side_effect=require_quiz_context):
+            result = await self.quiz_read(question_id=72)
+        self.assertEqual(result.content[-1].type, 'image')
+        self.assertNotIn('SYNTHETIC', json.dumps(result.structured_content))
+        self.assertTrue(any(c[1] == '/api/v1/files/101' for c in self.canvas.calls))
+        self.assertNotIn('quiz_submission_999', str(self.download.call_args))
+        self.canvas.calls.clear()
+        answer['text'] = '<img src="/users/7/files/101/preview?location=quiz_submission_999">'
+        await self.quiz_read(question_id=72)
+        self.assertIn(('GET', '/api/v1/files/101', {'location': 'quiz_submission_30'}), self.canvas.calls)
+
+    async def test_essay_links_remain_bound_to_question_attempt_course_and_student(self):
+        history = self.canvas.submission['submission_history']
+        history[0]['submission_data'][1]['text'] = '<img src="/users/7/files/102/preview">'
+        history[1]['submission_data'][1]['text'] = (
+            '<img src="/users/8/files/102/preview"><img src="/courses/99/files/102/preview">'
+            '<img src="//outside.invalid/files/102/preview"><p>File 102</p>'
+            '<img src="/api/v1/users/7/files/101">'
+        )
+        for overrides in ({'attempt': 2, 'file_id': 102}, {'attempt': 1, 'file_id': 101},
+                          {'question_id': 73, 'file_id': 101}):
+            args = {'question_id': 72, **overrides}
+            with self.subTest(args=args), self.assertRaises(ValueError):
+                await self.quiz_read(**args)
+        self.download.assert_not_awaited()
+        old = await self.quiz_read(question_id=72, attempt=1, file_id=102)
+        self.assertEqual(old.structured_content['resolved_attempt'], 1)
+        current = await self.quiz_read(question_id=72, attempt=2, file_id=101)
+        self.assertEqual(current.structured_content['resolved_attempt'], 2)
+
+    async def test_prompts_and_feedback_cannot_authorize_a_file_but_current_answer_can(self):
+        link = '<img src="/files/101/preview">'
+        self.canvas.definitions[1]['question_text'] = link
+        self.canvas.answer_payload['quiz_submission_questions'][1].update(comment=link, quiz_question={'question_text': link})
+        with self.assertRaises(ValueError):
+            await self.quiz_read(question_id=72, file_id=101)
+        self.download.assert_not_awaited()
+        self.canvas.answer_payload['quiz_submission_questions'][1]['answer'] = link
+        result = await self.quiz_read(question_id=72, file_id=101)
+        self.assertEqual(result.content[-1].type, 'image')
+        with self.assertRaises(ValueError):
+            await self.quiz_read(question_id=72, attempt=1, file_id=101)
+
     async def test_discussion_workbook_extracts_cells_formulas_and_cached_value_gaps(self):
         workbook = Workbook(); sheet = workbook.active; sheet.title = 'Synthetic analysis'
         sheet['A1'] = 0; sheet['B2'] = '=SUM(A1:A3)'

@@ -19,13 +19,33 @@ def attempt_answers(submission, attempt):
     return {}
 
 
-def answer_file_ids(record):
-    """Only explicit attachment fields establish file membership, never prose."""
+def answer_files(record, *, canvas_url=None, course_id=None, user_id=None):
+    """Read attachment fields and scoped Canvas file links in submitted answer HTML.
+
+    Question prompts, feedback and arbitrary numbers in prose do not establish
+    membership. Links establish IDs and optional file-scoped verifiers; downloads
+    still use authorized Files API metadata, never the authored URL.
+    """
     ids = record.get('attachment_ids')
     values = list(ids) if isinstance(ids, list) else []
     values.extend(a.get('id') for a in record.get('attachments') or [] if isinstance(a, dict))
-    return list(dict.fromkeys(str(v) for v in values
-                             if not isinstance(v, bool) and str(v).isascii() and str(v).isdigit() and int(v) > 0))
+    ids = dict.fromkeys(str(v) for v in values
+                        if not isinstance(v, bool) and str(v).isascii() and str(v).isdigit() and int(v) > 0)
+    verifiers = {}
+    if canvas_url and course_id is not None:
+        from canvas_file_links import CanvasFileLinks
+        links = CanvasFileLinks(canvas_url, course_id, user_id)
+        for key in ('text', 'answer'):
+            if isinstance(record.get(key), str):
+                links.feed(record[key])
+        ids.update(links.ids)
+        verifiers = links.verifiers
+    return [{'id': fid, **({'verifier': verifiers[fid]} if fid in verifiers else {})} for fid in ids]
+
+
+def answer_file_ids(record, **context):
+    """Public review metadata contains identifiers, never file access verifiers."""
+    return [item['id'] for item in answer_files(record, **context)]
 
 
 async def assignment_quiz_answers(client, course_id, quiz_id, quiz_submission, attempt=None):

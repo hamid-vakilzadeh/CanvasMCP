@@ -53,12 +53,15 @@ Group sets are Canvas group categories; assignment groups are gradebook categori
 For assignment or submission attachment content, search for read assignment
 attachments. Use canvas_read_assignment_attachment with a returned file ID;
 follow text pagination and report extraction gaps before assessing the work.
-Classic Quiz file-upload answers use canvas_read_quiz_attachment with the quiz
+Classic Quiz uploads and files embedded/linked in essay answers use canvas_read_quiz_attachment with the quiz
 submission, question and file IDs. Discussion post/reply files use
 canvas_read_discussion_attachment with topic, entry and file IDs. These readers
 return image content blocks for visual inspection and spreadsheet cells/formulas.
 ZIP attachments return a file inventory; pass archive_member with an exact listed
 path to read that member. A listing alone does not mean its contents were reviewed.
+For unsupported formats or local inspection, pass download_original=true to the
+same reader to save original bytes privately and receive local_path. Downloading
+does not mean the contents were inspected, and it never executes them.
 
 For student dashboards and comprehensive AI learning reviews, search for
 student report or learning review. Canonical guidance is at canvas://reports/templates.
