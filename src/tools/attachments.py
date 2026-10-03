@@ -32,6 +32,8 @@ from quiz_submission_data import assignment_quiz_answers, answer_file_ids
 
 PositiveInt = Annotated[int, Field(ge=1), BeforeValidator(not_boolean)]
 PageLimit = Annotated[int, Field(ge=1, le=5), BeforeValidator(not_boolean)]
+ArchiveMember = Annotated[str | None, Field(min_length=1, max_length=1024,
+    description='Exact file path inside a ZIP, from its inventory. Omit to list ZIP contents.')]
 CACHE_SECONDS = 600
 MAX_SNAPSHOTS = 4
 MAX_SNAPSHOT_CHARACTERS = 4_000_000
@@ -94,7 +96,7 @@ def file_metadata(item):
     filename = item.get('display_name') or item.get('filename') or ''
     result = {'file_id': numeric_id(item['id']), 'filename': filename,
               'content_type': item.get('content-type') or item.get('content_type'), 'size': item.get('size'),
-              'supported_format': Path(filename).suffix.lower() in SUPPORTED | IMAGE_SUFFIXES}
+              'supported_format': Path(filename).suffix.lower() in SUPPORTED | IMAGE_SUFFIXES | {'.zip'}}
     if item.get('locked_for_user') or item.get('hidden_for_user'):
         result['unavailable_reason'] = 'file_access_restricted'
     elif not result['supported_format']:
@@ -203,7 +205,7 @@ class AttachmentTools:
         student_id: CanvasID | None = None, anonymous_id: str | None = None,
         attempt: PositiveInt | None = None,
     ) -> dict:
-        """List files available for assignment attachment-content reading. source=submission requires student_id OR anonymous_id; omit attempt for current work or select an explicit historical attempt. source=assignment lists Canvas file IDs linked in instructions; omit student identifiers. Reuse IDs with canvas_read_assignment_attachment for PDF, Word, Excel, slides and text. External links and comment attachments are outside this inventory."""
+        """List files available for assignment attachment-content reading. source=submission requires student_id OR anonymous_id; omit attempt for current work or select an explicit historical attempt. source=assignment lists Canvas file IDs linked in instructions; omit student identifiers. Reuse IDs with canvas_read_assignment_attachment for ZIP archives, images, PDF, Word, Excel, slides and text. External links and comment attachments are outside this inventory."""
         scope = request_scope(course_id, assignment_id, source, student_id, anonymous_id, attempt)
         self._prune()
         async with AsyncCanvasClient.from_environment() as client:
@@ -220,36 +222,43 @@ class AttachmentTools:
         source: Literal['submission', 'assignment'] = 'submission',
         student_id: CanvasID | None = None, anonymous_id: str | None = None,
         attempt: PositiveInt | None = None, cursor: str | None = None, limit: PageLimit = 1,
+        archive_member: ArchiveMember = None,
     ) -> dict:
-        """Read assignment attachment CONTENT: PNG/JPEG/WebP/static GIF as MCP image blocks; PDF, Word, Excel cells/formulas, slides and text as paginated text. Use file_id from inventory or submission review. source=submission requires student_id OR anonymous_id; attempt omitted=current. source=assignment reads instruction files without student IDs. Quiz question uploads use canvas_read_quiz_attachment; discussion posts use canvas_read_discussion_attachment. Follow next_cursor with identical identifiers. Limits: 25 MiB documents, 8 MiB/25 megapixels images, 1–5 text chunks of 12,000 characters. No OCR or code execution; read-only."""
+        """Read assignment attachment CONTENT: PNG/JPEG/WebP/static GIF as MCP image blocks; PDF, Word, Excel cells/formulas, slides and text as paginated text. ZIP: omit archive_member to list files, then pass an exact listed path to read one member. A ZIP listing is not a content review; nested/encrypted archives are unsupported. Use file_id from inventory or submission review. source=submission requires student_id OR anonymous_id; attempt omitted=current. source=assignment reads instruction files without student IDs. Quiz question uploads use canvas_read_quiz_attachment; discussion posts use canvas_read_discussion_attachment. Follow next_cursor with identical identifiers and archive_member. Limits: 25 MiB files, 500 ZIP entries/100 MiB expanded, 8 MiB/25 megapixels images, 1–5 text chunks of 12,000 characters. No OCR or code execution; read-only."""
         scope = request_scope(course_id, assignment_id, source, student_id, anonymous_id, attempt)
-        return await self._read_attachment(scope, file_id, cursor, limit)
+        return await self._read_attachment(scope, file_id, cursor, limit, archive_member)
 
     async def canvas_read_quiz_attachment(
         self, course_id: CanvasID, quiz_id: CanvasID, quiz_submission_id: CanvasID,
         question_id: CanvasID, file_id: CanvasID, attempt: PositiveInt | None = None,
         cursor: str | None = None, limit: PageLimit = 1,
+        archive_member: ArchiveMember = None,
     ) -> ToolResult:
-        """Read a Classic Quiz file-upload answer: return an uploaded image as an MCP image block, or Excel cells/formulas, PDF/Word/text content. Uses Classic Quiz ID, quiz submission ID and question ID, not assignment/submission IDs. Verifies course, quiz, student submission, exact attempt and question/file association. Reuse attachment_ids from canvas_get_quiz_submission_review. attempt defaults to the quiz submission's current attempt; old attempts never use newer answers. Follow text next_cursor with identical arguments. Same size/format limits as canvas_read_assignment_attachment; read-only, no grading."""
+        """Read a Classic Quiz file-upload answer: return an uploaded image as an MCP image block, or Excel cells/formulas, PDF/Word/text content. ZIP: omit archive_member to list files, then pass an exact listed path to read one member; a listing is not a content review. Uses Classic Quiz ID, quiz submission ID and question ID, not assignment/submission IDs. Verifies course, quiz, student submission, exact attempt and question/file association. Reuse attachment_ids from canvas_get_quiz_submission_review. attempt defaults to the quiz submission's current attempt; old attempts never use newer answers. Follow text next_cursor with identical arguments including archive_member. Same size/format limits as canvas_read_assignment_attachment; read-only, no grading."""
         scope = {'source': 'classic_quiz', 'course_id': numeric_id(course_id), 'quiz_id': numeric_id(quiz_id),
                  'quiz_submission_id': numeric_id(quiz_submission_id), 'question_id': numeric_id(question_id), 'attempt': attempt}
         if attempt is not None and (isinstance(attempt, bool) or not isinstance(attempt, int) or attempt < 1):
             raise ValueError('Use a positive Classic Quiz attempt number')
-        result = await self._read_attachment(scope, file_id, cursor, limit)
+        result = await self._read_attachment(scope, file_id, cursor, limit, archive_member)
         return result if isinstance(result, ToolResult) else ToolResult(structured_content=result)
 
     async def canvas_read_discussion_attachment(
         self, course_id: CanvasID, topic_id: CanvasID, entry_id: CanvasID, file_id: CanvasID,
         cursor: str | None = None, limit: PageLimit = 1,
+        archive_member: ArchiveMember = None,
     ) -> ToolResult:
-        """Read an image or workbook/document attached or linked to a specific course discussion post or reply. Verifies entry_id within course_id/topic_id and file_id in its attachments or same-origin Canvas file links. Returns PNG/JPEG/WebP/static GIF as MCP image content; XLSX cells/formulas and other documents as paginated text. Does not fetch arbitrary external URLs, sibling entries or group discussions. Follow next_cursor with identical identifiers; same limits as canvas_read_assignment_attachment. Read-only."""
+        """Read an image or workbook/document attached or linked to a specific course discussion post or reply. ZIP: omit archive_member to list files, then pass an exact listed path to read one member; a listing is not a content review. Verifies entry_id within course_id/topic_id and file_id in its attachments or same-origin Canvas file links. Returns PNG/JPEG/WebP/static GIF as MCP image content; XLSX cells/formulas and other documents as paginated text. Does not fetch arbitrary external URLs, sibling entries or group discussions. Follow next_cursor with identical identifiers and archive_member; same limits as canvas_read_assignment_attachment. Read-only."""
         scope = {'source': 'discussion', 'course_id': numeric_id(course_id), 'topic_id': numeric_id(topic_id),
                  'entry_id': numeric_id(entry_id)}
-        result = await self._read_attachment(scope, file_id, cursor, limit)
+        result = await self._read_attachment(scope, file_id, cursor, limit, archive_member)
         return result if isinstance(result, ToolResult) else ToolResult(structured_content=result)
 
-    async def _read_attachment(self, scope, file_id, cursor, limit):
+    async def _read_attachment(self, scope, file_id, cursor, limit, archive_member=None):
         file_id = numeric_id(file_id)
+        if archive_member is not None:
+            if not isinstance(archive_member, str) or not archive_member.strip() or len(archive_member) > 1024:
+                raise ValueError('archive_member must be an exact ZIP entry name of 1–1024 characters')
+            scope = {**scope, 'archive_member': archive_member}
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 5:
             raise ValueError('limit must be an integer from 1 to 5')
         self._prune()
@@ -277,6 +286,8 @@ class AttachmentTools:
                 if not isinstance(item, dict) or str(item.get('id')) != file_id:
                     raise ValueError('Canvas returned a mismatched file')
             metadata = file_metadata(item)
+            if archive_member is not None and Path(metadata['filename']).suffix.lower() != '.zip':
+                raise ValueError('archive_member is only supported for ZIP attachments')
             reason = metadata.get('unavailable_reason')
             sha256 = None
             is_image = Path(metadata['filename']).suffix.lower() in IMAGE_SUFFIXES
@@ -296,6 +307,9 @@ class AttachmentTools:
                     try:
                         if is_image:
                             extracted = await extract_isolated(data, metadata['filename'], directory, image=True)
+                        elif Path(metadata['filename']).suffix.lower() == '.zip':
+                            extracted = await extract_isolated(data, metadata['filename'], directory,
+                                                               archive_member=archive_member)
                         else:
                             extracted = await extract_isolated(data, metadata['filename'], directory)
                     except Exception:
@@ -303,14 +317,17 @@ class AttachmentTools:
             if reason is not None:
                 extracted = {'segments': [], 'gaps': [{'location': 'file', 'reason': reason}], 'complete': False}
 
-        if is_image and extracted.get('image'):
+        if extracted.get('archive'):
+            metadata['archive'] = extracted['archive']
+            metadata['content_kind'] = 'archive_inventory' if archive_member is None else 'archive_member'
+        if extracted.get('image'):
             result = {**scope, **metadata, 'resolved_attempt': resolved_attempt, 'sha256': sha256,
                       'fetched_at': datetime.now(timezone.utc).isoformat(), 'image': extracted['image'],
                       'content_kind': 'image', 'all_content_returned': True, 'next_cursor': None,
                       'evidence_notice': EVIDENCE_NOTICE}
             return ToolResult(structured_content=result, content=[
                 TextContent(type='text', text=json.dumps(result)),
-                ImageContent(type='image', data=base64.b64encode(data).decode('ascii'), mime_type=extracted['image']['mime_type'])])
+                ImageContent(type='image', data=extracted.get('image_data') or base64.b64encode(data).decode('ascii'), mime_type=extracted['image']['mime_type'])])
 
         chunks, characters = [], 0
         gaps = extracted['gaps']
@@ -330,6 +347,10 @@ class AttachmentTools:
         if truncated:
             gap_reasons.append('attachment_output_limit')
             chunks.append({'kind': 'coverage_gap', 'location': 'file', 'text': 'attachment_output_limit'})
+            if 'archive' in metadata:
+                metadata['archive']['contents_read'] = False
+                if metadata['archive']['mode'] == 'inventory':
+                    metadata['archive']['inventory_complete'] = False
         metadata = {**scope, **metadata, 'resolved_attempt': resolved_attempt,
                     'sha256': sha256, 'fetched_at': datetime.now(timezone.utc).isoformat(),
                     'extraction_complete': extracted['complete'] and not truncated,

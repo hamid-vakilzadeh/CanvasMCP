@@ -217,7 +217,8 @@ def extract_document(data: bytes, filename: str) -> dict:
     return {"segments": segments, "gaps": gaps, "complete": not gaps, "characters": sum(len(s['text']) for s in segments)}
 
 
-async def extract_isolated(data: bytes, filename: str, private_directory: Path, *, image: bool = False) -> dict:
+async def extract_isolated(data: bytes, filename: str, private_directory: Path, *,
+                           image: bool = False, archive_member: str | None = None) -> dict:
     """Run parsers without Canvas credentials and terminate a stalled parser."""
     def run():
         with tempfile.TemporaryDirectory(prefix='extract-', dir=private_directory) as directory:
@@ -229,6 +230,8 @@ async def extract_isolated(data: bytes, filename: str, private_directory: Path, 
                 command = [sys.executable, str(Path(__file__).resolve()), str(path), filename]
                 if image:
                     command.append('--image')
+                if archive_member is not None:
+                    command.extend(['--archive-member', archive_member])
                 completed = subprocess.run(command,
                     capture_output=True, timeout=60, env=child_env, check=False)
                 if completed.returncode == 0:
@@ -290,5 +293,10 @@ if __name__ == '__main__':
     import logging
     logging.disable(logging.CRITICAL)
     data = Path(sys.argv[1]).read_bytes()
-    result = inspect_image(data) if sys.argv[3:] == ['--image'] else extract_document(data, sys.argv[2])
+    if Path(sys.argv[2]).suffix.lower() == '.zip':
+        from reporting.archives import extract_archive
+        member = sys.argv[4] if sys.argv[3:4] == ['--archive-member'] else None
+        result = extract_archive(data, member)
+    else:
+        result = inspect_image(data) if sys.argv[3:] == ['--image'] else extract_document(data, sys.argv[2])
     print(json.dumps(result, ensure_ascii=False))
