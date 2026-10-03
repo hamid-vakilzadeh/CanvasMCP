@@ -111,8 +111,9 @@ ACTION_DOMAINS: dict[str, dict[str, Any]] = {
             "canvas_plan_quiz_submission_grade",
             "canvas_apply_change",
         ],
-        "search_examples": ["quiz extra time 1.5x accommodations", "quiz questions", "question groups", "quiz reports", "quiz submissions"],
-        "discoverable_tools": ["canvas_plan_quiz_accommodations"],
+        "search_examples": ["anonymous survey statistics response counts averages", "quiz extra time 1.5x accommodations", "quiz questions", "question groups", "quiz reports", "quiz submissions"],
+        "discoverable_tools": ["canvas_plan_quiz_accommodations", "canvas_get_quiz_statistics"],
+        "statistics_notes": "Classic Quiz statistics return completed submission and answer counts without identities. Standard agreement choices map 1–5; N/A and unanswered responses are excluded. Use answer_values for custom scales. Read generated_at, denominators and warnings; unavailable counts are not zeros. Uses Canvas kept completed attempts, not all retakes. Verified 2026-10-03: https://developerdocs.instructure.com/services/canvas/resources/quiz_statistics",
         "accommodation_notes": "Classic quiz IDs differ from New Quiz assignment IDs. all_timed covers existing quizzes only. Availability dates can cut off extra time. New Quizzes course scope supports fixed minutes, not a multiplier.",
     },
     "files": {

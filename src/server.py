@@ -25,6 +25,7 @@ from tools.quiz_accommodations import QuizAccommodationTools
 from tools.grade_posting import GradePostingTools
 from tools.groups import GroupTools
 from tools.attachments import AttachmentTools
+from tools.quiz_statistics import QuizStatisticsTools
 from resources.content_creation_rules import register_content_creation_resource
 from instructor_experience import register_instructor_experience
 from reporting.tools import ReportingTools
@@ -62,6 +63,9 @@ path to read that member. A listing alone does not mean its contents were review
 For unsupported formats or local inspection, pass download_original=true to the
 same reader to save original bytes privately and receive local_path. Downloading
 does not mean the contents were inspected, and it never executes them.
+For anonymous Classic Quiz surveys, search for survey statistics to find
+canvas_get_quiz_statistics. It returns aggregate response counts and 1–5 averages
+excluding N/A, without student identities; quiz grades are not survey ratings.
 
 For student dashboards and comprehensive AI learning reviews, search for
 student report or learning review. Canonical guidance is at canvas://reports/templates.
@@ -170,6 +174,7 @@ def create_server() -> FastMCP:
     GradePostingTools(mcp)
     GroupTools(mcp)
     AttachmentTools(mcp)
+    QuizStatisticsTools(mcp)
     ReportingTools(mcp)
     register_content_creation_resource(mcp)
     register_instructor_experience(mcp)

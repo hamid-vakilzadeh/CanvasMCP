@@ -114,6 +114,8 @@ Use `download_original=true` to save an attachment privately for local inspectio
 including formats the reader cannot parse. Downloads retain the 25 MiB size limit.
 
 See [Reports and dashboards](REPORTING.md) for the optional reporting workflow.
+Anonymous Classic Quiz surveys support aggregate response counts and 1–5 averages,
+excluding “Not applicable,” without returning student identities.
 Tool schemas and built-in resources provide the detailed operational guidance.
 
 ## Development
