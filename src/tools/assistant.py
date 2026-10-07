@@ -266,7 +266,7 @@ class AssistantTools:
                 "visible_tools": [name for name in self.VISIBLE_NAMES if name in AUTHORING_TOOLS]
                                  + ["canvas_search_tools", "canvas_call_tool"],
                 "authoring": ["pages", "assignments", "announcements", "discussion topics", "modules",
-                              "Classic Quizzes", "New Quizzes", "rubrics", "file uploads", "course copies"],
+                              "Classic Quizzes", "Classic Question Banks", "New Quizzes", "rubrics", "file uploads", "course copies"],
                 "discovery": {"search": "canvas_search_tools", "call": "canvas_call_tool", "maximum_results": 5},
                 "writes": "Create a plan, review it, then call canvas_apply_change with confirm=true.",
             }
@@ -282,7 +282,7 @@ class AssistantTools:
             },
             "authoring": [
                 "pages", "assignments", "announcements", "discussions", "modules",
-                "Classic Quizzes", "New Quizzes", "rubrics", "files", "course copies",
+                "Classic Quizzes", "Classic Question Banks", "New Quizzes", "rubrics", "files", "course copies",
             ],
             "instructor_workflows": [
                 "rosters", "student snapshots", "engagement criteria", "grading queues",
@@ -1824,6 +1824,9 @@ class AssistantTools:
                 if fingerprint(current, kind=condition.fingerprint_kind) != condition.fingerprint:
                     raise ValueError("Plan is stale because the Canvas record changed; create a new plan")
             await progress.set_total(max(1, len(plan.mutations)))
+            if plan.action in {'question_bank_import', 'question_bank_draw'}:
+                from tools.question_banks import apply_question_bank_plan
+                return await apply_question_bank_plan(client, plan, progress)
             if plan.action in {"group_set_change", "group_change", "group_membership_change"}:
                 from tools.groups import apply_group_plan
                 return await apply_group_plan(client, plan, progress)
