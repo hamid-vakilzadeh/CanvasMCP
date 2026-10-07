@@ -210,6 +210,7 @@ class AsyncCanvasClient:
         params: dict[str, Any] | None = None,
         cursor: str | None = None,
         limit: int = 50,
+        preserve_overflow: bool = False,
     ) -> dict[str, Any]:
         limit = min(100, max(1, limit))
         url = decode_cursor(cursor) if cursor else endpoint
@@ -244,7 +245,9 @@ class AsyncCanvasClient:
         if next_url:
             self._url(next_url)
         return {
-            "items": items[:limit],
+            # The question-bank index can ignore per_page and return its entire
+            # collection without a next link. Its caller must not lose banks.
+            "items": items if preserve_overflow else items[:limit],
             "next_cursor": encode_cursor(next_url) if next_url else None,
-            "count": min(len(items), limit),
+            "count": len(items) if preserve_overflow else min(len(items), limit),
         }

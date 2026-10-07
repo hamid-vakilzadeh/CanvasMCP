@@ -26,6 +26,7 @@ from tools.grade_posting import GradePostingTools
 from tools.groups import GroupTools
 from tools.attachments import AttachmentTools
 from tools.quiz_statistics import QuizStatisticsTools
+from tools.question_banks import QuestionBankTools
 from resources.content_creation_rules import register_content_creation_resource
 from instructor_experience import register_instructor_experience
 from reporting.tools import ReportingTools
@@ -66,6 +67,9 @@ does not mean the contents were inspected, and it never executes them.
 For anonymous Classic Quiz surveys, search for survey statistics to find
 canvas_get_quiz_statistics. It returns aggregate response counts and 1–5 averages
 excluding N/A, without student identities; quiz grades are not survey ratings.
+For standalone Classic Question Banks, search for question banks. Create or append
+questions with canvas_plan_question_bank_import, monitor the migration, then
+inspect the bank before using canvas_plan_question_bank_draw for random selection.
 
 For student dashboards and comprehensive AI learning reviews, search for
 student report or learning review. Canonical guidance is at canvas://reports/templates.
@@ -175,6 +179,7 @@ def create_server() -> FastMCP:
     GroupTools(mcp)
     AttachmentTools(mcp)
     QuizStatisticsTools(mcp)
+    QuestionBankTools(mcp)
     ReportingTools(mcp)
     register_content_creation_resource(mcp)
     register_instructor_experience(mcp)

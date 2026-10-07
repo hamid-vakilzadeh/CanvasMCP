@@ -8,6 +8,7 @@ It connects directly to Canvas, so internet access is still required.
 ## What you can do
 
 - Create and manage course content, assignments, rubrics, modules, and quizzes.
+- Create reusable Classic Question Banks and use them for random quiz draws.
 - Review submissions, grade written quiz answers, and provide feedback.
 - Read uploaded documents, spreadsheets, images, and files inside ZIP attachments.
 - Work with discussions, Inbox messages, student groups, and quiz accommodations.

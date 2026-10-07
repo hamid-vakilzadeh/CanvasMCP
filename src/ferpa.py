@@ -29,6 +29,9 @@ AUTHORING_TOOLS = frozenset({
     "get_canvas_content_creation_rules", "search_canvas_reference",
     "list_content_migrations", "get_content_migration", "list_migration_systems",
     "get_migration_progress",
+    "canvas_list_question_banks", "canvas_get_question_bank",
+    "canvas_plan_question_bank_import", "canvas_get_question_bank_import",
+    "canvas_plan_question_bank_draw",
 })
 AUTHORING_RESOURCES = frozenset({
     "resource://content-creation-reference", "canvas://reference/content-creation",
@@ -39,6 +42,7 @@ AUTHORING_ACTIONS = frozenset({
     "module_change", "module_item_change", "classic_quiz_change", "new_quiz_change",
     "file_upload", "course_copy", "create_rubric", "apply_course_copy_selection",
     "set_file_usage_rights", "remove_file_usage_rights",
+    "question_bank_import", "question_bank_draw",
     *(f"{operation}_{resource}" for operation in ("create", "update", "delete")
       for resource in ("assignment_group", "folder", "classic_quiz_question", "classic_quiz_question_group")),
 })
